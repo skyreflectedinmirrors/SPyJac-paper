@@ -25,30 +25,74 @@ class CustomLatexPrinter(LatexPrinter):
 
 #override default latex print method
 def latex(expr, **settings):
-    return CustomLatexPrinter(settings).doprint(expr)    
+    return CustomLatexPrinter(settings).doprint(expr)
 
+base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
+base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
+class SymbolicFunction(Function):
+    def __new__(cls, name, *args, **options):
+        full_print = False
+        functional_form = args[0]
+        if 'full_print' in options:
+            full_print = options['full_print']
+            del options['full_print']
 
-class FunctionalSymbol(Symbol):
-    def __new__(cls, name, args, full_print=False, **assumptions):
-        obj = Symbol.__new__(cls, name, **assumptions)
-        obj.function_of = args
+        obj = Function.__new__(cls, name, *args, **options)
+        obj.functional_form = functional_form
         obj.full_print = full_print
         return obj
 
+    @property
+    def free_symbols(self):
+        return super(SymbolicFunction, self).free_symbols.union(
+            self.functional_form.free_symbols)
+
     def __str__(self):
-        return super(FunctionalSymbol, self).__str__() if not self.full_print else \
-            self.function_of.__str__()
+        if not self.full_print:
+            return self.args[0].__str__()
+        else:
+            return self.functional_form.__str__()
+
+    def _latex(self, *args, **kwargs):
+        return self.__str__()
+
+    def _eval_diff(self, wrt, **kw_args):
+            return self._eval_derivative(wrt)
+
+    def _eval_derivative(self, wrt):
+        if self == wrt:
+            return S.One
+        else:
+
+            funcof = self.functional_form.free_symbols
+            i = 0
+            l = []
+            base_str = base_str_total if len(funcof) == 1 else base_str_partial
+            da = self.functional_form.diff(wrt)
+            if da is S.Zero:
+                return S.Zero
+            return SymbolicFunction(Symbol(base_str.format(
+                str(self.args[0]), str(wrt))), da,
+            full_print=self.full_print)
+
+class ImplicitSymbol(Symbol):
+    def __new__(cls, name, args, **assumptions):
+        obj = Symbol.__new__(cls, name, **assumptions)
+        obj.functional_form = args
+        return obj
 
     def _get_iter_func(self):
-        funcof = self.function_of
-        if not hasattr(self.function_of, '__iter__'):
-            funcof = [self.function_of]
+        funcof = self.functional_form
+        if not funcof:
+            return []
+        if not hasattr(self.functional_form, '__iter__'):
+            funcof = [self.functional_form]
 
         return funcof
 
     @property
     def free_symbols(self):
-        return super(FunctionalSymbol, self).free_symbols.union(*[
+        return super(ImplicitSymbol, self).free_symbols.union(*[
             x.free_symbols for x in self._get_iter_func()])
 
     def _eval_diff(self, wrt, **kw_args):
@@ -57,9 +101,7 @@ class FunctionalSymbol(Symbol):
     def _eval_derivative(self, wrt):
         if self == wrt:
             return S.One
-        elif wrt == self.function_of:
-            base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
-            base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
+        else:
             funcof = self._get_iter_func()
             i = 0
             l = []
@@ -69,25 +111,22 @@ class FunctionalSymbol(Symbol):
                 da = a.diff(wrt)
                 if da is S.Zero:
                     continue
-                df = FunctionalSymbol(base_str.format(
-                str(self.name), str(a)), args=self.function_of)
+                df = ImplicitSymbol(base_str.format(
+                str(self.name), str(wrt)), args=self.functional_form)
                 
                 l.append(df * da)
             return Add(*l)
-        else:
-            return S.Zero
-
 
 class IndexedFunc(IndexedBase):
     def __new__(cls, label, args, shape=None, **kw_args):
         obj = IndexedBase.__new__(cls, label, shape=shape, **kw_args)
-        obj.function_of = args
+        obj.functional_form = args
         return obj
 
     def _get_iter_func(self):
-        funcof = self.function_of
-        if not hasattr(self.function_of, '__iter__'):
-            funcof = [self.function_of]
+        funcof = self.functional_form
+        if not hasattr(self.functional_form, '__iter__'):
+            funcof = [self.functional_form]
 
         return funcof
 
@@ -97,15 +136,15 @@ class IndexedFunc(IndexedBase):
             x.free_symbols for x in self._get_iter_func()])
 
     class IndexedFuncValue(Indexed):
-        def __new__(cls, base, function_of, *args):
+        def __new__(cls, base, functional_form, *args):
             obj = Indexed.__new__(cls, base, *args)
-            obj.function_of = function_of
+            obj.functional_form = functional_form
             return obj
 
         def _get_iter_func(self):
-            funcof = self.function_of
-            if not hasattr(self.function_of, '__iter__'):
-                funcof = [self.function_of]
+            funcof = self.functional_form
+            if not hasattr(self.functional_form, '__iter__'):
+                funcof = [self.functional_form]
 
             return funcof
         def _eval_diff(self, wrt, **kw_args):
@@ -118,9 +157,9 @@ class IndexedFunc(IndexedBase):
                     msg = "Different # of indices: d({!s})/d({!s})".format(self,
                                                                            wrt)
                     raise IndexException(msg)
-                elif self.function_of != wrt.function_of:
-                    msg = "Different function form d({!s})/d({!s})".format(self.function_of,
-                                                                        wrt.function_of)
+                elif self.functional_form != wrt.functional_form:
+                    msg = "Different function form d({!s})/d({!s})".format(self.functional_form,
+                                                                        wrt.functional_form)
                     raise IndexException(msg)
                 result = S.One
                 for index1, index2 in zip(self.indices, wrt.indices):
@@ -130,8 +169,6 @@ class IndexedFunc(IndexedBase):
                 #f(x).diff(s) -> x.diff(s) * f.fdiff(1)(s)
                 i = 0
                 l = []
-                base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
-                base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
                 funcof = self._get_iter_func()
                 base_str = base_str_total if len(funcof) == 1 else base_str_partial 
                 for a in self._get_iter_func():
@@ -140,7 +177,7 @@ class IndexedFunc(IndexedBase):
                     if da is S.Zero:
                         continue
                     df = IndexedFunc(base_str.format(
-                    str(self.base), str(a)), args=self.function_of)[self.args[1]]
+                    str(self.base), str(wrt)), args=self.functional_form)[self.args[1]]
                     
                     l.append(df * da)
                 return Add(*l)
@@ -155,12 +192,12 @@ class IndexedFunc(IndexedBase):
             # Special case needed because M[*my_tuple] is a syntax error.
             if self.shape and len(self.shape) != len(indices):
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self, self.function_of,
+            return IndexedFunc.IndexedFuncValue(self, self.functional_form,
                 *indices, **kw_args)
         else:
             if self.shape and len(self.shape) != 1:
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self, self.function_of,
+            return IndexedFunc.IndexedFuncValue(self, self.functional_form,
                 indices, **kw_args)
 
 """
@@ -245,9 +282,8 @@ def derivation(file, conp = True):
                 return NotImplementedError('Lower and upper bound expected.')
 
     #thermo vars
-    T = FunctionalSymbol('T', t)
+    T = ImplicitSymbol('T', t)
     Wi = IndexedBase('W')
-    Wtot = symbols(r'\bar{W}')
 
     #some constants, and state variables
     Patm = S.atm_pressure
@@ -258,22 +294,22 @@ def derivation(file, conp = True):
 
     #molecular weight and moles
     W = Sum(Xi[i] * Wi[i], (i, 1, Ns))
-    write_eq(Eq(Wtot, W))
-    n = m / W
-    n_sym = Function('n')(t)
-    write_eq(Eq(n_sym, n))
+    Wtot = SymbolicFunction(Symbol(r'\bar{W}'), W)
+    write_eq(Eq(Wtot, Wtot.functional_form))
+    n = SymbolicFunction('n', m / W)
+    write_eq(Eq(n, n.functional_form))
 
     #more thermo
     if conp:
         P = S.pressure
         P_sym = S.pressure
         V = n * R * T / P
-        V_sym = FunctionalSymbol('V', t)
+        V_sym = ImplicitSymbol('V', t)
     else:
         V = S.volume
         V_sym = S.volume
         P = n * R * T / V
-        P_sym = FunctionalSymbol('P', t)
+        P_sym = ImplicitSymbol('P', t)
 
     #polyfits
     a = IndexedBase('a')
