@@ -29,10 +29,15 @@ def latex(expr, **settings):
 
 
 class FunctionalSymbol(Symbol):
-    def __new__(cls, name, args, **assumptions):
+    def __new__(cls, name, args, full_print=False, **assumptions):
         obj = Symbol.__new__(cls, name, **assumptions)
         obj.function_of = args
+        obj.full_print = full_print
         return obj
+
+    def __str__(self):
+        return super(FunctionalSymbol, self).__str__() if not self.full_print else \
+            self.function_of.__str__()
 
     def _get_iter_func(self):
         funcof = self.function_of
