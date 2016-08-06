@@ -210,6 +210,9 @@ def write_eq(eq, simiplify=False):
     else:
         file.write(latex(eq, mode='equation') + '\n')
 
+def write_dummy_eq(text):
+    file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
+
 def factor_and_solve(expr, factor):
     expr = collect(expand(expr), factor)
     fac_args = [i for i, arg in enumerate(expr.args) if arg.atoms(factor)]
@@ -223,6 +226,12 @@ def factor_and_solve(expr, factor):
     else:
         noFac_args = Add(*[expr.args[i] for i in noFac_args])
     return -noFac_args / (fac_args / factor)
+
+def sum_simplifier(expr):
+    terms = Add.make_args(expr)
+    sum_terms = [term for term in terms if term.has(Sum)]
+    non_sum_terms = [term for term in terms if term not in sum_terms]
+    return simplify(Add(*sum_terms)) + Add(*non_sum_terms)
 
 def derivation(file, conp = True):
     #mechanism size
@@ -283,6 +292,7 @@ def derivation(file, conp = True):
 
     #thermo vars
     T = ImplicitSymbol('T', t)
+    Ci = IndexedFunc('[C]', t)
     Wi = IndexedBase('W')
 
     #some constants, and state variables
@@ -290,26 +300,47 @@ def derivation(file, conp = True):
     R = S.gas_constant
     m = S.mass
 
-    Xi = IndexedFunc('X', t)
+    #define state vector
+    state = symbols(r'\Phi')
+    write_dummy_eq(str(state) + ' = ' + r'\left\{{{},\ldots,{}\right\}}'.format(
+        ','.join([str(x) for x in [T, '[C]_1', '[C]_2']]), '[C]_{N_s - 1}'))
+
+    #define concentration
+    P = symbols('P')
+    Ctot = symbols(r'[C]')
+    Ctot_eq = Eq(Eq(Ctot, P / (R * T)), Sum(Ci[i], (i, 1, Ns)))
+    if conp:
+        write_eq(Ctot_eq)
+
+    #next we solve for Cns
+    Cns = P / (R * T) - Sum(Ci[i], (i, 1, Ns - 1))
+    write_eq(Eq(Ci[Ns], Cns))
 
     #molecular weight and moles
-    W = Sum(Xi[i] * Wi[i], (i, 1, Ns))
-    Wtot = SymbolicFunction(Symbol(r'\bar{W}'), W)
-    write_eq(Eq(Wtot, Wtot.functional_form))
-    n = SymbolicFunction('n', m / W)
-    write_eq(Eq(n, n.functional_form))
+    W = simplify(Sum(Ci[i] * Wi[i], (i, 1, Ns - 1)) + Cns * Wi[Ns])
+    W = SymbolicFunction(Symbol(r'\bar{W}'), sum_simplifier(W))
+    if conp:
+        write_eq(Eq(W, W.functional_form))
 
     #more thermo
     if conp:
         P = S.pressure
         P_sym = S.pressure
-        V = n * R * T / P
+        V = m * R * T / (P * W)
         V_sym = ImplicitSymbol('V', t)
     else:
         V = S.volume
         V_sym = S.volume
-        P = n * R * T / V
+        Pnew = m * R * T / (V * W)
+        Cns = Cns.subs(Pnew, P)
+        write_eq(Eq(Ci[Ns], Cns))
+        W = W.subs(Pnew, P)
+        write_eq(Eq(Wtot, W))
+        P = Pnew
         P_sym = ImplicitSymbol('P', t)
+
+    #moles
+    n = m / W
 
     #polyfits
     a = IndexedBase('a')
@@ -331,29 +362,20 @@ def derivation(file, conp = True):
     write_eq(Eq(B_sym[i], B))
     write_eq(Eq(diff(B_sym[i], T), simplify(diff(B, T))))
 
-    #first we define the system
-    file.write(r'\begin{equation}\Phi = \left\{T, [X]_1, [X]_2, \ldots [X]_{N_{sp}}\right\}^{T}\end{equation}'
-        + '\n')
-
     file.write(r'\begin{equation}\frac{\partial \Phi}{\partial t}' +
         r' = \left\{\frac{\partial T}{\partial t}' +
-        r', \frac{\partial [X]_1}{\partial t}' +
-        r', \frac{\partial [X]_2}{\partial t}' + 
-        r', \ldots \frac{\partial [X]_{N_{sp}}}{\partial t}\right\}^{T}\end{equation}'
+        r', \frac{\partial [C]_1}{\partial t}' +
+        r', \frac{\partial [C]_2}{\partial t}' + 
+        r', \ldots \frac{\partial [C]_{N_{sp}}}{\partial t}\right\}^{T}\end{equation}'
         + '\n')
 
-    Xtot = symbols(r'[X]')
-    Xtot_eq = Eq(Xtot, P / (R * T))
-    write_eq(Xtot_eq)
-    Xtot = solve(Xtot_eq, Xtot)[0]
-    #solve for C_ns
-    Xns = Xtot - Sum(Xi, (i, 1, Ns - 1))
-    write_eq(Eq(Xi[Ns], Xns))
-
-
     #now define our time derivatives
-    U = n * Sum(Xi[i] * hi[i], (i, 1, Ns)) - P * V
+    U = n * (Sum(Ci[i] * hi[i], (i, 1, Ns - 1)) + Cns * hi[Ns] - P * V)
     U_sym = Function('U')(t)
+    write_eq(Eq(U_sym, U))
+    num, den = fraction(expand(U))
+    U = simplify(num) / simplify(den)
+    write_eq(Eq(U_sym, U))
 
     energy_conv = Eq(diff(U_sym, t), -P_sym * diff(V_sym, t))
     write_eq(energy_conv)
@@ -385,8 +407,8 @@ def derivation(file, conp = True):
         energy_conv = simplify(energy_conv.subs(U_sym, U).subs(P_sym, P))
 
     #Temperature jacobian entries
-    dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{X_j}}')
-    write_eq(Eq(dTdtdx, simplify(diff(dTdt, Xi[j]))))
+    dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
+    write_eq(Eq(dTdtdx, simplify(diff(dTdt, Ci[j]))))
     dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
     write_eq(Eq(dTdtdT, simplify(diff(dTdt, T))))
 
@@ -425,19 +447,19 @@ def derivation(file, conp = True):
     kr_sym = kf_sym[j] / Kc_sym[j]
 
     #rate of progress
-    rop = kf_sym[j] * SmartProduct(Xi[i]**nu_f[i, j], (i, 1, Ns)) - kr_sym * SmartProduct(Xi[i]**nu_r[i, j], (i, 1, Ns))
-    rop_sym = IndexedFunc(r'{R_{net}}', args=(Xi, T, nu))
+    rop = kf_sym[j] * SmartProduct(Ci[i]**nu_f[i, j], (i, 1, Ns)) - kr_sym * SmartProduct(Ci[i]**nu_r[i, j], (i, 1, Ns))
+    rop_sym = IndexedFunc(r'{R_{net}}', args=(Ci, T, nu))
 
     write_eq(Eq(rop_sym[j], rop))
     
     #net reaction rate
     omega = Sum(rop, (j, 1, Nr))
-    write_eq(Eq(diff(Xi[i], t), omega))
+    write_eq(Eq(diff(Ci[i], t), omega))
 
     #concentration Jacobian equations
-    dXdot = IndexedFunc(r'\dot{X}', (Xi[k], T))
-    write_eq(Eq(diff(dXdot[i], Xi[j]), simplify(diff(omega, Xi[k]))))
-    write_eq(Eq(diff(dXdot[i], T), simplify(diff(omega, T))))
+    dCdot = IndexedFunc(r'\dot{C}', (Ci[k], T))
+    write_eq(Eq(diff(dCdot[i], Ci[j]), simplify(diff(omega, Ci[k]))))
+    write_eq(Eq(diff(dCdot[i], T), simplify(diff(omega, T))))
 
 
 if __name__ == '__main__':
