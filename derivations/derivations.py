@@ -15,6 +15,7 @@ from sympy.core.function import UndefinedFunction, Function, diff, Derivative, e
 from sympy.functions.elementary.exponential import exp, log
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.core.compatibility import is_sequence
+from sympy.core.numbers import Rational
 from constants import *
 
 init_printing()
@@ -276,18 +277,18 @@ def derivation(file, conp = True):
     cpi = IndexedFunc('{c_p}', T)
 
     write_eq(Eq(cpi[i], cp))
-    write_eq(Eq(diff(cpi[i], T), diff(cp, T)))
+    write_eq(Eq(diff(cpi[i], T), simplify(diff(cp, T))))
 
-    h = R * T * (a[i, 0] + T * (a[i, 1] / 2. + T * (a[i, 2] / 3. + T * (a[i, 3] / 4. + a[i, 4] * T / 5.))))
+    h = R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5)))))
     hi = IndexedFunc('h', T)
     write_eq(Eq(hi[i], h))
-    write_eq(Eq(diff(hi[i], T), diff(h, T)))
+    write_eq(Eq(diff(hi[i], T), simplify(diff(h, T))))
 
-    B = a[i, 6] - a[i, 0] + (a[i, 0] - 1) * log(T) + T * (a[i, 1] / 2 + T * (a[i, 2] / 6 + T * (a[i, 3] / 12 + a[i, 4] * T / 20))) - a[i, 5] / T 
+    B = a[i, 6] - a[i, 0] + (a[i, 0] - 1) * log(T) + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 6)  + T * (a[i, 3] * Rational(1, 12)  + a[i, 4] * T * Rational(1, 20)))) - a[i, 5] / T 
     B_sym = IndexedFunc(r'B', T)
 
     write_eq(Eq(B_sym[i], B))
-    write_eq(Eq(diff(B_sym[i], T), diff(B, T)))
+    write_eq(Eq(diff(B_sym[i], T), simplify(diff(B, T))))
 
     #first we define the system
     file.write(r'\begin{equation}\Phi = \left\{T, [X]_1, [X]_2, \ldots [X]_{N_{sp}}\right\}^{T}\end{equation}'
