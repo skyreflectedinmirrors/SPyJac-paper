@@ -16,6 +16,7 @@ from sympy.functions.elementary.exponential import exp, log
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.core.compatibility import is_sequence
 from sympy.core.numbers import Rational
+from sympy.core.exprtools import factor_terms
 from constants import *
 
 init_printing()
@@ -371,11 +372,15 @@ def derivation(file, conp = True):
 
     #now define our time derivatives
     U = n * (Sum(Ci[i] * hi[i], (i, 1, Ns - 1)) + Cns * hi[Ns] - P * V)
-    U_sym = Function('U')(t)
-    write_eq(Eq(U_sym, U))
-    num, den = fraction(expand(U))
-    U = simplify(num) / simplify(den)
-    write_eq(Eq(U_sym, U))
+    U = SymbolicFunction('U', U)
+    write_eq(Eq(U, U.functional_form))
+    U.functional_form = expand(simplify(U.functional_form))
+    write_eq(Eq(U, U.functional_form))
+    U.functional_form = factor_terms(U.functional_form, m / W)
+    write_eq(Eq(U, U.functional_form))
+    U.functional_form = Mul(*[sum_simplifier(x) for x in Mul.make_args(U.functional_form)])
+    write_eq(Eq(U, U.functional_form))
+    return
 
     energy_conv = Eq(diff(U_sym, t), -P_sym * diff(V_sym, t))
     write_eq(energy_conv)
