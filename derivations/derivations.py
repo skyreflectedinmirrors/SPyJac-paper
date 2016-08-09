@@ -1,6 +1,6 @@
 from sympy.interactive import init_printing
 from sympy.simplify.radsimp import collect, fraction
-from sympy.simplify.simplify import simplify
+from sympy.simplify.simplify import simplify, cancel, separatevars
 from sympy.solvers.solvers import solve
 from sympy.core.symbol import symbols, Symbol
 from sympy.core.relational import Eq
@@ -11,12 +11,13 @@ from sympy.tensor.indexed import Idx, IndexedBase, Indexed
 from sympy.core.symbol import Symbol
 from sympy.concrete import Sum, Product
 from sympy.printing.latex import LatexPrinter
-from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand
+from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul
 from sympy.functions.elementary.exponential import exp, log
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.core.compatibility import is_sequence
 from sympy.core.numbers import Rational
 from sympy.core.exprtools import factor_terms
+from sympy.core.relational import Equality
 from constants import *
 
 init_printing()
@@ -42,6 +43,17 @@ class SymbolicFunction(Function):
         obj.functional_form = functional_form
         obj.full_print = full_print
         return obj
+
+    def symbol(self):
+        return self.args[0]
+
+    def _eval_subs(self, old, new):
+        if self == old:
+            return new
+        if self.functional_form.has(old):
+            return SymbolicFunction(str(self), \
+            self.functional_form.subs(old, new))
+        return new
 
     @property
     def free_symbols(self):
@@ -91,6 +103,14 @@ class ImplicitSymbol(Symbol):
 
         return funcof
 
+    def _eval_subs(self, old, new):
+        if old == self:
+            return new
+        if self.functional_form.has(old):
+            return ImplicitSymbol(str(self),
+                self.functional_form.subs(old, new))
+        return self
+
     @property
     def free_symbols(self):
         return super(ImplicitSymbol, self).free_symbols.union(*[
@@ -124,6 +144,11 @@ class IndexedFunc(IndexedBase):
         obj.functional_form = args
         return obj
 
+    def _eval_simplify(self, ratio=1.7, measure=None):
+        return IndexedFunc(self.label,
+            *[simplify(x, ratio=ratio, measure=measure)
+                         for x in self.args])
+
     def _get_iter_func(self):
         funcof = self.functional_form
         if not hasattr(self.functional_form, '__iter__'):
@@ -141,6 +166,22 @@ class IndexedFunc(IndexedBase):
             obj = Indexed.__new__(cls, base, *args)
             obj.functional_form = functional_form
             return obj
+
+        def _eval_simplify(self, ratio=1.7, measure=None):
+            return IndexedFunc.IndexedFuncValue(
+                        self.base,
+                        *[simplify(x, ratio=ratio, measure=measure)
+                                 for x in self.args])
+
+
+        def _eval_subs(self, old, new):
+            if self == old:
+                return new
+            if self.functional_form.has(old):
+                return IndexedFunc.IndexedFuncValue(self.base, 
+                self.functional_form.subs(old, new),
+                *self.indices)
+            return new
 
         def _get_iter_func(self):
             funcof = self.functional_form
@@ -193,46 +234,68 @@ class IndexedFunc(IndexedBase):
             # Special case needed because M[*my_tuple] is a syntax error.
             if self.shape and len(self.shape) != len(indices):
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self, self.functional_form,
+            return IndexedFunc.IndexedFuncValue(self.label,
+                self.functional_form,
                 *indices, **kw_args)
         else:
             if self.shape and len(self.shape) != 1:
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self, self.functional_form,
+            return IndexedFunc.IndexedFuncValue(self.label,
+                self.functional_form,
                 indices, **kw_args)
 
 """
 Actual derivation
 """
 
-def write_eq(eq, simiplify=False):
-    if simiplify:
-        file.write(latex(simplify(eq), mode='equation') + '\n')
+def write_eq(eq):
+    if isinstance(eq, SymbolicFunction) or \
+       isinstance(eq, IndexedFunc.IndexedFuncValue) or \
+       isinstance(eq, ImplicitSymbol):
+        file.write(latex(Eq(eq, eq.functional_form), mode='equation') + '\n')
     else:
         file.write(latex(eq, mode='equation') + '\n')
 
 def write_dummy_eq(text):
     file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
 
-def factor_and_solve(expr, factor):
+
+def factor_and_solve(expr, factor, sum_simplify=True):
+    if isinstance(expr, Equality):
+        expr = expr.lhs - expr.rhs
     expr = collect(expand(expr), factor)
-    fac_args = [i for i, arg in enumerate(expr.args) if arg.atoms(factor)]
-    noFac_args = [i for i in range(len(expr.args)) if i not in fac_args]
+    args = Add.make_args(expr)
+    fac_args = [i for i, arg in enumerate(args) if arg.has(factor)]
+    noFac_args = [i for i in range(len(args)) if i not in fac_args]
     if len(fac_args) == 1:
-        fac_args = expr.args[fac_args[0]]
+        fac_args = args[fac_args[0]]
     else:
-        fac_args = Add(*[expr.args[i] for i in fac_args])
+        fac_args = Add(*[args[i] for i in fac_args])
     if len(noFac_args) == 1:
-        noFac_args = expr.args[noFac_args[0]]
+        noFac_args = args[noFac_args[0]]
     else:
-        noFac_args = Add(*[expr.args[i] for i in noFac_args])
-    return -noFac_args / (fac_args / factor)
+        noFac_args = Add(*[args[i] for i in noFac_args])
+    if sum_simplify:
+        return -sum_simplifier(noFac_args) / sum_simplifier(fac_args / factor)
+    else:
+        return -(noFac_args) / (fac_args / factor)
 
 def sum_simplifier(expr):
-    terms = Add.make_args(expr)
-    sum_terms = [term for term in terms if term.has(Sum)]
-    non_sum_terms = [term for term in terms if term not in sum_terms]
-    return simplify(Add(*sum_terms)) + Add(*non_sum_terms)
+    args = Mul.make_args(expr)
+    out_args = []
+    for arg in args:
+        if isinstance(arg, Sum):
+            out_args.append(simplify(arg))
+        elif isinstance(arg, Mul):
+            out_args.append(sum_simplifier(arg))
+        elif isinstance(arg, Add):
+            out_args.append(Add(*[sum_simplifier(x) for x in arg.args]))
+        else:
+            out_args.append(simplify(arg))
+    return Mul(*out_args)
+
+def functional_simplfier(expr):
+    return expr.subs([(x, x.functional_form) for x in expr.atoms(SymbolicFunction)])
 
 def derivation(file, conp = True):
     #mechanism size
@@ -301,47 +364,43 @@ def derivation(file, conp = True):
     R = S.gas_constant
     m = S.mass
 
-    #define state vector
-    state = symbols(r'\Phi')
-    write_dummy_eq(str(state) + ' = ' + r'\left\{{{},\ldots,{}\right\}}'.format(
-        ','.join([str(x) for x in [T, '[C]_1', '[C]_2']]), '[C]_{N_s - 1}'))
-
     #define concentration
-    P = symbols('P')
-    Ctot = symbols(r'[C]')
-    Ctot_eq = Eq(Eq(Ctot, P / (R * T)), Sum(Ci[i], (i, 1, Ns)))
-    if conp:
-        write_eq(Ctot_eq)
-
-    #next we solve for Cns
-    Cns = P / (R * T) - Sum(Ci[i], (i, 1, Ns - 1))
-    write_eq(Eq(Ci[Ns], Cns))
-
-    #molecular weight and moles
-    W = simplify(Sum(Ci[i] * Wi[i], (i, 1, Ns - 1)) + Cns * Wi[Ns])
-    W = SymbolicFunction(Symbol(r'\bar{W}'), sum_simplifier(W))
-    if conp:
-        write_eq(Eq(W, W.functional_form))
-
-    #more thermo
     if conp:
         P = S.pressure
-        P_sym = S.pressure
-        V = m * R * T / (P * W)
-        V_sym = ImplicitSymbol('V', t)
+        V = ImplicitSymbol('V', t)
+        state_vec = [T, Ci[1], Ci[2], Ci[Ns - 1]]
     else:
         V = S.volume
-        V_sym = S.volume
-        Pnew = m * R * T / (V * W)
-        Cns = Cns.subs(Pnew, P)
-        write_eq(Eq(Ci[Ns], Cns))
-        W = W.subs(Pnew, P)
-        write_eq(Eq(Wtot, W))
-        P = Pnew
-        P_sym = ImplicitSymbol('P', t)
+        P = SymbolicFunction('P', t)
+        state_vec = [T, Ci[1], Ci[2], Ci[Ns - 1]]
 
-    #moles
-    n = m / W
+    #define state vector
+    state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
+    state = ImplicitSymbol(r'\Phi', t)
+    write_dummy_eq(str(state) + state_vec_str.format(
+        ','.join([str(x) for x in state_vec[:-1]]),
+        str(state_vec[-1])))
+
+    write_dummy_eq(str(diff(state, t)) + state_vec_str.format(
+        ','.join([str(diff(x, t)) for x in state_vec[:-1]]),
+        str(diff(state_vec[-1], t))))
+
+    n = SymbolicFunction('n', P * V / (R * T))
+    write_eq(n)
+
+    Ctot = SymbolicFunction(Symbol('[C]'), P / (R * T))
+    write_eq(Ctot)
+    Cns = SymbolicFunction(Symbol('[C]_{N_s}'), Ctot - Sum(Ci[i], (i, 1 , Ns - 1)))
+    write_eq(Cns)
+
+    Xi = IndexedFunc('X', Ci / Ctot)
+    Xns = Cns / Ctot
+
+    #molecular weight
+    W = factor_terms(Sum(Wi[i] * Xi[i], (i, 1, Ns - 1)) + Wi[Ns] * Xns,
+        1 / Ctot)
+    W = SymbolicFunction('W', W)
+    write_eq(W)
 
     #polyfits
     a = IndexedBase('a')
@@ -363,53 +422,28 @@ def derivation(file, conp = True):
     write_eq(Eq(B_sym[i], B))
     write_eq(Eq(diff(B_sym[i], T), simplify(diff(B, T))))
 
-    file.write(r'\begin{equation}\frac{\partial \Phi}{\partial t}' +
-        r' = \left\{\frac{\partial T}{\partial t}' +
-        r', \frac{\partial [C]_1}{\partial t}' +
-        r', \frac{\partial [C]_2}{\partial t}' + 
-        r', \ldots \frac{\partial [C]_{N_{sp}}}{\partial t}\right\}^{T}\end{equation}'
-        + '\n')
-
-    #now define our time derivatives
-    U = n * (Sum(Ci[i] * hi[i], (i, 1, Ns - 1)) + Cns * hi[Ns] - P * V)
-    U = SymbolicFunction('U', U)
-    write_eq(Eq(U, U.functional_form))
-    U.functional_form = expand(simplify(U.functional_form))
-    write_eq(Eq(U, U.functional_form))
-    U.functional_form = factor_terms(U.functional_form, m / W)
-    write_eq(Eq(U, U.functional_form))
-    U.functional_form = Mul(*[sum_simplifier(x) for x in Mul.make_args(U.functional_form)])
-    write_eq(Eq(U, U.functional_form))
-    return
-
-    energy_conv = Eq(diff(U_sym, t), -P_sym * diff(V_sym, t))
-    write_eq(energy_conv)
+    U = ImplicitSymbol('U', t)
+    dUdt = diff(U, t)
+    dUdt.functional_form = -P * diff(V, t)
+    write_eq(dUdt)
 
     if conp:
-        H_sym = Function('H')(t)
-        Heq = U + P * V
-        write_eq(Eq(H_sym, Heq))
+        H = SymbolicFunction('H', U + P * V)
+        dHdt = diff(H, t)
+        write_eq(dHdt)
+        dHdt.functional_form = dHdt.functional_form.subs(dUdt, -P * diff(V, t))
+        write_eq(dHdt)
+        #start from dH/dt = 0
+        H.functional_form = V * (Sum(Ci[i] * hi[i], (i, 1, Ns - 1)) + Cns * hi[Ns])
+        write_eq(H)
 
-        enthalpy_diff = Eq(diff(H_sym), diff(U_sym + P_sym * V_sym, t))
-        write_eq(enthalpy_diff)
-        du_dt = solve(enthalpy_diff, diff(U_sym, t))[0]
-        write_eq(Eq(diff(U_sym, t), du_dt))
-        energy_conv = Eq(diff(H_sym, t),
-            solve(energy_conv.subs(diff(U_sym, t), du_dt), diff(H_sym, t))[0])
-        write_eq(energy_conv)
+        H = H.subs(Cns, Cns.functional_form)
+        write_eq(H)
 
-        #we now have dH/dt = 0
-        #so let's get that as a function of temperature
-        energy_conv = diff(Heq, t)
-        write_eq(Eq(energy_conv, 0))
-        #due to sympy's inability to solve sums, we have to do this one manually
-        dTdt = simplify(factor_and_solve(energy_conv, diff(T, t)))
-        num, den = fraction(dTdt)
-        dTdt = num / simplify(den)
-        write_eq(Eq(diff(T, t), dTdt))
-        
+        return
     else:
-        energy_conv = simplify(energy_conv.subs(U_sym, U).subs(P_sym, P))
+        raise NotImplementedError
+
 
     #Temperature jacobian entries
     dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
@@ -468,10 +502,28 @@ def derivation(file, conp = True):
 
 
 if __name__ == '__main__':
-    with open('derivations/derivs.tex', 'w') as file:
-        file.write(r'\documentclass[a4paper,10pt]{article}' + '\n' +
-                   r'\usepackage[utf8]{inputenc}' + '\n'
-                   r'\usepackage{amsmath}' + '\n')
-        file.write(r'\begin{document}' + '\n') 
-        derivation(file)
-        file.write(r'\end{document}' + '\n') 
+    class filer(object):
+        def __init__(self, name, mode):
+            self.name = name
+            self.mode = mode
+            self.lines = []
+        def write(self, thestr):
+            self.lines.append(thestr)
+        def close(self):
+            with open(self.name, self.mode) as file:
+                file.writelines(self.lines)
+
+    file = filer('derivations/derivs.tex', 'w')
+    file.write(r'\documentclass[a4paper,10pt]{article}' + '\n' +
+               r'\usepackage[utf8]{inputenc}' + '\n'
+               r'\usepackage{amsmath}' + '\n' +
+               r'\usepackage{breqn}' + '\n')
+    file.write(r'\begin{document}' + '\n')
+    def finalize():
+        file.write(r'\end{document}' + '\n')
+        file.lines = [line.replace(r'\begin{equation}', r'\begin{dmath} ').replace(
+            r'\end{equation}', r'\end{dmath}') for line in file.lines]
+        file.close()
+    derivation(file)
+    finalize()
+    

@@ -137,7 +137,7 @@ class gas_constant(with_metaclass(Singleton, NumberSymbol)):
     r_val = 8.3144621
 
     def _latex(self, printer):
-        return r"\bar{R}"
+        return r"{R_u}"
 
     @staticmethod
     def abs():
