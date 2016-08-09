@@ -1,6 +1,6 @@
 from sympy.interactive import init_printing
 from sympy.simplify.radsimp import collect, fraction
-from sympy.simplify.simplify import simplify, cancel, separatevars
+from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify
 from sympy.solvers.solvers import solve
 from sympy.core.symbol import symbols, Symbol
 from sympy.core.relational import Eq
@@ -31,62 +31,6 @@ def latex(expr, **settings):
 
 base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
 base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
-class SymbolicFunction(Function):
-    def __new__(cls, name, *args, **options):
-        full_print = False
-        functional_form = args[0]
-        if 'full_print' in options:
-            full_print = options['full_print']
-            del options['full_print']
-
-        obj = Function.__new__(cls, name, *args, **options)
-        obj.functional_form = functional_form
-        obj.full_print = full_print
-        return obj
-
-    def symbol(self):
-        return self.args[0]
-
-    def _eval_subs(self, old, new):
-        if self == old:
-            return new
-        if self.functional_form.has(old):
-            return SymbolicFunction(str(self), \
-            self.functional_form.subs(old, new))
-        return new
-
-    @property
-    def free_symbols(self):
-        return super(SymbolicFunction, self).free_symbols.union(
-            self.functional_form.free_symbols)
-
-    def __str__(self):
-        if not self.full_print:
-            return self.args[0].__str__()
-        else:
-            return self.functional_form.__str__()
-
-    def _latex(self, *args, **kwargs):
-        return self.__str__()
-
-    def _eval_diff(self, wrt, **kw_args):
-            return self._eval_derivative(wrt)
-
-    def _eval_derivative(self, wrt):
-        if self == wrt:
-            return S.One
-        else:
-
-            funcof = self.functional_form.free_symbols
-            i = 0
-            l = []
-            base_str = base_str_total if len(funcof) == 1 else base_str_partial
-            da = self.functional_form.diff(wrt)
-            if da is S.Zero:
-                return S.Zero
-            return SymbolicFunction(Symbol(base_str.format(
-                str(self.args[0]), str(wrt))), da,
-            full_print=self.full_print)
 
 class ImplicitSymbol(Symbol):
     def __new__(cls, name, args, **assumptions):
@@ -133,8 +77,7 @@ class ImplicitSymbol(Symbol):
                 if da is S.Zero:
                     continue
                 df = ImplicitSymbol(base_str.format(
-                str(self.name), str(wrt)), args=self.functional_form)
-                
+                str(self.name), str(a)), args=self.functional_form)
                 l.append(df * da)
             return Add(*l)
 
@@ -177,11 +120,11 @@ class IndexedFunc(IndexedBase):
         def _eval_subs(self, old, new):
             if self == old:
                 return new
-            if self.functional_form.has(old):
+            if any(x.has(old) for x in self._get_iter_func()):
                 return IndexedFunc.IndexedFuncValue(self.base, 
-                self.functional_form.subs(old, new),
+                tuple(x.subs(old, new) for x in self._get_iter_func()),
                 *self.indices)
-            return new
+            return self
 
         def _get_iter_func(self):
             funcof = self.functional_form
@@ -219,7 +162,7 @@ class IndexedFunc(IndexedBase):
                     if da is S.Zero:
                         continue
                     df = IndexedFunc(base_str.format(
-                    str(self.base), str(wrt)), args=self.functional_form)[self.args[1]]
+                    str(self.base), str(a)), args=self.functional_form)[self.args[1]]
                     
                     l.append(df * da)
                 return Add(*l)
@@ -248,13 +191,11 @@ class IndexedFunc(IndexedBase):
 Actual derivation
 """
 
-def write_eq(eq):
-    if isinstance(eq, SymbolicFunction) or \
-       isinstance(eq, IndexedFunc.IndexedFuncValue) or \
-       isinstance(eq, ImplicitSymbol):
-        file.write(latex(Eq(eq, eq.functional_form), mode='equation') + '\n')
+def write_eq(*args):
+    if len(args) == 2:
+        file.write(latex(Eq(args[0], args[1]), mode='equation') + '\n')
     else:
-        file.write(latex(eq, mode='equation') + '\n')
+        file.write(latex(*args, mode='equation') + '\n')
 
 def write_dummy_eq(text):
     file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
@@ -289,13 +230,11 @@ def sum_simplifier(expr):
         elif isinstance(arg, Mul):
             out_args.append(sum_simplifier(arg))
         elif isinstance(arg, Add):
-            out_args.append(Add(*[sum_simplifier(x) for x in arg.args]))
+            out_args.append(
+                simplify(Add(*[sum_simplifier(x) for x in arg.args])))
         else:
             out_args.append(simplify(arg))
     return Mul(*out_args)
-
-def functional_simplfier(expr):
-    return expr.subs([(x, x.functional_form) for x in expr.atoms(SymbolicFunction)])
 
 def derivation(file, conp = True):
     #mechanism size
@@ -362,17 +301,19 @@ def derivation(file, conp = True):
     #some constants, and state variables
     Patm = S.atm_pressure
     R = S.gas_constant
-    m = S.mass
+    m_sym = S.mass
 
     #define concentration
     if conp:
         P = S.pressure
-        V = ImplicitSymbol('V', t)
-        state_vec = [T, Ci[1], Ci[2], Ci[Ns - 1]]
+        V_sym = ImplicitSymbol('V', t)
+        V = V_sym
+        state_vec = [T, Ci[1], Ci[2], Ci[Ns]]
     else:
         V = S.volume
-        P = SymbolicFunction('P', t)
-        state_vec = [T, Ci[1], Ci[2], Ci[Ns - 1]]
+        P_sym = ImplicitSymbol('P', t)
+        P = P_sym
+        state_vec = [T, Ci[1], Ci[2], Ci[Ns]]
 
     #define state vector
     state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
@@ -385,33 +326,40 @@ def derivation(file, conp = True):
         ','.join([str(diff(x, t)) for x in state_vec[:-1]]),
         str(diff(state_vec[-1], t))))
 
-    n = SymbolicFunction('n', P * V / (R * T))
-    write_eq(n)
+    n_sym = ImplicitSymbol('n', t)
+    n = P * V / (R * T)
+    write_eq(n_sym, n)
 
-    Ctot = SymbolicFunction(Symbol('[C]'), P / (R * T))
-    write_eq(Ctot)
-    Cns = SymbolicFunction(Symbol('[C]_{N_s}'), Ctot - Sum(Ci[i], (i, 1 , Ns - 1)))
-    write_eq(Cns)
-
-    Xi = IndexedFunc('X', Ci / Ctot)
-    Xns = Cns / Ctot
+    Ctot_sym = ImplicitSymbol('[C]', t)
+    Ctot = P / (R * T)
+    write_eq(Ctot_sym, Ctot)
+    Cns_sym = ImplicitSymbol('[C]_{N_s}', t)
+    Cns = Ctot - Sum(Ci[i], (i, 1 , Ns - 1))
+    write_eq(Cns_sym, Cns)
 
     #molecular weight
-    W = factor_terms(Sum(Wi[i] * Xi[i], (i, 1, Ns - 1)) + Wi[Ns] * Xns,
+    W = factor_terms((Sum(Wi[i] * Ci[i], (i, 1, Ns - 1)) + Wi[Ns] * Cns) / Ctot,
         1 / Ctot)
-    W = SymbolicFunction('W', W)
-    write_eq(W)
+    W = simplify(expand(W))
+    W_sym = ImplicitSymbol('W', t)
+    write_eq(W_sym, W)
+
+    m = n * W
+    density = m / V
+    density_sym = ImplicitSymbol(r'\rho', t)
+    write_eq(density_sym, n_sym * W_sym / V_sym)
 
     #polyfits
     a = IndexedBase('a')
 
-    cp = R * (a[i, 0] + T * (a[i, 1] + T * (a[i, 2] + T * (a[i, 3] + a[i, 4] * T))))
+    cpfunc = (R * (a[i, 0] + T * (a[i, 1] + T * (a[i, 2] + T * (a[i, 3] + a[i, 4] * T))))) / Wi[i]
     cpi = IndexedFunc('{c_p}', T)
+    cp_tot_sym = ImplicitSymbol(r'\bar{c_p}', T)
 
-    write_eq(Eq(cpi[i], cp))
-    write_eq(Eq(diff(cpi[i], T), simplify(diff(cp, T))))
+    write_eq(Eq(cpi[i], cpfunc))
+    write_eq(Eq(diff(cpi[i], T), simplify(diff(cpfunc, T))))
 
-    h = R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5)))))
+    h = (R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5)))))) / Wi[i]
     hi = IndexedFunc('h', T)
     write_eq(Eq(hi[i], h))
     write_eq(Eq(diff(hi[i], T), simplify(diff(h, T))))
@@ -422,34 +370,7 @@ def derivation(file, conp = True):
     write_eq(Eq(B_sym[i], B))
     write_eq(Eq(diff(B_sym[i], T), simplify(diff(B, T))))
 
-    U = ImplicitSymbol('U', t)
-    dUdt = diff(U, t)
-    dUdt.functional_form = -P * diff(V, t)
-    write_eq(dUdt)
-
-    if conp:
-        H = SymbolicFunction('H', U + P * V)
-        dHdt = diff(H, t)
-        write_eq(dHdt)
-        dHdt.functional_form = dHdt.functional_form.subs(dUdt, -P * diff(V, t))
-        write_eq(dHdt)
-        #start from dH/dt = 0
-        H.functional_form = V * (Sum(Ci[i] * hi[i], (i, 1, Ns - 1)) + Cns * hi[Ns])
-        write_eq(H)
-
-        H = H.subs(Cns, Cns.functional_form)
-        write_eq(H)
-
-        return
-    else:
-        raise NotImplementedError
-
-
-    #Temperature jacobian entries
-    dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
-    write_eq(Eq(dTdtdx, simplify(diff(dTdt, Ci[j]))))
-    dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
-    write_eq(Eq(dTdtdT, simplify(diff(dTdt, T))))
+    #reaction rates
 
     #arrhenius
     A = IndexedBase(r'A')
@@ -493,7 +414,28 @@ def derivation(file, conp = True):
     
     #net reaction rate
     omega = Sum(rop, (j, 1, Nr))
+    omega_sym = IndexedFunc(Symbol(r'\dot{\omega}'), args=(Ci, T, nu))
     write_eq(Eq(diff(Ci[i], t), omega))
+
+    if conp:
+        dTdt_sym = diff(T, t)
+        dTdt = -1 / (density_sym * cp_tot_sym) * Sum(hi[i] * Wi[i] * omega_sym[i], (i, 1, Ns))
+        write_eq(diff(T, t), dTdt)
+
+        dTdt = dTdt.subs(density_sym, W_sym * Ctot_sym)
+        write_eq(diff(T, t), dTdt)
+
+
+        return
+    else:
+        raise NotImplementedError
+
+
+    #Temperature jacobian entries
+    dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
+    write_eq(Eq(dTdtdx, simplify(diff(dTdt, Ci[j]))))
+    dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
+    write_eq(Eq(dTdtdT, simplify(diff(dTdt, T))))
 
     #concentration Jacobian equations
     dCdot = IndexedFunc(r'\dot{C}', (Ci[k], T))
