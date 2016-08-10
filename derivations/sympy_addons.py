@@ -121,7 +121,7 @@ class IndexedFunc(IndexedBase):
 
     @property
     def free_symbols(self):
-        return super(IndexedBase, self).free_symbols.union(*[
+        return set([self]).union(*[
             x.free_symbols for x in self._get_iter_func()])
 
     class IndexedFuncValue(Indexed):
@@ -197,12 +197,12 @@ class IndexedFunc(IndexedBase):
             # Special case needed because M[*my_tuple] is a syntax error.
             if self.shape and len(self.shape) != len(indices):
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self.label,
+            return IndexedFunc.IndexedFuncValue(self,
                 self.functional_form,
                 *indices, **kw_args)
         else:
             if self.shape and len(self.shape) != 1:
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self.label,
+            return IndexedFunc.IndexedFuncValue(self,
                 self.functional_form,
                 indices, **kw_args)
