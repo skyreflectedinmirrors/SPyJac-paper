@@ -111,7 +111,7 @@ class IndexedFunc(IndexedBase):
     def _eval_simplify(self, ratio=1.7, measure=None):
         return IndexedFunc(self.label,
             *[simplify(x, ratio=ratio, measure=measure)
-                         for x in self.args])
+                         for x in self._get_iter_func()])
 
     def _get_iter_func(self):
         funcof = self.functional_form
@@ -126,16 +126,21 @@ class IndexedFunc(IndexedBase):
             x.free_symbols for x in self._get_iter_func()])
 
     class IndexedFuncValue(Indexed):
-        def __new__(cls, base, functional_form, *args):
+        def __new__(cls, base, *args):
+            functional_form = args[0]
             obj = Indexed.__new__(cls, base, *args)
             obj.functional_form = functional_form
             return obj
+
+        @property
+        def indices(self):
+            return self.args[2:]
 
         def _eval_simplify(self, ratio=1.7, measure=None):
             return IndexedFunc.IndexedFuncValue(
                         self.base,
                         *[simplify(x, ratio=ratio, measure=measure)
-                                 for x in self.args])
+                                 for x in self._get_iter_func()])
 
         def _eval_subs(self, old, new):
             if self == old:
@@ -150,8 +155,8 @@ class IndexedFunc(IndexedBase):
             funcof = self.functional_form
             if not hasattr(self.functional_form, '__iter__'):
                 funcof = [self.functional_form]
-
             return funcof
+
         def _eval_diff(self, wrt, **kw_args):
             return self._eval_derivative(wrt)
         def _eval_derivative(self, wrt):
@@ -182,7 +187,7 @@ class IndexedFunc(IndexedBase):
                     if da is S.Zero:
                         continue
                     df = IndexedFunc(base_str.format(
-                    str(self.base), str(a)), args=self.functional_form)[self.args[1]]
+                    str(self.base), str(a)), args=self.functional_form)[self.indices]
                     
                     l.append(df * da)
                 return Add(*l)
