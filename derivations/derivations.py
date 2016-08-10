@@ -1,12 +1,13 @@
 from sympy.interactive import init_printing
 from sympy.simplify.radsimp import collect, fraction
-from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify
+from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify, signsimp
 from sympy.solvers.solvers import solve
 from sympy.core.symbol import symbols, Symbol
 from sympy.core.relational import Eq
 from sympy.core.sympify import sympify
 from sympy.core.mul import Mul
 from sympy.core.add import Add
+from sympy.core.power import Pow
 from sympy.tensor.indexed import Idx, IndexedBase, Indexed
 from sympy.core.symbol import Symbol
 from sympy.concrete import Sum, Product
@@ -170,6 +171,7 @@ class IndexedFunc(IndexedBase):
         @property
         def free_symbols(self):
             return super(Indexed, self).free_symbols.union(*[
+            set([x]) if not isinstance(x, IndexedFunc.IndexedFuncValue) else
             x.free_symbols for x in self._get_iter_func()])
 
     def __getitem__(self, indices, **kw_args):
@@ -242,8 +244,8 @@ def derivation(file, conp = True):
     Nr = S.Nr
 
     #index variables
-    i = Idx('i', Ns + 1)
-    j = Idx('j', Nr + 1)
+    i = Idx('i', (1, Ns + 1))
+    j = Idx('j', (1, Nr + 1))
     k = Idx('k')
 
     #time
@@ -333,14 +335,18 @@ def derivation(file, conp = True):
     Ctot_sym = ImplicitSymbol('[C]', t)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
-    Cns_sym = ImplicitSymbol('[C]_{N_s}', t)
+    Cns_sym = ImplicitSymbol('[C]_{N_s}', args=(P, T))
     Cns = Ctot - Sum(Ci[i], (i, 1 , Ns - 1))
     write_eq(Cns_sym, Cns)
 
     #molecular weight
-    W = factor_terms((Sum(Wi[i] * Ci[i], (i, 1, Ns - 1)) + Wi[Ns] * Cns) / Ctot,
-        1 / Ctot)
-    W = simplify(expand(W))
+    Cns_simp = 1 - Sum(Ci[i], (i, 1 , Ns - 1)) / Ctot
+    assert expand(Cns / Ctot) - expand(Cns_simp) == 0
+    W = Sum(Wi[i] * Ci[i], (i, 1, Ns - 1)) / Ctot_sym + Wi[Ns] * Cns_simp.subs(1 / Ctot, 1 / Ctot_sym)
+    W_new = Wi[Ns] + Sum(Ci[i] * (Wi[i] - Wi[Ns]), (i, 1, Ns - 1)) / Ctot_sym
+    assert simplify(W - W_new) == 0
+    W = W_new
+    
     W_sym = ImplicitSymbol('W', t)
     write_eq(W_sym, W)
 
@@ -349,15 +355,23 @@ def derivation(file, conp = True):
     density_sym = ImplicitSymbol(r'\rho', t)
     write_eq(density_sym, n_sym * W_sym / V_sym)
 
+    #mass fractions
+    Yi_sym = IndexedFunc('Y', args=(density, Ci[i], Wi[i]))
+    Yi = Ci[i] * Wi[i]/ density_sym
+
+    write_eq(Yi_sym[i], Yi)
+
     #polyfits
     a = IndexedBase('a')
 
     cpfunc = (R * (a[i, 0] + T * (a[i, 1] + T * (a[i, 2] + T * (a[i, 3] + a[i, 4] * T))))) / Wi[i]
-    cpi = IndexedFunc('{c_p}', T)
+    cp = IndexedFunc('{c_p}', T)
     cp_tot_sym = ImplicitSymbol(r'\bar{c_p}', T)
+    cp_tot = Sum(Yi_sym[i] * cp[i], (i, 1, Ns))
+    write_eq(cp_tot_sym, cp_tot)
 
-    write_eq(Eq(cpi[i], cpfunc))
-    write_eq(Eq(diff(cpi[i], T), simplify(diff(cpfunc, T))))
+    write_eq(Eq(cp[i], cpfunc))
+    write_eq(Eq(diff(cp[i], T), simplify(diff(cpfunc, T))))
 
     h = (R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5)))))) / Wi[i]
     hi = IndexedFunc('h', T)
@@ -414,8 +428,9 @@ def derivation(file, conp = True):
     
     #net reaction rate
     omega = Sum(rop, (j, 1, Nr))
-    omega_sym = IndexedFunc(Symbol(r'\dot{\omega}'), args=(Ci, T, nu))
-    write_eq(Eq(diff(Ci[i], t), omega))
+    omega_sym = IndexedFunc(Symbol(r'\dot{\omega}'), args=(Ci[i], T, nu))
+
+    write_eq(Eq(diff(Ci[i], t), Eq(omega_sym[i], omega)))
 
     if conp:
         dTdt_sym = diff(T, t)
@@ -425,17 +440,71 @@ def derivation(file, conp = True):
         dTdt = dTdt.subs(density_sym, W_sym * Ctot_sym)
         write_eq(diff(T, t), dTdt)
 
+        cp_tot = cp_tot.subs(Sum(cp[i] * Yi_sym[i], (i, 1, Ns)), Sum(cp[i] * Yi, (i, 1, Ns)))
+        write_eq(cp_tot_sym, cp_tot)
+        cp_tot = simplify(cp_tot).subs(density_sym, W_sym * Ctot_sym)
+        write_eq(cp_tot_sym, cp_tot)
 
-        return
+        dTdt = dTdt.subs(W_sym * Ctot_sym * cp_tot_sym, W_sym * Ctot_sym * cp_tot)
+
+        write_eq(diff(T, t), dTdt)
+
+        dTdt = dTdt.subs(Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns)),
+            Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns - 1)) + Wi[Ns] * Cns * cp[Ns])
+
+        write_eq(diff(T, t), dTdt)
+
+        num, den = fraction(dTdt)
+        new_den = Sum(Ci[i] * (Wi[i] * cp[i] - Wi[Ns] * cp[Ns]), (i, 1, Ns - 1)) + Wi[Ns] * cp[Ns] * Ctot
+
+        assert(simplify(den - new_den) == 0)
+
+        dTdt = num / new_den.subs(Ctot, Ctot_sym)
+        write_eq(diff(T, t), dTdt)
+
     else:
         raise NotImplementedError
 
-
     #Temperature jacobian entries
-    dTdtdx = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
-    write_eq(Eq(dTdtdx, simplify(diff(dTdt, Ci[j]))))
+    dTdC_sym = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
+    #need to do some trickery here to get the right derivative
+    #due to weirdness with differentiation of indxedfunc's
+    num, den = fraction(dTdt)
+
+    omega_i = Function(r'\dot{\omega}_i')(Ci[j], T, i)
+    num = Sum(Wi[i] * omega_i * hi[i], (i, 1, Ns))
+    dTdt_new = num / den
+    write_eq(diff(T, t), dTdt_new)
+
+    dTdC = diff(dTdt_new, Ci[j])
+    write_eq(dTdC_sym, dTdC)
+    dTdC = simplify(dTdC)
+    write_eq(dTdC_sym, dTdC)
+
+    #make it more compact for sanity
+    num, den = fraction(dTdC)
+    subs_expr_den, power = den.args[:]
+    subs_expr_num = Add.make_args(subs_expr_den)
+    sum_term = next(term for term in subs_expr_num if term.has(Sum))
+    subs_expr_num = Add(*[x for x in subs_expr_num if x != sum_term]) + simplify(sum_term)
+    
+    dTdC = num.subs(subs_expr_num, Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns))) / den.subs(
+        subs_expr_den, Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns)))
+
+    write_eq(dTdC_sym, dTdC)
+
+    #one more level of compactness, replaces the kronecker delta sum
+    num, den = fraction(dTdC)
+    num_terms = Add.make_args(num)
+    kd_term = next(x for x in num_terms if x.has(KroneckerDelta))
+    num_terms = Add(*[x for x in num_terms if x != kd_term])
+    kd_term = kd_term.subs(Sum((Wi[Ns] * cp[Ns] - Wi[i] * cp[i]) * KroneckerDelta(i, j), (i, 1, Ns - 1)),
+        (Wi[Ns] * cp[Ns] - Wi[j] * cp[j]))
+    dTdC = (num_terms + kd_term) / den
+    write_eq(dTdC_sym, dTdC)
+
     dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
-    write_eq(Eq(dTdtdT, simplify(diff(dTdt, T))))
+    write_eq(Eq(dTdtdT, simplify(diff(dTdt_new, T))))
 
     #concentration Jacobian equations
     dCdot = IndexedFunc(r'\dot{C}', (Ci[k], T))
