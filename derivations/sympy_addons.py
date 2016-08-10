@@ -4,6 +4,7 @@ from sympy.concrete import Product
 from sympy.core.compatibility import is_sequence
 from sympy.core.singleton import S
 from sympy.core.add import Add
+from sympy.core.function import Derivative
 from sympy.functions.special.tensor_functions import KroneckerDelta
 
 base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'

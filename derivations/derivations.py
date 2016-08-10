@@ -32,6 +32,15 @@ class CustomLatexPrinter(LatexPrinter):
 def latex(expr, **settings):
     return CustomLatexPrinter(settings).doprint(expr)
 
+#some custom behaviour for concentrations
+class IndexedConc(IndexedFunc):
+    _diff_wrt = True
+    def _eval_derivative(self, wrt):
+        if isinstance(wrt, IndexedFunc.IndexedFuncValue) and \
+            isinstance(wrt.base, IndexedConc):
+            return Symbol(r'\frac{{\partial[C]}}{{\partial{}}}'.format(
+                wrt))
+        return S.Zero
 """
 Actual derivation
 """
@@ -97,7 +106,7 @@ def conp_derivation(file):
 
     #thermo vars
     T = ImplicitSymbol('T', t)
-    Ci = IndexedFunc('[C]', t)
+    Ci = IndexedConc('[C]', t)
     Wi = IndexedBase('W')
 
     #some constants, and state variables
@@ -257,12 +266,15 @@ def conp_derivation(file):
     write_eq(diff(T, t), dTdt)
 
     #Temperature jacobian entries
+
+    #first we do the concentration derivative
     dTdC_sym = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
     #need to do some trickery here to get the right derivative
     #due to weirdness with differentiation of indxedfunc's
     num, den = fraction(dTdt)
 
-    omega_i = Function(r'\dot{\omega}_i')(Ci[j], T, i)
+    omega_i = Function(r'\dot{\omega}_i')(Ci, T, i)
+
     num = Sum(Wi[i] * omega_i * hi[i], (i, 1, Ns))
     dTdt_new = num / den
     write_eq(diff(T, t), dTdt_new)
