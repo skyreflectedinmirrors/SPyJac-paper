@@ -171,19 +171,24 @@ def conp_derivation(file):
     #polyfits
     a = IndexedBase('a')
 
-    cpfunc = (R * (a[i, 0] + T * (a[i, 1] + T * (a[i, 2] + T * (a[i, 3] + a[i, 4] * T))))) / Wi[i]
-    cp = IndexedFunc('{c_p}', T)
-    cp_tot_sym = ImplicitSymbol(r'\bar{c_p}', T)
-    cp_tot = Sum(Yi_sym[i] * cp[i], (i, 1, Ns))
+    cpfunc = (R * (a[i, 0] + T * (a[i, 1] + T * (a[i, 2] + T * (a[i, 3] + a[i, 4] * T)))))
+    cp = IndexedFunc(r'{c_p}^{\circ}', T)
+    cp_mass = IndexedFunc(r'{c_p}', T)
+
+    cp_tot_sym = ImplicitSymbol(r'\bar{c_p}', T,)
+    cp_tot = Sum(Yi_sym[i] * cp_mass[i], (i, 1, Ns))
     write_eq(cp_tot_sym, cp_tot)
 
     write_eq(Eq(cp[i], cpfunc))
     write_eq(Eq(diff(cp[i], T), simplify(diff(cpfunc, T))))
+    write_eq(cp_mass[i], cp[i] / Wi[i])
 
-    h = (R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5)))))) / Wi[i]
-    hi = IndexedFunc('h', T)
-    write_eq(Eq(hi[i], h))
-    write_eq(Eq(diff(hi[i], T), simplify(diff(h, T))))
+    h = (R * T * (a[i, 0] + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 3) + T * (a[i, 3] * Rational(1, 4) + a[i, 4] * T * Rational(1, 5))))))
+    hi = IndexedFunc(r'h^{\circ}', T)
+    hi_mass = IndexedFunc(r'h', T)
+    write_eq(hi[i], h)
+    write_eq(diff(hi[i], T), simplify(diff(h, T)))
+    write_eq(hi_mass[i], hi[i] / Wi[i])
 
     B = a[i, 6] - a[i, 0] + (a[i, 0] - 1) * log(T) + T * (a[i, 1] * Rational(1, 2) + T * (a[i, 2] * Rational(1, 6)  + T * (a[i, 3] * Rational(1, 12)  + a[i, 4] * T * Rational(1, 20)))) - a[i, 5] / T 
     B_sym = IndexedFunc(r'B', T)
@@ -244,7 +249,7 @@ def conp_derivation(file):
     #in terms of mass fraction
 
     dTdt_sym = diff(T, t)
-    dTdt = -1 / (density_sym * cp_tot_sym) * Sum(hi[i] * Wi[i] * omega_sym[i], (i, 1, Ns))
+    dTdt = -1 / (density_sym * cp_tot_sym) * Sum(hi_mass[i] * Wi[i] * omega_sym[i], (i, 1, Ns))
     write_eq(diff(T, t), dTdt)
 
     #next we turn into concentrations
@@ -252,12 +257,21 @@ def conp_derivation(file):
     write_eq(diff(T, t), dTdt)
 
     #do some simplifcation of the cp term
-    cp_tot = cp_tot.subs(Sum(cp[i] * Yi_sym[i], (i, 1, Ns)), Sum(cp[i] * Yi, (i, 1, Ns)))
+    cp_tot = cp_tot.subs(Sum(cp_mass[i] * Yi_sym[i], (i, 1, Ns)), Sum(cp_mass[i] * Yi, (i, 1, Ns)))
     write_eq(cp_tot_sym, cp_tot)
     cp_tot = simplify(cp_tot).subs(density_sym, W_sym * Ctot_sym)
     write_eq(cp_tot_sym, cp_tot)
 
     dTdt = dTdt.subs(W_sym * Ctot_sym * cp_tot_sym, W_sym * Ctot_sym * cp_tot)
+    write_eq(dTdt_sym, dTdt)
+
+    #this will be used many times
+    CiCpSum = Sum(Ci[i] * cp[i], (i, 1, Ns))
+
+    #next we swap out the mass cp's
+    dTdt = dTdt.subs(Sum(Wi[i] * Ci[i] * cp_mass[i], (i, 1, Ns)), CiCpSum).subs(
+        Sum(hi_mass[i] * Wi[i] * omega_sym[i], (i, 1, Ns)),
+        Sum(hi[i] * omega_sym[i], (i, 1, Ns)))
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
@@ -265,13 +279,13 @@ def conp_derivation(file):
     write_eq(diff(T, t), dTdt)
 
     #next expand the summation for derivative taking
-    dTdt = dTdt.subs(Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns)),
-        Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns - 1)) + Wi[Ns] * Cns * cp[Ns])
+    dTdt = dTdt.subs(CiCpSum,
+        Sum(Ci[i] * cp[i], (i, 1, Ns - 1)) + Cns * cp[Ns])
 
     write_eq(diff(T, t), dTdt)
 
     num, den = fraction(dTdt)
-    new_den = Sum(Ci[i] * (Wi[i] * cp[i] - Wi[Ns] * cp[Ns]), (i, 1, Ns - 1)) + Wi[Ns] * cp[Ns] * Ctot
+    new_den = Sum(Ci[i] * (cp[i] - cp[Ns]), (i, 1, Ns - 1)) + cp[Ns] * Ctot
 
     assert(simplify(den - new_den) == 0)
 
@@ -281,76 +295,158 @@ def conp_derivation(file):
     #Temperature jacobian entries
 
     #first we do the concentration derivative
-    dTdC_sym = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
+    dTdotdC_sym = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
     #need to do some trickery here to get the right derivative
     #due to weirdness with differentiation of indxedfunc's
     num, den = fraction(dTdt)
 
     omega_i = Function(r'\dot{\omega}_i')(Ci, T, i)
 
-    num = Sum(Wi[i] * omega_i * hi[i], (i, 1, Ns))
+    num = Sum(omega_i * hi[i], (i, 1, Ns))
     dTdt_new = num / den
     write_eq(diff(T, t), dTdt_new)
 
-    dTdC = diff(dTdt_new, Ci[j])
-    write_eq(dTdC_sym, dTdC)
-    dTdC = simplify(dTdC)
-    write_eq(dTdC_sym, dTdC)
+    dTdotdC = diff(dTdt_new, Ci[j])
+    write_eq(dTdotdC_sym, dTdotdC)
+    dTdotdC = simplify(dTdotdC)
+    write_eq(dTdotdC_sym, dTdotdC)
 
     #make it more compact for sanity
-    num, den = fraction(dTdC)
-    subs_expr_den, power = den.args[:]
-    subs_expr_num = Add.make_args(subs_expr_den)
-    sum_term = next(term for term in subs_expr_num if term.has(Sum))
-    subs_expr_num = Add(*[x for x in subs_expr_num if x != sum_term]) + simplify(sum_term)
-    
-    dTdC = num.subs(subs_expr_num, Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns))) / den.subs(
-        subs_expr_den, Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns)))
+    def __collapse_cp_conc_sum(expr):
+        terms = Add.make_args(expr)
+        subs_terms = []
+        for term in terms:
+            num, den = fraction(term)
+            #denominator is a power of the sum
+            if isinstance(den, Pow):
+                subs_term_den, power = den.args[:]
+            else:
+                subs_term_den = den
+            subs_term_num = simplify(subs_term_den)
+            num = num.subs(subs_term_num, CiCpSum).subs(
+                subs_term_den, CiCpSum)
+            den = den.subs(subs_term_num, CiCpSum).subs(
+                subs_term_den, CiCpSum)
+            subs_terms.append(num / den)
 
-    write_eq(dTdC_sym, dTdC)
+        return Add(*subs_terms)
+
+    dTdotdC = __collapse_cp_conc_sum(dTdotdC)
+    write_eq(dTdotdC_sym, dTdotdC)
 
     #another level of compactness, replaces the kronecker delta sum
-    num, den = fraction(dTdC)
+    num, den = fraction(dTdotdC)
     num_terms = Add.make_args(num)
     kd_term = next(x for x in num_terms if x.has(KroneckerDelta))
     num_terms = Add(*[x for x in num_terms if x != kd_term])
-    kd_term = kd_term.subs(Sum((Wi[Ns] * cp[Ns] - Wi[i] * cp[i]) * KroneckerDelta(i, j), (i, 1, Ns - 1)),
-        (Wi[Ns] * cp[Ns] - Wi[j] * cp[j]))
-    dTdC = (num_terms + kd_term) / den
-    write_eq(dTdC_sym, dTdC)
+    kd_term = kd_term.subs(Sum((cp[Ns] - cp[i]) * KroneckerDelta(i, j), (i, 1, Ns - 1)),
+        (cp[Ns] - cp[j]))
+    dTdotdC = (num_terms + kd_term) / den
+    write_eq(dTdotdC_sym, dTdotdC)
 
     #now expand to replace with the dT/dt term
-    num, den = fraction(dTdC)
-    arg, power = den.args
-    assert power == 2
-    dTdC = Add(*[x / arg for x in Add.make_args(num)]) / arg
-    write_eq(dTdC_sym, dTdC)
+    def __factor_denom(expr):
+        num, den = fraction(expr)
+        arg, power = den.args
+        assert power == 2
+        return Add(*[x / arg for x in Add.make_args(num)]) / arg
 
-    dTdC = dTdC.subs(omega_i, omega_sym[i])
-    write_eq(dTdC_sym, dTdC)
-    num, den = fraction(dTdC)
-    num_terms = Add.make_args(num)
-    dTdt_term = next(term for term in num_terms if not term.has(Derivative))
-    other_nums = [x for x in num_terms if x != dTdt_term]
-    dTdt_terms = Mul.make_args(dTdt_term)
-    coeff = next(term for term in dTdt_terms if term.has(Wi[Ns]))
-    n, d = fraction(Mul(*[term for term in dTdt_terms if term != coeff]))
-    
-    #check that this indeed the term we're expecting
-    assert simplify(n / d + dTdt_simple) == 0
-    dTdt_term = coeff * (-dTdt_sym)
+    dTdotdC = __factor_denom(dTdotdC)
+    write_eq(dTdotdC_sym, dTdotdC)
 
-    other_nums.append(dTdt_term)
-    #and reassamble
-    dTdC = Add(*other_nums) / den
-    write_eq(dTdC_sym, dTdC)
+    def __rep_dT_dt(expr):
+        #the terms here should be some denominator
+        #which we do not consider
+        #multiplied by some add's
+        #one of which contains the dTdt term
+        expr = expr.subs(omega_i, omega_sym[i])
+
+        num, den = fraction(expr)
+        out_terms = []
+        add_terms = Add.make_args(num)
+        for term in add_terms:
+            if term.has(Ci[i]) and term.has(cp[i]) and term.has(omega_sym[i])\
+                and term.has(hi[i]) and term.has(Sum):
+                #this is the one
+                assert isinstance(term, Mul)
+                subterms = Mul.make_args(term)
+                out_sub_terms = []
+                for sterm in subterms:
+                    n, d = fraction(sterm)
+                    if d == CiCpSum:
+                        continue
+                    elif n == Sum(omega_sym[i] * hi[i], (i, 1, Ns)):
+                        continue
+                    out_sub_terms.append(sterm)
+                out_terms.append(Mul(*out_sub_terms) * dTdt_sym)
+            else:
+                out_terms.append(term)
+
+        return Add(*out_terms) / den 
+
+
+    dTdotdC = __rep_dT_dt(dTdotdC)
+    write_eq(dTdotdC_sym, dTdotdC)
 
 
     #up next the temperature derivative
-    dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
+    dTdotdT_sym = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
+    #first we must sub in the actual form of C, as the temperature derivative is non-zero
+    starting = dTdt_new.subs(Ctot_sym, Ctot)
+    write_eq(dTdt_sym, starting)
+    dTdotdT = diff(starting, T)
 
+    write_eq(dTdotdT_sym, dTdotdT)
 
-    write_eq(Eq(dTdtdT, simplify(diff(dTdt_new, T))))
+    #first up, go back to Ctot_sym
+    dTdotdT = dTdotdT.subs(Ctot, Ctot_sym)
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    #and collapse the cp sum
+    dTdotdT = __collapse_cp_conc_sum(dTdotdT)
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    #now we factor out the ci cp sum
+    dTdotdT = factor_terms(dTdotdT, CiCpSum)
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    #and replace the dTdt term
+    dTdotdT = __rep_dT_dt(dTdotdT)
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    #the final simplification is of the [C]cp[ns] term
+    dTdotdT = dTdotdT.subs(Ctot_sym * diff(cp[Ns], T), diff(cp[Ns], T) * Sum(Ci[i], (i, 1, Ns)))
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    num, den = fraction(dTdotdT)
+    #seach for the Ci sums
+    add_terms = Add.make_args(num)
+    simp_term = next(x for x in add_terms if x.has(Sum) and x.has(Ci[i]))
+    add_terms = [x for x in add_terms if x != simp_term]
+    to_simp = Mul.make_args(simp_term)
+    constant = Mul(*[x for x in to_simp if not (x.has(Ci[i]) and x.has(Sum))])
+    to_simp = next(x for x in to_simp if not constant.has(x))
+    #we now have the Ci sum
+
+    #make sure it's the right thing
+    check_term = -diff(cp[Ns], T) * Sum(Ci[i], (i, 1, Ns))\
+        + Sum((diff(cp[Ns], T) - diff(cp[i], T)) * Ci[i], (i, 1, Ns - 1))
+    other_add = Ctot_sym * cp[Ns] / T
+    assert simplify(to_simp - (check_term + other_add)) == 0
+
+    #make the replacement term
+    rep_term = -diff(cp[Ns], T) * Sum(Ci[i], (i, 1, Ns - 1)) + -diff(cp[Ns], T) * Ci[Ns] +\
+                    Sum((diff(cp[Ns], T) - diff(cp[i], T)) * Ci[i], (i, 1, Ns - 1))
+    assert simplify(rep_term - (-Sum(diff(cp[i], T) * Ci[i], (i, 1, Ns - 1)) 
+                - diff(cp[Ns], T) * Ci[Ns])) == 0
+
+    #and reconstruct
+    add_terms.append(constant * (-Sum(Ci[i] * diff(cp[i], T), (i, 1, Ns)) + 
+        other_add))
+    dTdotdT = Add(*add_terms) / den
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    return
 
     #concentration Jacobian equations
     dCdot = IndexedFunc(r'\dot{C}', (Ci[k], T))
