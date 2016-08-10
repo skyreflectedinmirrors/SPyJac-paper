@@ -5,7 +5,6 @@ from sympy.core.compatibility import is_sequence
 from sympy.core.singleton import S
 from sympy.core.add import Add
 from sympy.functions.special.tensor_functions import KroneckerDelta
-from sympy.core.function import Derivative
 
 base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
 base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
@@ -92,7 +91,7 @@ class ImplicitSymbol(Symbol):
             i = 0
             l = []
             base_str = base_str_total if len(funcof) == 1 else base_str_partial 
-            for a in self._get_iter_func():
+            for a in funcof:
                 i += 1
                 da = a.diff(wrt)
                 if da is S.Zero:
@@ -137,7 +136,6 @@ class IndexedFunc(IndexedBase):
                         *[simplify(x, ratio=ratio, measure=measure)
                                  for x in self.args])
 
-
         def _eval_subs(self, old, new):
             if self == old:
                 return new
@@ -177,7 +175,7 @@ class IndexedFunc(IndexedBase):
                 l = []
                 funcof = self._get_iter_func()
                 base_str = base_str_total if len(funcof) == 1 else base_str_partial 
-                for a in self._get_iter_func():
+                for a in funcof:
                     i += 1
                     da = a.diff(wrt)
                     if da is S.Zero:
