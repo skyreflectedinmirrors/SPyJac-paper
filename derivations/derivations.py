@@ -12,7 +12,7 @@ from sympy.tensor.indexed import Idx, IndexedBase
 from sympy.concrete import Sum, Product
 from sympy.printing.latex import LatexPrinter
 from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul
-from sympy.functions.elementary.exponential import exp, log
+from sympy.functions.elementary.exponential import exp, log, sqrt
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.core.numbers import Rational
 from sympy.core.exprtools import factor_terms
@@ -34,6 +34,10 @@ def latex(expr, **settings):
 
 #some custom behaviour for concentrations
 class IndexedConc(IndexedFunc):
+    is_Real = True
+    is_Positive = True
+    is_Negative = False
+    is_Number = True
     _diff_wrt = True
     def _eval_derivative(self, wrt):
         if isinstance(wrt, IndexedFunc.IndexedFuncValue) and \
@@ -235,14 +239,19 @@ def conp_derivation(file):
 
     write_eq(Eq(diff(Ci[i], t), Eq(omega_sym[i], omega)))
 
+    #temperature derivative
+
+    #in terms of mass fraction
 
     dTdt_sym = diff(T, t)
     dTdt = -1 / (density_sym * cp_tot_sym) * Sum(hi[i] * Wi[i] * omega_sym[i], (i, 1, Ns))
     write_eq(diff(T, t), dTdt)
 
+    #next we turn into concentrations
     dTdt = dTdt.subs(density_sym, W_sym * Ctot_sym)
     write_eq(diff(T, t), dTdt)
 
+    #do some simplifcation of the cp term
     cp_tot = cp_tot.subs(Sum(cp[i] * Yi_sym[i], (i, 1, Ns)), Sum(cp[i] * Yi, (i, 1, Ns)))
     write_eq(cp_tot_sym, cp_tot)
     cp_tot = simplify(cp_tot).subs(density_sym, W_sym * Ctot_sym)
@@ -250,8 +259,12 @@ def conp_derivation(file):
 
     dTdt = dTdt.subs(W_sym * Ctot_sym * cp_tot_sym, W_sym * Ctot_sym * cp_tot)
 
+    #save a copy of this form as it's very compact
+    dTdt_simple = dTdt
+
     write_eq(diff(T, t), dTdt)
 
+    #next expand the summation for derivative taking
     dTdt = dTdt.subs(Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns)),
         Sum(Wi[i] * Ci[i] * cp[i], (i, 1, Ns - 1)) + Wi[Ns] * Cns * cp[Ns])
 
@@ -296,7 +309,7 @@ def conp_derivation(file):
 
     write_eq(dTdC_sym, dTdC)
 
-    #one more level of compactness, replaces the kronecker delta sum
+    #another level of compactness, replaces the kronecker delta sum
     num, den = fraction(dTdC)
     num_terms = Add.make_args(num)
     kd_term = next(x for x in num_terms if x.has(KroneckerDelta))
@@ -306,7 +319,37 @@ def conp_derivation(file):
     dTdC = (num_terms + kd_term) / den
     write_eq(dTdC_sym, dTdC)
 
+    #now expand to replace with the dT/dt term
+    num, den = fraction(dTdC)
+    arg, power = den.args
+    assert power == 2
+    dTdC = Add(*[x / arg for x in Add.make_args(num)]) / arg
+    write_eq(dTdC_sym, dTdC)
+
+    dTdC = dTdC.subs(omega_i, omega_sym[i])
+    write_eq(dTdC_sym, dTdC)
+    num, den = fraction(dTdC)
+    num_terms = Add.make_args(num)
+    dTdt_term = next(term for term in num_terms if not term.has(Derivative))
+    other_nums = [x for x in num_terms if x != dTdt_term]
+    dTdt_terms = Mul.make_args(dTdt_term)
+    coeff = next(term for term in dTdt_terms if term.has(Wi[Ns]))
+    n, d = fraction(Mul(*[term for term in dTdt_terms if term != coeff]))
+    
+    #check that this indeed the term we're expecting
+    assert simplify(n / d + dTdt_simple) == 0
+    dTdt_term = coeff * (-dTdt_sym)
+
+    other_nums.append(dTdt_term)
+    #and reassamble
+    dTdC = Add(*other_nums) / den
+    write_eq(dTdC_sym, dTdC)
+
+
+    #up next the temperature derivative
     dTdtdT = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
+
+
     write_eq(Eq(dTdtdT, simplify(diff(dTdt_new, T))))
 
     #concentration Jacobian equations
