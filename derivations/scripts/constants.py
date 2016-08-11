@@ -107,7 +107,7 @@ class atm_pressure(with_metaclass(Singleton, NumberSymbol)):
     p_val = 101325
 
     def _latex(self, printer):
-        return r"P"
+        return r"P_{atm}"
 
     @staticmethod
     def abs():
