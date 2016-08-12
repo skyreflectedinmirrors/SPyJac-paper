@@ -1,4 +1,4 @@
-from sympy.interactive import init_printing
+from sympy.interactive.printing import init_printing
 from sympy.simplify.radsimp import collect, fraction
 from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify, signsimp
 from sympy.solvers.solvers import solve
@@ -38,18 +38,55 @@ class CustomLatexPrinter(LatexPrinter):
 def latex(expr, **settings):
     return CustomLatexPrinter(settings).doprint(expr)
 
+class MyImplicitSymbol(ImplicitSymbol):
+    def _get_df(self, arg, wrt):
+        if isinstance(arg, IndexedConc) and \
+                    isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
+                    isinstance(wrt.base, IndexedConc):
+            return MyImplicitSymbol(self.base_str.format(
+                    str(self.name), str(wrt)), args=self.functional_form)
+        return MyImplicitSymbol(self.base_str.format(
+                str(self.name), str(arg)), args=self.functional_form)
+
+class MyIndexedFunc(IndexedFunc):
+    class MyIndexedFuncValue(IndexedFunc.IndexedFuncValue):
+        def _get_df(self, arg, wrt):
+            if isinstance(arg, IndexedConc) and \
+                    isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
+                    isinstance(wrt.base, IndexedConc):
+                return MyIndexedFunc(self.base_str.format(
+                        str(self.base), str(wrt)), args=self.functional_form)[self.indices]
+            return MyIndexedFunc(self.base_str.format(
+                        str(self.base), str(arg)), args=self.functional_form)[self.indices]
+
+    def __getitem__(self, indices, **kw_args):
+        if is_sequence(indices):
+            # Special case needed because M[*my_tuple] is a syntax error.
+            if self.shape and len(self.shape) != len(indices):
+                raise IndexException("Rank mismatch.")
+            return MyIndexedFunc.MyIndexedFuncValue(self,
+                self.functional_form,
+                *indices, **kw_args)
+        else:
+            if self.shape and len(self.shape) != 1:
+                raise IndexException("Rank mismatch.")
+            return MyIndexedFunc.MyIndexedFuncValue(self,
+                self.functional_form,
+                indices, **kw_args)
+
+
+
 #some custom behaviour for concentrations
-class IndexedConc(IndexedFunc):
+class IndexedConc(MyIndexedFunc):
     is_Real = True
     is_Positive = True
     is_Negative = False
     is_Number = True
     _diff_wrt = True
     def _eval_derivative(self, wrt):
-        if isinstance(wrt, IndexedFunc.IndexedFuncValue) and \
+        if isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
             isinstance(wrt.base, IndexedConc):
-            return Symbol(r'\frac{{\partial[C]}}{{\partial{}}}'.format(
-                wrt))
+            return S.One
         return S.Zero
 
 def write_eq(*args, **kw_args):
@@ -76,7 +113,7 @@ t = symbols('t', float=True, finite=True, negative=False, real=True)
 
 
 #thermo vars
-T = ImplicitSymbol('T', t)  
+T = MyImplicitSymbol('T', t)  
 
 #mechanism size
 Ns = S.Ns
@@ -86,6 +123,7 @@ Nr = S.Nr
 k = Idx('k', (1, Ns + 1))
 i = Idx('i', (1, Nr + 1))
 j = Idx('j')
+l = Idx('l')
 m = Idx('m')
 
 Wi = IndexedBase('W')
@@ -105,10 +143,10 @@ def thermo_derivation(Yi_sym, subfile=None):
     #derivation of thermo constants, e.g. enthalpy, cp, etc.
 
     cpfunc = R * (a[k, 0] + T * (a[k, 1] + T * (a[k, 2] + T * (a[k, 3] + a[k, 4] * T))))
-    cp = IndexedFunc(r'{C_p}', T)
-    cp_mass = IndexedFunc(r'{c_p}', T)
+    cp = MyIndexedFunc(r'{C_p}', T)
+    cp_mass = MyIndexedFunc(r'{c_p}', T)
 
-    cp_tot_sym = ImplicitSymbol(r'\bar{c_p}', T,)
+    cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T,)
     if hasattr(Yi_sym, '__getitem__'):
         Yi_sym = Yi_sym[k]
 
@@ -121,8 +159,8 @@ def thermo_derivation(Yi_sym, subfile=None):
         write(cp_tot_sym, cp_tot)
 
     hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T * (a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))))) + a[k, 5])
-    h = IndexedFunc(r'H', T)
-    h_mass = IndexedFunc(r'h', T)
+    h = MyIndexedFunc(r'H', T)
+    h_mass = MyIndexedFunc(r'h', T)
 
     #check that the dH/dT = cp identity holds
     if subfile: #only check once
@@ -136,7 +174,7 @@ def thermo_derivation(Yi_sym, subfile=None):
 
     #finally do the entropy and B terms
     Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
-    s = IndexedFunc(r'S', T)
+    s = MyIndexedFunc(r'S', T)
     if subfile:
         write(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc), 
             expand(Sfunc))
@@ -160,48 +198,51 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
 
     #define for later use
     Ctot = P / (R * T)
+    Cns = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
+    Cns_sym = ImplicitSymbol('[C]_{Ns}', Cns)
+    write(Ck[Ns], Cns)
 
-    omega_sym = IndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P))
+    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P))
     write(diff(Ck[k], t), omega_sym[k])
 
-    q = IndexedFunc('q', args=(Ck, T, P))
+    q = MyIndexedFunc('q', args=(Ck, T, P))
     omega_k = Sum(nu_sym[k, i] * q[i], (i, 1, Nr))
     write(omega_sym[k], omega_k)
 
-    Rop = IndexedFunc('R', args=(Ck, T))
-    ci = IndexedFunc('c', args=(Ck, P))
+    Rop = MyIndexedFunc('R', args=(Ck, T))
+    ci = MyIndexedFunc('c', args=(Ck, P, T))
 
     write(q[i], Rop[i] * ci[i])
 
     #arrhenius coeffs
     A = IndexedBase(r'A')
-    b = IndexedBase(r'b')
+    Beta = IndexedBase(r'\beta')
     Ea = IndexedBase(r'{E_{a}}')
 
     write_sec('Rate of Progress')
-    Ropf_sym = IndexedFunc(r'{R_f}', args=(Ck, T))
-    Ropr_sym = IndexedFunc(r'{R_r}', args=(Ck, T))
+    Ropf_sym = MyIndexedFunc(r'{R_f}', args=(Ck, T))
+    Ropr_sym = MyIndexedFunc(r'{R_r}', args=(Ck, T))
 
     write(Rop[i], Ropf_sym[i] - Ropr_sym[i])
     
-    kf_sym = IndexedFunc(r'{k_f}', T)
-    Ropf = kf_sym * SmartProduct(Ck[k]**nu_f[k, i], (k, 1, Ns))
-    write(Ropf_sym, Ropf)
+    kf_sym = MyIndexedFunc(r'{k_f}', T)
+    Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
+    write(Ropf_sym[i], Ropf)
 
-    kr_sym = IndexedFunc(r'{k_r}', T)
-    Ropr = kr_sym * SmartProduct(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    write(Ropr_sym, Ropr)
+    kr_sym = MyIndexedFunc(r'{k_r}', T)
+    Ropr = kr_sym * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
+    write(Ropr_sym[i], Ropr)
 
     write_sec('Pressure Dependent Forms')
     #write the various ci forms
     ci_elem = 1
     write_dummy('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
 
-    ci_thd_sym = ImplicitSymbol('[X]_i', args=(Ck, Ctot))
+    ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, Ctot))
     write_dummy('c_{{i}} = {}'.format(latex(ci_thd_sym)) + r'\text{\quad for third-body enhanced reactions}')
 
-    Pri = ImplicitSymbol('P_{r, i}', args=(T, Ck, Ctot))
-    Fi = ImplicitSymbol('F_{i}', args=(T, Pri))
+    Pri = MyImplicitSymbol('P_{r, i}', args=(T, Ck, Ctot))
+    Fi = MyImplicitSymbol('F_{i}', args=(T, Pri))
     ci_fall = (Pri / (1 + Pri)) * Fi 
     write_dummy('c_{{i}} = {}'.format(latex(ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
 
@@ -209,13 +250,13 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_dummy('c_{{i}} = {}'.format(latex(ci_fall)) + r'\text{\quad for chemically-activated bimolecular reactions}')
 
     write_sec('Forward Reaction Rate')
-    kf = A[i] * (T**b[i]) * exp(-Ea[i] / (R * T))
+    kf = A[i] * (T**Beta[i]) * exp(-Ea[i] / (R * T))
     write(kf_sym[i], kf)
 
     
     write_sec('Equilibrium Constants')
-    Kp_sym = IndexedFunc(r'{K_p}', args=(T, a))
-    Kc_sym = IndexedFunc(r'{K_c}', args=(T))
+    Kp_sym = MyIndexedFunc(r'{K_p}', args=(T, a))
+    Kc_sym = MyIndexedFunc(r'{K_c}', args=(T))
     write(Kc_sym[i], Kp_sym[i] * ((Patm / (R * T))**Sum(nu_sym[k, i], (k, 1, Ns))))
 
     write_dummy(latex(Kp_sym[i]) + ' = ' + 
@@ -223,7 +264,7 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_dummy(latex(Kp_sym[i]) + ' = ' + 
         r'\text{exp}(\sum_{k=1}^{N_s}\frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T})')
 
-    B_sym = IndexedFunc('B', T)
+    B_sym = MyIndexedFunc('B', T)
     Kc = ((Patm / R)**Sum(nu_sym[k, i], (k, 1, Ns))) * exp(Sum(nu_sym[k, i] * B_sym[k], (k, 1, Ns)))
     write(Kc_sym[i], Kc)
 
@@ -240,7 +281,7 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
 
     write_sec('Reverse Reaction Rate')
     kr = kf / Kc
-    kr_sym = IndexedFunc(r'{k_r}', kf_sym[i] / Kc_sym[i])
+    kr_sym = MyIndexedFunc(r'{k_r}', kf_sym[i] / Kc_sym[i])
     write(kr_sym[i], kf_sym[i] / Kc_sym[i])
     
     write_sec('Third Body Efficiencies')
@@ -252,20 +293,20 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}') 
 
     write_sec('Falloff Reactions')
-    k0 = ImplicitSymbol(r'k_{0, i}', T)
-    kinf = ImplicitSymbol(r'k_{\infty, i}', T)
+    k0 = MyImplicitSymbol(r'k_{0, i}', T)
+    kinf = MyImplicitSymbol(r'k_{\infty, i}', T)
     write_dummy(latex(Eq(Pri, ci_thd_sym  * k0 / kinf)) + r'\text{\quad for the mixture as the third body}')
     write_dummy(latex(Eq(Pri, Ck[m] * k0 / kinf)) + r'\text{\quad for the mixture as the third body}')
 
     write_dummy(latex(Eq(Fi, 1)) + r'\text{\quad for Lindemann}')
 
-    Fcent_sym = ImplicitSymbol('F_cent', T)
-    Atroe_sym = ImplicitSymbol('A_{Troe}', args=(Pri, Fcent_sym))
-    Btroe_sym = ImplicitSymbol('B_{Troe}', args=(Pri, Fcent_sym))
+    Fcent_sym = MyImplicitSymbol('F_cent', T)
+    Atroe_sym = MyImplicitSymbol('A_{Troe}', args=(Pri, Fcent_sym))
+    Btroe_sym = MyImplicitSymbol('B_{Troe}', args=(Pri, Fcent_sym))
     Fcent_power = (1 + (Atroe_sym / Btroe_sym)**2)**-1
     write_dummy(latex(Eq(Fi, Fcent_sym**Fcent_power)) + r'\text{\quad for Troe}')
 
-    X_sym = ImplicitSymbol('X', Pri)
+    X_sym = MyImplicitSymbol('X', Pri)
     a_fall, b_fall, c_fall, d_fall, e_fall, \
         Tstar, Tstarstar, Tstarstarstar = symbols('a b c d e T* T** T***')
     write_dummy(latex(Eq(Fi, d_fall * T ** e_fall * (
@@ -289,8 +330,8 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     #pdep
     k1 = Symbol('A_1') * T**Symbol(r'\beta_1') * exp(-Symbol('E_{a, 1}') / (R * T))
     k2 = Symbol('A_2') * T**Symbol(r'\beta_2') * exp(-Symbol('E_{a, 2}') / (R * T))
-    k1_sym = ImplicitSymbol('k_1', k1)
-    k2_sym = ImplicitSymbol('k_2', k2)
+    k1_sym = MyImplicitSymbol('k_1', k1)
+    k2_sym = MyImplicitSymbol('k_2', k2)
     write_dummy(latex(Eq(k1_sym, k1)) + r'\text{\quad at } P_1')
     write_dummy(latex(Eq(k2_sym, k2)) + r'\text{\quad at } P_2')
 
@@ -302,14 +343,46 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
     Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1) 
     Pred = (2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10))
-    Tred_sym = ImplicitSymbol(r'\tilde{T}', Tred)
-    Pred_sym = ImplicitSymbol(r'\tilde{P}', Pred)
+    Tred_sym = MyImplicitSymbol(r'\tilde{T}', Tred)
+    Pred_sym = MyImplicitSymbol(r'\tilde{P}', Pred)
 
     Nt, Np = symbols('N_T N_P')
     eta = IndexedBase(r'\eta')
     kf_cheb = Sum(Sum(eta[i, j] * chebyshevt(m - 1, Tred_sym) * chebyshevt(j - 1, Pred_sym), 
         (j, 1, Np)), (m, 1, Nt))
     write(log(kf_pdep_sym, 10), kf_cheb)
+
+    write_sec('Derivatives')
+    write(diff(omega_sym[k], T), diff(omega_k, T))
+    write(diff(q[i], T), diff(Rop[i] * ci[i], T))
+
+    write(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]))
+    write(diff(q[i], Ck[k]), diff(Rop[i] * ci[i], Ck[j]))
+
+    write(diff(Ropf_sym, T), diff(Ropf, T))
+    write(diff(Ropf_sym, Ck[k]), diff(Ropf, Ck[j]))
+
+    write_dummy(r'\frac{\partial [C_k]}{\partial [C_j]} =' + latex(
+        diff(Ck[k], Ck[j])))
+    write_dummy(r'\frac{\partial [C_{Ns}]}{\partial [C_j]} =' + latex(
+        Eq(diff(Cns, Ck[j]), -S.One)))
+
+    dCnsdCj = diff(Cns**nu_f[k, i], Ck[j])
+    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
+        dCnsdCj))
+    dCnsdCj = simplify(dCnsdCj.subs(Cns, Cns_sym).subs(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1))
+    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
+        dCnsdCj))
+
+    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1), (k, 1, Ns - 1)) - \
+                    nu_f[Ns, i] * Ck[Ns]**(nu_f[Ns, i] - 1)
+    write(diff(Ropf / kf_sym[i], Ck[j]), dRopfdCj)
+
+    write_dummy(latex(diff(Ropf_sym[i], Ck[j])) + ' = ' + latex(kf_sym[i] * (dRopfdCj)) + 
+        latex(Product(Ck[l]**nu_f[l, i], (l, 1, Ns))).replace('l=1', r'\substack{l=1 \\ l \ne k}'))
+
+    dkfdT = factor_terms(diff(kf, T), kf).subs(kf, kf_sym[i])
+    write(diff(kf_sym[i], T), dkfdT)
 
     return nu_sym, nu, omega_sym, omega_k, q, Rop, ci
 
@@ -321,13 +394,13 @@ def conp_derivation(file):
 
     #define concentration
     P = S.pressure
-    V_sym = ImplicitSymbol('V', t)
+    V_sym = MyImplicitSymbol('V', t)
     V = V_sym
     state_vec = [T, Ck[1], Ck[2], Ck[Ns]]
 
     #define state vector
     state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
-    state = ImplicitSymbol(r'\Phi', t)
+    state = MyImplicitSymbol(r'\Phi', t)
     write_dummy_eq(str(state) + state_vec_str.format(
         ','.join([str(x) for x in state_vec[:-1]]),
         str(state_vec[-1])))
@@ -336,14 +409,14 @@ def conp_derivation(file):
         ','.join([str(diff(x, t)) for x in state_vec[:-1]]),
         str(diff(state_vec[-1], t))))
 
-    n_sym = ImplicitSymbol('n', t)
+    n_sym = MyImplicitSymbol('n', t)
     n = P * V / (R * T)
     write_eq(n_sym, n)
 
-    Ctot_sym = ImplicitSymbol('[C]', t)
+    Ctot_sym = MyImplicitSymbol('[C]', t)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
-    Cns_sym = ImplicitSymbol('[C]_{N_s}', args=(P, T))
+    Cns_sym = MyImplicitSymbol('[C]_{N_s}', args=(P, T))
     Cns = Ctot - Sum(Ck[k], (k, 1 , Ns - 1))
     write_eq(Cns_sym, Cns)
 
@@ -355,16 +428,16 @@ def conp_derivation(file):
     assert simplify(W - W_new) == 0
     W = W_new
     
-    W_sym = ImplicitSymbol('W', t)
+    W_sym = MyImplicitSymbol('W', t)
     write_eq(W_sym, W)
 
     m = n * W
     density = m / V
-    density_sym = ImplicitSymbol(r'\rho', t)
+    density_sym = MyImplicitSymbol(r'\rho', t)
     write_eq(density_sym, n_sym * W_sym / V_sym)
 
     #mass fractions
-    Yi_sym = IndexedFunc('Y', args=(density, Ck[k], Wi[k]))
+    Yi_sym = MyIndexedFunc('Y', args=(density, Ck[k], Wi[k]))
     Yi = Ck[k] * Wi[k]/ density_sym
 
     write_eq(Yi_sym[k], Yi)
@@ -380,14 +453,14 @@ def conp_derivation(file):
     return
 
     #rate of progress
-    rop = kf_sym[i] * SmartProduct(Ck[k]**nu_f[k, i], (k, 1, Ns)) - kr_sym * SmartProduct(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    rop_sym = IndexedFunc(r'{R_{net}}', args=(Ck, T, nu))
+    rop = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns)) - kr_sym * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
+    rop_sym = MyIndexedFunc(r'{R_{net}}', args=(Ck, T, nu))
 
     write_eq(Eq(rop_sym[i], rop))
     
     #net reaction rate
     omega = Sum(rop, (i, 1, Nr))
-    omega_sym = IndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck[k], T, nu))
+    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck[k], T, nu))
 
     write_eq(Eq(diff(Ck[k], t), Eq(omega_sym[k], omega)))
 
@@ -596,7 +669,7 @@ def conp_derivation(file):
     return
 
     #concentration Jacobian equations
-    dCdot = IndexedFunc(r'\dot{C}', (Ck[k], T))
+    dCdot = MyIndexedFunc(r'\dot{C}', (Ck[k], T))
     write_eq(Eq(diff(dCdot[k], Ck[i]), simplify(diff(omega, Ck[k]))))
     write_eq(Eq(diff(dCdot[k], T), simplify(diff(omega, T))))
 

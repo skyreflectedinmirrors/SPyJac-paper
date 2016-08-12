@@ -57,6 +57,8 @@ class ImplicitSymbol(Symbol):
     def __new__(cls, name, args, **assumptions):
         obj = Symbol.__new__(cls, name, **assumptions)
         obj.functional_form = args
+        obj.base_str = base_str_total if len(obj._get_iter_func()) == 1\
+                            else base_str_partial 
         return obj
 
     def _get_iter_func(self):
@@ -84,6 +86,10 @@ class ImplicitSymbol(Symbol):
     def _eval_diff(self, wrt, **kw_args):
             return self._eval_derivative(wrt)
 
+    def _get_df(self, a, wrt):
+        return ImplicitSymbol(self.base_str.format(
+                str(self.name), str(a)), args=self.functional_form)
+
     def _eval_derivative(self, wrt):
         if self == wrt:
             return S.One
@@ -91,14 +97,13 @@ class ImplicitSymbol(Symbol):
             funcof = self._get_iter_func()
             i = 0
             l = []
-            base_str = base_str_total if len(funcof) == 1 else base_str_partial 
+            
             for a in funcof:
                 i += 1
                 da = a.diff(wrt)
                 if da is S.Zero:
                     continue
-                df = ImplicitSymbol(base_str.format(
-                str(self.name), str(a)), args=self.functional_form)
+                df = self._get_df(a, wrt)
                 l.append(df * da)
             return Add(*l)
 
@@ -130,6 +135,7 @@ class IndexedFunc(IndexedBase):
             functional_form = args[0]
             obj = Indexed.__new__(cls, base, *args)
             obj.functional_form = functional_form
+            obj.base_str = base_str_total if len(obj._get_iter_func()) == 1 else base_str_partial 
             return obj
 
         @property
@@ -157,6 +163,10 @@ class IndexedFunc(IndexedBase):
                 funcof = [self.functional_form]
             return funcof
 
+        def _get_df(self, a, wrt):
+            return IndexedFunc(base_str.format(
+                    str(self.base), str(a)), args=self.functional_form)[self.indices]
+
         def _eval_diff(self, wrt, **kw_args):
             return self._eval_derivative(wrt)
         def _eval_derivative(self, wrt):
@@ -180,15 +190,12 @@ class IndexedFunc(IndexedBase):
                 i = 0
                 l = []
                 funcof = self._get_iter_func()
-                base_str = base_str_total if len(funcof) == 1 else base_str_partial 
                 for a in funcof:
                     i += 1
                     da = a.diff(wrt)
                     if da is S.Zero:
                         continue
-                    df = IndexedFunc(base_str.format(
-                    str(self.base), str(a)), args=self.functional_form)[self.indices]
-                    
+                    df = self._get_df(a, wrt)
                     l.append(df * da)
                 return Add(*l)
 
