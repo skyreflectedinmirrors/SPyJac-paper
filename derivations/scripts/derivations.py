@@ -14,7 +14,8 @@ from sympy.printing.latex import LatexPrinter
 from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul
 from sympy.functions.elementary.exponential import exp, log, sqrt
 from sympy.functions.special.tensor_functions import KroneckerDelta
-from sympy.core.numbers import Rational
+from sympy.functions.special.polynomials import chebyshevt, chebyshevu
+from sympy.core.numbers import Rational, Float
 from sympy.core.exprtools import factor_terms
 from sympy.core.relational import Equality
 from sympy.core.singleton import S
@@ -62,6 +63,10 @@ def write_dummy_eq(text, **kw_args):
     writer = file if not 'myfile' in kw_args else kw_args['myfile']
     writer.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
 
+def write_section(title, **kw_args):
+    writer = file if not 'myfile' in kw_args else kw_args['myfile']
+    writer.write(r'\section{{{}}}'.format(title) + '\n')
+
 """
 ConP / ConV independent symbols
 """
@@ -81,6 +86,7 @@ Nr = S.Nr
 k = Idx('k', (1, Ns + 1))
 i = Idx('i', (1, Nr + 1))
 j = Idx('j')
+m = Idx('m')
 
 Wi = IndexedBase('W')
 
@@ -135,33 +141,17 @@ def thermo_derivation(Yi_sym, subfile=None):
         write(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc), 
             expand(Sfunc))
 
-    Bk = Sfunc / R - hfunc / (R * T)
+    Bk = simplify(Sfunc / R - hfunc / (R * T))
 
-    Bk_rep = a[k, 6] + a[k, 0] * (log(T) - 1) + T *\
-                (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) +\
-                    T * (a[k, 3] * Rational(1, 12) + a[k, 4] * Rational(1, 20) * T))) -\
-                a[k, 5] / T
+    return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass, Bk
 
-    if subfile:
-        write(Symbol('B_k'), Bk_rep)
-        #only check once
-        assert simplify(Bk - Bk_rep) == 0
-
-        diff_bk_rep = ((a[k, 5] / T) + a[k, 0]) / T + \
-            a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T *(a[k, 3] *\
-                Rational(1, 4) + T * a[k, 4] * Rational(1, 5)))
-
-        #only check once
-        assert simplify(diff(Bk, T) - diff_bk_rep) == 0
-        write(diff(ImplicitSymbol('B_k', T), T), diff_bk_rep)
-
-    return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass, Bk_rep
-
-def reaction_derivation(P, Ck, Bk, subfile):
+def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     def write(*args):
         write_eq(*args, myfile=subfile)
     def write_dummy(*args):
         write_dummy_eq(*args, myfile=subfile)
+    def write_sec(*args):
+        write_section(*args, myfile=subfile)
     nu_f = IndexedBase(r'\nu^{\prime}')
     nu_r = IndexedBase(r'\nu^{\prime\prime}')
     nu = nu_f[k, i] - nu_r[k, i]
@@ -188,12 +178,12 @@ def reaction_derivation(P, Ck, Bk, subfile):
     b = IndexedBase(r'b')
     Ea = IndexedBase(r'{E_{a}}')
 
-    #rate of progress
+    write_sec('Rate of Progress')
     Ropf_sym = IndexedFunc(r'{R_f}', args=(Ck, T))
     Ropr_sym = IndexedFunc(r'{R_r}', args=(Ck, T))
 
     write(Rop[i], Ropf_sym[i] - Ropr_sym[i])
-
+    
     kf_sym = IndexedFunc(r'{k_f}', T)
     Ropf = kf_sym * SmartProduct(Ck[k]**nu_f[k, i], (k, 1, Ns))
     write(Ropf_sym, Ropf)
@@ -202,12 +192,13 @@ def reaction_derivation(P, Ck, Bk, subfile):
     Ropr = kr_sym * SmartProduct(Ck[k]**nu_r[k, i], (k, 1, Ns))
     write(Ropr_sym, Ropr)
 
+    write_sec('Pressure Dependent Forms')
     #write the various ci forms
     ci_elem = 1
     write_dummy('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
 
-    ci_thd = ImplicitSymbol('[X]', args=(Ck, Ctot))
-    write_dummy('c_{{i}} = {}'.format(latex(ci_thd)) + r'\text{\quad for third-body enhanced reactions}')
+    ci_thd_sym = ImplicitSymbol('[X]_i', args=(Ck, Ctot))
+    write_dummy('c_{{i}} = {}'.format(latex(ci_thd_sym)) + r'\text{\quad for third-body enhanced reactions}')
 
     Pri = ImplicitSymbol('P_{r, i}', args=(T, Ck, Ctot))
     Fi = ImplicitSymbol('F_{i}', args=(T, Pri))
@@ -217,15 +208,15 @@ def reaction_derivation(P, Ck, Bk, subfile):
     ci_chem = (1 / (1 + Pri)) * Fi  
     write_dummy('c_{{i}} = {}'.format(latex(ci_fall)) + r'\text{\quad for chemically-activated bimolecular reactions}')
 
-    #forward reaction rate
+    write_sec('Forward Reaction Rate')
     kf = A[i] * (T**b[i]) * exp(-Ea[i] / (R * T))
     write(kf_sym[i], kf)
 
     
-    #equilibrium
+    write_sec('Equilibrium Constants')
     Kp_sym = IndexedFunc(r'{K_p}', args=(T, a))
     Kc_sym = IndexedFunc(r'{K_c}', args=(T))
-    write(Kc_sym[i], Kp_sym[i] * ((Patm / T)**Sum(nu_sym[k, i], (k, 1, Ns))))
+    write(Kc_sym[i], Kp_sym[i] * ((Patm / (R * T))**Sum(nu_sym[k, i], (k, 1, Ns))))
 
     write_dummy(latex(Kp_sym[i]) + ' = ' + 
         r'\text{exp}(\frac{\Delta S^{\circ}_k}{R_u} - \frac{\Delta H^{\circ}_k}{R_u T})')
@@ -233,18 +224,92 @@ def reaction_derivation(P, Ck, Bk, subfile):
         r'\text{exp}(\sum_{k=1}^{N_s}\frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T})')
 
     B_sym = IndexedFunc('B', T)
-    Kc = ((Patm / T)**Sum(nu_sym[k, i], (k, 1, Ns))) * exp(Sum(nu_sym[k, i] * B_sym[k], (k, 1, Ns)))
+    Kc = ((Patm / R)**Sum(nu_sym[k, i], (k, 1, Ns))) * exp(Sum(nu_sym[k, i] * B_sym[k], (k, 1, Ns)))
     write(Kc_sym[i], Kc)
 
-    write_dummy(latex(B_sym[k]) + r'= \frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T}')
+    write_dummy(latex(B_sym[k]) + r'= \frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T} - ln(T)')
 
-    write(B_sym[k], simplify(factor_terms(Bk, T)))
+    Bk = Bk - log(T)
+    Bk_rep = a[k, 6] - a[k, 0] + (a[k, 0] - 1)*log(T) +\
+        T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) + T * \
+            (a[k, 3] * Rational(1, 12) + a[k, 4] * T * Rational(1, 20)))) - \
+        a[k, 5] / T
 
-    #reverse reaction rate
+    assert simplify(Bk - Bk_rep) == 0
+    write(B_sym[k], Bk_rep)
+
+    write_sec('Reverse Reaction Rate')
     kr = kf / Kc
     kr_sym = IndexedFunc(r'{k_r}', kf_sym[i] / Kc_sym[i])
     write(kr_sym[i], kf_sym[i] / Kc_sym[i])
     
+    write_sec('Third Body Efficiencies')
+    thd_bdy_eff = IndexedBase(r'\alpha')
+    ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
+    write(ci_thd_sym, ci_thd)
+    write(ci_thd_sym, Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)))
+
+    write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}') 
+
+    write_sec('Falloff Reactions')
+    k0 = ImplicitSymbol(r'k_{0, i}', T)
+    kinf = ImplicitSymbol(r'k_{\infty, i}', T)
+    write_dummy(latex(Eq(Pri, ci_thd_sym  * k0 / kinf)) + r'\text{\quad for the mixture as the third body}')
+    write_dummy(latex(Eq(Pri, Ck[m] * k0 / kinf)) + r'\text{\quad for the mixture as the third body}')
+
+    write_dummy(latex(Eq(Fi, 1)) + r'\text{\quad for Lindemann}')
+
+    Fcent_sym = ImplicitSymbol('F_cent', T)
+    Atroe_sym = ImplicitSymbol('A_{Troe}', args=(Pri, Fcent_sym))
+    Btroe_sym = ImplicitSymbol('B_{Troe}', args=(Pri, Fcent_sym))
+    Fcent_power = (1 + (Atroe_sym / Btroe_sym)**2)**-1
+    write_dummy(latex(Eq(Fi, Fcent_sym**Fcent_power)) + r'\text{\quad for Troe}')
+
+    X_sym = ImplicitSymbol('X', Pri)
+    a_fall, b_fall, c_fall, d_fall, e_fall, \
+        Tstar, Tstarstar, Tstarstarstar = symbols('a b c d e T* T** T***')
+    write_dummy(latex(Eq(Fi, d_fall * T ** e_fall * (
+        a_fall * exp(-b_fall / T) + exp(-T / c_fall))**X_sym)) + r'\text{\quad for SRI}')
+
+    Fcent = (S.One - a_fall) * exp(-T / Tstarstarstar) + a_fall * exp(-T / Tstar) + \
+        exp(-Tstarstar / T)
+    write(Fcent_sym, Fcent)
+
+    Atroe = log(Pri, 10) - Float(0.67) * log(Fcent, 10) - Float(0.4)
+    write(Atroe_sym, Atroe)
+
+    Btroe = Float(0.806) - Float(1.1762) * log(Fcent, 10) - Float(0.14) * log(Pri, 10)
+    write(Btroe_sym, Btroe)
+
+    X = (1 + (log(Pri, 10))**2)**-1
+    write(X_sym, X)
+
+    write_sec('Pressure-dependent Reactions')
+
+    #pdep
+    k1 = Symbol('A_1') * T**Symbol(r'\beta_1') * exp(-Symbol('E_{a, 1}') / (R * T))
+    k2 = Symbol('A_2') * T**Symbol(r'\beta_2') * exp(-Symbol('E_{a, 2}') / (R * T))
+    k1_sym = ImplicitSymbol('k_1', k1)
+    k2_sym = ImplicitSymbol('k_2', k2)
+    write_dummy(latex(Eq(k1_sym, k1)) + r'\text{\quad at } P_1')
+    write_dummy(latex(Eq(k2_sym, k2)) + r'\text{\quad at } P_2')
+
+    kf_pdep = log(k1, 10) + (log(k2_sym, 10) - log(k1_sym, 10)) * (log(P) - log(Symbol('P_1'))) / (Symbol('P_2') - Symbol('P_1'))
+    kf_pdep_sym = Function('k_f')(T, P)
+    write(log(kf_pdep_sym, 10), kf_pdep)
+
+    #cheb
+    Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
+    Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1) 
+    Pred = (2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10))
+    Tred_sym = ImplicitSymbol(r'\tilde{T}', Tred)
+    Pred_sym = ImplicitSymbol(r'\tilde{P}', Pred)
+
+    Nt, Np = symbols('N_T N_P')
+    eta = IndexedBase(r'\eta')
+    kf_cheb = Sum(Sum(eta[i, j] * chebyshevt(m - 1, Tred_sym) * chebyshevt(j - 1, Pred_sym), 
+        (j, 1, Np)), (m, 1, Nt))
+    write(log(kf_pdep_sym, 10), kf_cheb)
 
     return nu_sym, nu, omega_sym, omega_k, q, Rop, ci
 
@@ -310,7 +375,7 @@ def conp_derivation(file):
     #reaction rates
 
     with filer('conp_reaction_derivation.tex', 'w') as subfile:
-        reaction_derivation(P, Ck, Bk, subfile)
+        reaction_derivation(P, Ck, Ctot_sym, Bk, subfile)
 
     return
 
