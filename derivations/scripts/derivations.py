@@ -209,10 +209,10 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     omega_k = Sum(nu_sym[k, i] * q[i], (i, 1, Nr))
     write(omega_sym[k], omega_k)
 
-    Rop = MyIndexedFunc('R', args=(Ck, T))
+    Rop_sym = MyIndexedFunc('R', args=(Ck, T))
     ci = MyIndexedFunc('c', args=(Ck, P, T))
 
-    write(q[i], Rop[i] * ci[i])
+    write(q[i], Rop_sym[i] * ci[i])
 
     #arrhenius coeffs
     A = IndexedBase(r'A')
@@ -223,14 +223,15 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     Ropf_sym = MyIndexedFunc(r'{R_f}', args=(Ck, T))
     Ropr_sym = MyIndexedFunc(r'{R_r}', args=(Ck, T))
 
-    write(Rop[i], Ropf_sym[i] - Ropr_sym[i])
+    Rop = Ropf_sym[i] - Ropr_sym[i]
+    write(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
     
     kf_sym = MyIndexedFunc(r'{k_f}', T)
     Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
     write(Ropf_sym[i], Ropf)
 
     kr_sym = MyIndexedFunc(r'{k_r}', T)
-    Ropr = kr_sym * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
+    Ropr = kr_sym[i] * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
     write(Ropr_sym[i], Ropr)
 
     write_sec('Pressure Dependent Forms')
@@ -281,14 +282,23 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
 
     write_sec('Reverse Reaction Rate')
     kr = kf / Kc
-    kr_sym = MyIndexedFunc(r'{k_r}', kf_sym[i] / Kc_sym[i])
+    kr_sym = MyIndexedFunc(r'{k_r}', args=(T))
     write(kr_sym[i], kf_sym[i] / Kc_sym[i])
     
     write_sec('Third Body Efficiencies')
     thd_bdy_eff = IndexedBase(r'\alpha')
     ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
     write(ci_thd_sym, ci_thd)
-    write(ci_thd_sym, Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)))
+    ci_thd = Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns))
+    write(ci_thd_sym, ci_thd)
+    ci_thd = ci_thd.subs(Ctot_sym, Ctot).subs(
+        Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)),
+        Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns - 1)) + 
+        (1 - thd_bdy_eff[Ns, i]) * Cns)
+    write(ci_thd_sym, ci_thd)
+    ci_thd = factor_terms(simplify(ci_thd), Ck[k]).subs(Ctot, Ctot_sym)
+
+    write(ci_thd_sym, ci_thd)
 
     write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}') 
 
@@ -354,11 +364,12 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
 
     write_sec('Derivatives')
     write(diff(omega_sym[k], T), diff(omega_k, T))
-    write(diff(q[i], T), diff(Rop[i] * ci[i], T))
+    write(diff(q[i], T), diff(Rop_sym[i] * ci[i], T))
 
     write(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]))
-    write(diff(q[i], Ck[k]), diff(Rop[i] * ci[i], Ck[j]))
+    write(diff(q[i], Ck[k]), diff(Rop_sym[i] * ci[i], Ck[j]))
 
+    write_sec('Rate of Progress Derivatives')
     write(diff(Ropf_sym, T), diff(Ropf, T))
     write(diff(Ropf_sym, Ck[k]), diff(Ropf, Ck[j]))
 
@@ -374,17 +385,111 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
         dCnsdCj))
 
-    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1), (k, 1, Ns - 1)) - \
-                    nu_f[Ns, i] * Ck[Ns]**(nu_f[Ns, i] - 1)
+    def __mod_prod_sum(kval, fwd=True):
+        nuv = nu_f if fwd else nu_r
+        if kval == Ns:
+            return Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1))
+        else:
+            return Product(Ck[l]**nuv[l, i], (l, 1, k - 1), (l, k + 1, Ns))
+
+    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1) * 
+        __mod_prod_sum(k), (k, 1, Ns - 1)) - \
+        nu_f[Ns, i] * Ck[Ns]**(nu_f[Ns, i] - 1) * __mod_prod_sum(Ns)
     write(diff(Ropf / kf_sym[i], Ck[j]), dRopfdCj)
 
-    write_dummy(latex(diff(Ropf_sym[i], Ck[j])) + ' = ' + latex(kf_sym[i] * (dRopfdCj)) + 
-        latex(Product(Ck[l]**nu_f[l, i], (l, 1, Ns))).replace('l=1', r'\substack{l=1 \\ l \ne k}'))
+    def __create_dRopdCj(fwd=True):
+        nuv = nu_f if fwd else nu_r
+        krate = kf_sym[i] if fwd else kr_sym[i]
+        return krate * Sum((1 - 2 * KroneckerDelta(k, Ns)) * nuv[k, i] * Ck[k] ** (nuv[k, i] - 1) * 
+        __mod_prod_sum(k, fwd), (k, 1, Ns))
+
+    dRopfdCj = __create_dRopdCj()
+    write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
+
+    dRoprdCj = __create_dRopdCj(False)
+    write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
     dkfdT = factor_terms(diff(kf, T), kf).subs(kf, kf_sym[i])
     write(diff(kf_sym[i], T), dkfdT)
 
-    return nu_sym, nu, omega_sym, omega_k, q, Rop, ci
+    dRopfdT = diff(Ropf, T).subs(diff(kf_sym[i], T), dkfdT).subs(
+        Ropf, Ropf_sym[i])
+    write(diff(Ropf_sym[i], T), dRopfdT)
+
+    subfile.write('For reactions with explicit reverse Arrhenius coefficients\n')
+
+    A_rexp = IndexedBase(r'{A_{r}}')
+    Beta_rexp = IndexedBase(r'{\beta_r}')
+    Ea_rexp = IndexedBase(r'{E_{a,r}}')
+    kr_rexp = A_rexp[i] * T**Beta_rexp[i] * exp(-Ea_rexp[i] / (R * T))
+    Ropr_rexp = kr_rexp * Product(Ck[l]**nu_r[k, i], (k, 1, Ns))
+    dRopr_rexpdT =  diff(Ropr_rexp, T)
+    dRopr_rexpdT = factor_terms(dRopr_rexpdT, Ropr_rexp / T).subs(Ropr_rexp, Ropr_sym[i])
+    dRop_expdT = dRopfdT - dRopr_rexpdT
+    dRop_expdT = dRop_expdT.subs(Ropf, Ropf_sym[i])
+
+    write(diff(Rop_sym[i], T), dRop_expdT)
+
+    subfile.write('For non-explicit reversible reactions\n')
+    dkrdT = diff(kf_sym[i] / Kc_sym[i], T)
+    write(diff(kr_sym[i], T), dkrdT)
+    dkrdT = dkrdT.subs(diff(kf_sym[i], T), dkfdT)
+    dkrdT = dkrdT.subs(kf_sym[i] / Kc_sym[i], kr_sym[i])
+    dkrdT = factor_terms(dkrdT, kr_sym[i])
+    write(diff(kr_sym[i], T), dkrdT)
+
+    #dkcdT
+    dKcdT = diff(Kc, T)
+    dKcdT = dKcdT.subs(Kc, Kc_sym[i])
+    write(diff(Kc_sym[i], T), dKcdT)
+
+    #sub into dkrdT
+    dkrdT = dkrdT.subs(diff(Kc_sym[i], T), dKcdT)
+    write(diff(kr_sym[i], T), dkrdT)
+
+    #now the full dRdT
+    dRoprdT = diff(Ropr, T).subs(diff(kr_sym[i], T), dkrdT)
+    dRoprdT = dRoprdT.subs(Ropr, Ropr_sym[i])
+    write(diff(Ropr_sym[i], T), dRoprdT)
+
+    dRopdT = diff(Rop, T).subs(diff(Ropf_sym[i], T),
+        dRopfdT).subs(diff(Ropr_sym[i], T), dRoprdT)
+    write(diff(Rop_sym[i], T), dRopdT)
+
+    subfile.write('For all reversible reactions\n')
+    #now do dRop/dCj
+    dRopdCj = diff(Rop, Ck[j]).subs(diff(Ropf_sym[i], Ck[j]),
+        dRopfdCj).subs(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
+    write(diff(Rop_sym[i], Ck[j]), dRopdCj)
+
+    write_sec(r'Third-Body\slash Pressure-Depencence Derivatives')
+    subfile.write('For elementary reactions\n')
+    write(diff(ci[i], T), diff(ci_elem, T))
+    write(diff(ci[i], Ck[j]), diff(ci_elem, Ck[j]))
+
+    subfile.write('For third body enhanced reactions\n')
+    write(diff(ci[i], T), diff(ci_thd.subs(Ctot_sym, Ctot), T))
+    dci_thddCj = diff(ci_thd.subs(Ctot_sym, Ctot), Ck[j])
+    dci_thddCj = dci_thddCj.subs(Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) *
+        KroneckerDelta(j, k), (k, 1, Ns - 1)), thd_bdy_eff[Ns, i] - thd_bdy_eff[j, i])
+    write(diff(ci[i], Ck[j]), dci_thddCj)
+
+    subfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
+    dci_temp = diff(ci_thd.subs(thd_bdy_eff[Ns, i], 1), Ck[j])
+    dci_temp_args = Mul.make_args(dci_temp)
+    sind = next(ind for ind, x in enumerate(dci_temp_args) if x.has(Sum))
+    dci_temp_args = [dci_temp_args[ind] for ind in range(len(dci_temp_args)) 
+        if ind != sind] + [Sum(
+        dci_temp_args[sind].function.subs(thd_bdy_eff[k, i], 1),
+        dci_temp_args[sind].limits)]
+    dci_temp = simplify(Mul(*dci_temp_args))
+    write(diff(ci[i], Ck[j]), dci_temp)
+
+    subfile.write('For unimolecular/recombination fall-of reactions')
+    dci_falldT = factor_terms(diff(ci_fall, T), ci_fall).subs(ci_fall, ci[i])
+    write(diff(ci[i], T), dci_falldT)
+
+    return nu_sym, nu, omega_sym, omega_k, q, Rop_sym, ci
 
 
 
@@ -413,7 +518,7 @@ def conp_derivation(file):
     n = P * V / (R * T)
     write_eq(n_sym, n)
 
-    Ctot_sym = MyImplicitSymbol('[C]', t)
+    Ctot_sym = MyImplicitSymbol('[C]', T)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
     Cns_sym = MyImplicitSymbol('[C]_{N_s}', args=(P, T))
