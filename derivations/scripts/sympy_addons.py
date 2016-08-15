@@ -73,9 +73,12 @@ class ImplicitSymbol(Symbol):
     def _eval_subs(self, old, new):
         if old == self:
             return new
-        if self.functional_form.has(old):
-            return ImplicitSymbol(str(self),
-                self.functional_form.subs(old, new))
+        funcof = self._get_iter_func()
+        for a in funcof:
+            if a.has(old):
+                new_func = [x if x != a else a.subs(old, new) 
+                                for x in funcof]
+                return ImplicitSymbol(str(self), new_func)
         return self
 
     @property
