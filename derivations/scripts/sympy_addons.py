@@ -133,6 +133,9 @@ class IndexedFunc(IndexedBase):
         return set([self]).union(*[
             x.free_symbols for x in self._get_iter_func()])
 
+    def _get_subclass(self, *args):
+        return IndexedFunc.IndexedFuncValue(*args)
+
     class IndexedFuncValue(Indexed):
         def __new__(cls, base, *args):
             functional_form = args[0]
@@ -146,7 +149,7 @@ class IndexedFunc(IndexedBase):
             return self.args[2:]
 
         def _eval_simplify(self, ratio=1.7, measure=None):
-            return IndexedFunc.IndexedFuncValue(
+            return self.__class__(
                         self.base,
                         *[simplify(x, ratio=ratio, measure=measure)
                                  for x in self._get_iter_func()])
@@ -155,9 +158,13 @@ class IndexedFunc(IndexedBase):
             if self == old:
                 return new
             if any(x.has(old) for x in self._get_iter_func()):
-                return IndexedFunc.IndexedFuncValue(self.base, 
+                return self.__class__(self.base,
                 tuple(x.subs(old, new) for x in self._get_iter_func()),
                 *self.indices)
+            elif any(x.has(old) for x in self.indices):
+                return self.__class__(self.base,
+                self.functional_form,
+                *tuple(x.subs(old, new) for x in self.indices))
             return self
 
         def _get_iter_func(self):
@@ -167,7 +174,7 @@ class IndexedFunc(IndexedBase):
             return funcof
 
         def _get_df(self, a, wrt):
-            return IndexedFunc(base_str.format(
+            return IndexedFunc(self.base_str.format(
                     str(self.base), str(a)), args=self.functional_form)[self.indices]
 
         def _eval_diff(self, wrt, **kw_args):
@@ -213,12 +220,12 @@ class IndexedFunc(IndexedBase):
             # Special case needed because M[*my_tuple] is a syntax error.
             if self.shape and len(self.shape) != len(indices):
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self,
+            return self._get_subclass(self.label,
                 self.functional_form,
                 *indices, **kw_args)
         else:
             if self.shape and len(self.shape) != 1:
                 raise IndexException("Rank mismatch.")
-            return IndexedFunc.IndexedFuncValue(self,
+            return self._get_subclass(self.label,
                 self.functional_form,
                 indices, **kw_args)

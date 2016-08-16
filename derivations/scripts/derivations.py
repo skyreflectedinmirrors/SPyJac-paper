@@ -49,30 +49,17 @@ class MyImplicitSymbol(ImplicitSymbol):
                 str(self.name), str(arg)), args=self.functional_form)
 
 class MyIndexedFunc(IndexedFunc):
+    def _get_subclass(self, *args):
+        return MyIndexedFunc.MyIndexedFuncValue(*args)
+
     class MyIndexedFuncValue(IndexedFunc.IndexedFuncValue):
         def _get_df(self, arg, wrt):
             if isinstance(arg, IndexedConc) and \
                     isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
                     isinstance(wrt.base, IndexedConc):
-                return MyIndexedFunc(self.base_str.format(
+                return self.__class__(self.base_str.format(
                         str(self.base), str(wrt)), args=self.functional_form)[self.indices]
-            return MyIndexedFunc(self.base_str.format(
-                        str(self.base), str(arg)), args=self.functional_form)[self.indices]
-
-    def __getitem__(self, indices, **kw_args):
-        if is_sequence(indices):
-            # Special case needed because M[*my_tuple] is a syntax error.
-            if self.shape and len(self.shape) != len(indices):
-                raise IndexException("Rank mismatch.")
-            return MyIndexedFunc.MyIndexedFuncValue(self,
-                self.functional_form,
-                *indices, **kw_args)
-        else:
-            if self.shape and len(self.shape) != 1:
-                raise IndexException("Rank mismatch.")
-            return MyIndexedFunc.MyIndexedFuncValue(self,
-                self.functional_form,
-                indices, **kw_args)
+            return super(MyIndexedFunc.MyIndexedFuncValue, self)._get_df(arg, wrt)
 
 
 
