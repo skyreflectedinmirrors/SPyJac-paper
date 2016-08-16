@@ -347,8 +347,10 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
 
     #pdep
     subfile.write('For PLog reactions\n')
-    k1 = Symbol('A_1') * T**Symbol(r'\beta_1') * exp(-Symbol('E_{a, 1}') / (R * T))
-    k2 = Symbol('A_2') * T**Symbol(r'\beta_2') * exp(-Symbol('E_{a, 2}') / (R * T))
+    A_1, A_2, beta_1, beta_2, Ea_1, Ea_2 = symbols(r'A_1 A_2 \beta_1' +
+        r' \beta_2 E_{a_1} E_{a_2}')
+    k1 = A_1 * T**beta_1 * exp(Ea_1 / (R * T))
+    k2 = A_2 * T**beta_2 * exp(Ea_2 / (R * T))
     k1_sym = MyImplicitSymbol('k_1', T)
     k2_sym = MyImplicitSymbol('k_2', T)
     write_dummy(latex(Eq(k1_sym, k1)) + r'\text{\quad at } P_1')
@@ -363,8 +365,8 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
     Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1) 
     Pred = (2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10))
-    Tred_sym = MyImplicitSymbol(r'\tilde{T}', Tred)
-    Pred_sym = MyImplicitSymbol(r'\tilde{P}', Pred)
+    Tred_sym = MyImplicitSymbol(r'\tilde{T}', T)
+    Pred_sym = MyImplicitSymbol(r'\tilde{P}', P)
 
     Nt, Np = symbols('N_T N_P')
     eta = IndexedBase(r'\eta')
@@ -603,17 +605,29 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_sec('Pressure-dependent reaction derivatives')
     subfile.write('For PLog reactions\n')
     dkf_pdepdT = diff(kf_pdep, T)
+    #since the kf_pdep is expressed as a log
+    #we need to solve for this in terms of dkf/dT
+    mul_term = log(10) * kf_sym[i]
+    assert diff(log(kf_sym[i], 10), T) * mul_term == diff(kf_sym[i], T)
+    dkf_pdepdT = dkf_pdepdT * mul_term
     write(diff(kf_sym[i], T), dkf_pdepdT)
-    #easier to redo with substituted vals
-    dkf_pdepdT = diff(kf_pdep.subs([(k1_sym, k1), (k2_sym, k2)]), T)
-    write(diff(kf_sym[i], T), dkf_pdepdT)
-    #now want to collapse back
-    dkf_pdepdT = collect(dkf_pdepdT, k1)
-    dkf_pdepdT = dkf_pdepdT.subs([(log(k1), log(k1_sym)), (log(k2), log(k2_sym))])
+    #next sub in the corresponding kf derivatives
+    dk1dT = dkfdT.subs([(kf_sym[i], k1_sym),
+        (Beta[i], beta_1), (Ea[i], Ea_1)])
+    dk2dT = dkfdT.subs([(kf_sym[i], k2_sym),
+        (Beta[i], beta_2), (Ea[i], Ea_2)])
+    dkf_pdepdT = dkf_pdepdT.subs([(diff(k1_sym, T), dk1dT), 
+        (diff(k2_sym, T), dk2dT)])
     write(diff(kf_sym[i], T), dkf_pdepdT)
     #and even futher
     dkf_pdepdT = factor_terms(dkf_pdepdT.subs(kf_pdep, kf_pdep_sym), kf_pdep_sym / T)
     write(diff(kf_sym[i], T), dkf_pdepdT)
+
+    subfile.write('For Chebyshev reactions\n')
+    dkf_chebdT = diff(kf_cheb, T) * mul_term
+    write(diff(kf_sym[i], T), dkf_chebdT)
+    dkf_chebdT = dkf_chebdT.subs(diff(Tred_sym, T), diff(Tred, T))
+    write(diff(kf_sym[i], T), dkf_chebdT)
     
     return nu_sym, nu, omega_sym, omega_k, q, Rop_sym, ci
 
