@@ -220,12 +220,12 @@ class IndexedFunc(IndexedBase):
             # Special case needed because M[*my_tuple] is a syntax error.
             if self.shape and len(self.shape) != len(indices):
                 raise IndexException("Rank mismatch.")
-            return self._get_subclass(self.label,
+            return self._get_subclass(self,
                 self.functional_form,
                 *indices, **kw_args)
         else:
             if self.shape and len(self.shape) != 1:
                 raise IndexException("Rank mismatch.")
-            return self._get_subclass(self.label,
+            return self._get_subclass(self,
                 self.functional_form,
                 indices, **kw_args)
