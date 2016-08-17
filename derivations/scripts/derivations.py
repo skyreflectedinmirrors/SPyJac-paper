@@ -119,7 +119,7 @@ j = Idx('j')
 l = Idx('l')
 m = Idx('m')
 
-Wi = IndexedBase('W')
+Wk = IndexedBase('W')
 
 #some constants, and state variables
 Patm = S.atm_pressure
@@ -130,16 +130,20 @@ m_sym = S.mass
 a = IndexedBase('a')
 
 
-def thermo_derivation(Yi_sym, subfile=None):
+def thermo_derivation(Yi_sym, P, V, n, subfile=None):
     def write(*args):
         write_eq(*args, myfile=subfile)
+    def write_dummy(*args):
+        write_dummy_eq(*args, myfile=subfile)
+    def write_sec(*args):
+        write_section(*args, myfile=subfile)
     #derivation of thermo constants, e.g. enthalpy, cp, etc.
 
     cpfunc = R * (a[k, 0] + T * (a[k, 1] + T * (a[k, 2] + T * (a[k, 3] + a[k, 4] * T))))
     cp = MyIndexedFunc(r'{C_p}', T)
     cp_mass = MyIndexedFunc(r'{c_p}', T)
 
-    cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T,)
+    cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T)
     if hasattr(Yi_sym, '__getitem__'):
         Yi_sym = Yi_sym[k]
 
@@ -148,8 +152,20 @@ def thermo_derivation(Yi_sym, subfile=None):
         write(Eq(Eq(Symbol(r'{C_{p,k}}^{\circ}'), cp[k]), cpfunc),
             expand(cpfunc))
         write(diff(cp[k], T), simplify(diff(cpfunc, T)))
-        write(cp_mass[k], cp[k] / Wi[k])
+        write(cp_mass[k], cp[k] / Wk[k])
         write(cp_tot_sym, cp_tot)
+
+    cvfunc = simplify(cpfunc - R)
+    cv = MyIndexedFunc(r'{C_v}', T)
+    cv_mass = MyIndexedFunc(r'{c_v}', T)
+    cv_tot_sym = MyImplicitSymbol(r'\bar{c_v}', T)
+    cv_tot = Sum(Yi_sym * cv_mass[k], (k, 1, Ns))
+    if subfile:
+        write(Eq(Eq(Symbol(r'{C_{v,k}}^{\circ}'), cv[k]), cvfunc),
+            expand(cvfunc))
+        write(diff(cv[k], T), simplify(diff(cvfunc, T)))
+        write(cv_mass[k], cv[k] / Wk[k])
+        write(cv_tot_sym, cv_tot)
 
     hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T * (a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))))) + a[k, 5])
     h = MyIndexedFunc(r'H', T)
@@ -163,7 +179,17 @@ def thermo_derivation(Yi_sym, subfile=None):
         write(Eq(Eq(Symbol(r'H_k^{\circ}'), h[k]), hfunc),
             expand(hfunc))
         write(diff(h[k], T), simplify(diff(hfunc, T)))
-        write(h_mass[k], h[k] / Wi[k])
+        write(h_mass[k], h[k] / Wk[k])
+
+    u = MyIndexedFunc(r'U', T)
+    u_mass = MyIndexedFunc(r'u', T)
+    if subfile:
+        write_dummy(r'H_k = U_k + \frac{P V}{n}')
+        write(h[k], u[k] + P * V / n)
+        ufunc = h[k] - P * V / n
+        ufunc = collect(ufunc.subs(h[k], hfunc), R)
+        write(u[k], ufunc)
+        assert simplify(diff(ufunc, T) - cvfunc) == 0
 
     #finally do the entropy and B terms
     Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
@@ -174,36 +200,84 @@ def thermo_derivation(Yi_sym, subfile=None):
 
     Bk = simplify(Sfunc / R - hfunc / (R * T))
 
-    return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass, Bk
+    return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
+            cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk
 
-def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
+def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, Bk, subfile):
     def write(*args):
         write_eq(*args, myfile=subfile)
     def write_dummy(*args):
         write_dummy_eq(*args, myfile=subfile)
     def write_sec(*args):
         write_section(*args, myfile=subfile)
+
+    write_sec('Definitions')
     nu_f = IndexedBase(r'\nu^{\prime}')
     nu_r = IndexedBase(r'\nu^{\prime\prime}')
     nu = nu_f[k, i] - nu_r[k, i]
     nu_sym = IndexedBase(r'\nu')
     write(nu_sym[k, i], nu)
 
+    conp = P.is_constant()
+    dPdT = None
+    dPdCj = None
+    if not conp:
+        #let's get some Pressure definitions out of the way
+        subfile.write('Pressure derivatives')
+        n_sym = MyImplicitSymbol('n', args=(T, Ck, V))
+        P_real = R * T * n_sym / V
+        write(P_sym, P_real)
+
+        #get values for dP/dT
+        dPdT = diff(P_real, T)
+        write(diff(P, T), dPdT)
+
+        mass = n_sym * W.subs(Ctot_sym, n_sym / V)
+        m_sym = MyImplicitSymbol('m', args=(T, Ck))
+
+        write(m_sym, mass)
+        dmdT = diff(mass, T)
+        write(Eq(diff(m_sym, T), 0), dmdT)
+        dmdT = factor_terms(dmdT)
+        write(diff(m_sym, T), dmdT)
+        dndT = solve(Eq(dmdT, 0), diff(n_sym, T))[0]
+        write(diff(n_sym, T), dndT)
+
+        dPdT = dPdT.subs(diff(n_sym, T), dndT)
+        write(diff(P, T), dPdT)
+        assert dPdT == P_real / T
+        dPdT = P / T
+        write(diff(P, T), dPdT)
+
+        #get values for dP/dCj
+        dPdCj = diff(P_real, Ck[j])
+        write(diff(P, Ck[j]), dPdCj)
+
+        dmdCj = diff(mass, Ck[j])
+        write(Eq(diff(m_sym, Ck[j]), 0), dmdCj)
+        dndCj = solve(Eq(dmdCj, 0), diff(n_sym, Ck[j]))[0]
+        dndCj = simplify(dndCj.subs(
+            Sum(-KroneckerDelta(j, k) * (Wk[Ns] - Wk[k]), (k, 1, Ns - 1)),
+            -(Wk[Ns] - Wk[j])))
+        write(diff(n_sym, Ck[j]), dndCj)
+
+        dPdCj = dPdCj.subs(diff(n_sym, Ck[j]), dndCj)
+        write(diff(P, Ck[j]), dPdCj)
+
     #define for later use
     Ctot = P / (R * T)
     Cns = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
-    Cns_sym = ImplicitSymbol('[C]_{Ns}', Cns)
     write(Ck[Ns], Cns)
 
-    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P))
+    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P_sym))
     write(diff(Ck[k], t), omega_sym[k])
 
-    q = MyIndexedFunc('q', args=(Ck, T, P))
+    q = MyIndexedFunc('q', args=(Ck, T))
     omega_k = Sum(nu_sym[k, i] * q[i], (i, 1, Nr))
     write(omega_sym[k], omega_k)
 
     Rop_sym = MyIndexedFunc('R', args=(Ck, T))
-    ci = MyIndexedFunc('c', args=(Ck, P, T))
+    ci = MyIndexedFunc('c', args=(Ck, T))
 
     write(q[i], Rop_sym[i] * ci[i])
 
@@ -232,11 +306,11 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     ci_elem = 1
     write_dummy('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
 
-    ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, T, P))
+    ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, T, P_sym))
     write_dummy('c_{{i}} = {}'.format(latex(ci_thd_sym)) + r'\text{\quad for third-body enhanced reactions}')
 
-    Pri_sym = MyImplicitSymbol('P_{r, i}', args=(T, Ck, P))
-    Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P))
+    Pri_sym = MyImplicitSymbol('P_{r, i}', args=(T, Ck, P_sym))
+    Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P_sym))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
     write_dummy(latex(Eq(ci[i], ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
 
@@ -349,15 +423,15 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write_dummy(latex(Eq(k1_sym, k1)) + r'\text{\quad at } P_1')
     write_dummy(latex(Eq(k2_sym, k2)) + r'\text{\quad at } P_2')
 
-    kf_pdep = log(k1_sym, 10) + (log(k2_sym, 10) - log(k1_sym, 10)) * (log(P) - log(Symbol('P_1'))) / (log(Symbol('P_2')) - log(Symbol('P_1')))
-    kf_pdep_sym = Function('k_f')(T, P)
-    write(log(kf_pdep_sym, 10), kf_pdep)
+    kf_pdep = log(k1_sym) + (log(k2_sym) - log(k1_sym)) * (log(P) - log(Symbol('P_1'))) / (log(Symbol('P_2')) - log(Symbol('P_1')))
+    kf_pdep_sym = Function('k_f')(T, P_sym)
+    write(log(kf_pdep_sym), kf_pdep)
 
     #cheb
     subfile.write('For Chebyshev reactions\n')
     Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
     Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1) 
-    Pred = (2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10))
+    Pred = simplify((2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10)))
     Tred_sym = MyImplicitSymbol(r'\tilde{T}', T)
     Pred_sym = MyImplicitSymbol(r'\tilde{P}', P)
 
@@ -365,8 +439,10 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     eta = IndexedBase(r'\eta')
     kf_cheb = Sum(Sum(eta[i, j] * chebyshevt(m - 1, Tred_sym) * chebyshevt(j - 1, Pred_sym), 
         (j, 1, Np)), (m, 1, Nt))
-    kf_cheb_sym = Function('k_f')(T, P)
+    kf_cheb_sym = Function('k_f')(T, P_sym)
     write(log(kf_cheb_sym, 10), kf_cheb)
+    write(Tred_sym, Tred)
+    write(Pred_sym, Pred)
 
     write_sec('Derivatives')
     write(diff(omega_sym[k], T), diff(omega_k, T))
@@ -379,17 +455,28 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     write(diff(Ropf_sym, T), diff(Ropf, T))
     write(diff(Ropf_sym, Ck[k]), diff(Ropf, Ck[j]))
 
+    dCkdCj = diff(Ck[k], Ck[j])
     write_dummy(r'\frac{\partial [C_k]}{\partial [C_j]} =' + latex(
-        diff(Ck[k], Ck[j])))
-    write_dummy(r'\frac{\partial [C_{Ns}]}{\partial [C_j]} =' + latex(
-        Eq(diff(Cns, Ck[j]), -S.One)))
+        dCkdCj))
+    
+    dCnsdCj_orig = diff(Cns, Ck[j])
+    dCnsdCj = dCnsdCj_orig.subs(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), S.One)
+    if not conp:
+        dCnsdCj = simplify(dCnsdCj.subs(diff(P, Ck[j]), dPdCj))
 
-    dCnsdCj = diff(Cns**nu_f[k, i], Ck[j])
-    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
-        dCnsdCj))
-    dCnsdCj = simplify(dCnsdCj.subs(Cns, Cns_sym).subs(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1))
-    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
-        dCnsdCj))
+    write_dummy(r'\frac{\partial [C_{Ns}]}{\partial [C_j]} =' + latex(
+        Eq(dCnsdCj_orig, dCnsdCj)))
+
+    dCnsdCj_pow = diff(Cns**nu_f[Ns, i], Ck[j])
+    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial [C_j]} =' + latex(
+        dCnsdCj_pow))
+    dCnsdCj_pow = simplify(dCnsdCj_pow.subs(Cns, Ck[Ns]).subs(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1))
+    write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial [C_j]} =' + latex(
+        dCnsdCj_pow))
+    if not conp:
+        dCnsdCj_pow = simplify(dCnsdCj_pow.subs(diff(P, Ck[j]), dPdCj))
+        write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
+            dCnsdCj_pow))
 
     def __mod_prod_sum(kval, fwd=True):
         nuv = nu_f if fwd else nu_r
@@ -406,8 +493,8 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     def __create_dRopdCj(fwd=True):
         nuv = nu_f if fwd else nu_r
         krate = kf_sym[i] if fwd else kr_sym[i]
-        return krate * Sum((1 - 2 * KroneckerDelta(k, Ns)) * nuv[k, i] * Ck[k] ** (nuv[k, i] - 1) * 
-        __mod_prod_sum(k, fwd), (k, 1, Ns))
+        return krate * Sum((dCkdCj + dCnsdCj * KroneckerDelta(k, Ns)) *\
+                nuv[k, i] * Ck[k] ** (nuv[k, i] - 1) * __mod_prod_sum(k, fwd), (k, 1, Ns))
 
     dRopfdCj = __create_dRopdCj()
     write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
@@ -477,29 +564,40 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     dci_thddT = diff(ci_thd.subs(Ctot_sym, Ctot), T).subs(
         Ctot, Ctot_sym)
     write(diff(ci_thd_sym, T), dci_thddT)
+    if not conp:
+        dci_thddT = dci_thddT.subs(diff(P, T), dPdT).subs(
+                        Ctot, Ctot_sym)
+        write(diff(ci_thd_sym, T), dci_thddT)
+
     dci_thddCj = diff(ci_thd.subs(Ctot_sym, Ctot), Ck[j])
-    dci_thddCj = dci_thddCj.subs(Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) *
+    dci_thddCj = simplify(dci_thddCj).subs(Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) *
         KroneckerDelta(j, k), (k, 1, Ns - 1)), thd_bdy_eff[Ns, i] - thd_bdy_eff[j, i])
     write(diff(ci_thd_sym, Ck[j]), dci_thddCj)
+    if not conp:
+        dci_thddCj = simplify(dci_thddCj.subs(diff(P, Ck[j]), dPdCj))
+        write(diff(ci_thd_sym, Ck[j]), dci_thddCj)
 
     subfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     dci_unity_dCj = diff(Ctot, Ck[j])
     write(diff(ci_thd_sym, Ck[j]), dci_unity_dCj)
+    if not conp:
+        dci_unity_dCj = dci_unity_dCj.subs(diff(P, Ck[j]), dPdCj)
+        write(diff(ci_thd_sym, Ck[j]), dci_unity_dCj)
 
     subfile.write('For unimolecular/recombination fall-off reactions\n')
-    dci_falldT = collect(diff(ci_fall, T).subs(ci_fall, ci[i]), diff(Pri_sym, T))
+    dci_falldT = factor_terms(collect(diff(ci_fall, T).subs(ci_fall, ci[i]), diff(Pri_sym, T)))
     write(diff(ci[i], T), dci_falldT)
 
-    dci_falldCj = collect(diff(ci_fall, Ck[j]).subs(ci_fall, ci[i]), diff(Pri_sym, Ck[j]) / 
-        (Pri_sym + 1))
+    dci_falldCj = factor_terms(collect(diff(ci_fall, Ck[j]).subs(ci_fall, ci[i]), diff(Pri_sym, Ck[j]) / 
+        (Pri_sym + 1)))
     write(diff(ci[i], Ck[j]), dci_falldCj)
 
     subfile.write('For chemically-activated bimolecular reactions\n')
-    dci_chemdT = collect(diff(ci_chem, T).subs(ci_chem, ci[i]), diff(Pri_sym, T))
+    dci_chemdT = factor_terms(collect(diff(ci_chem, T).subs(ci_chem, ci[i]), diff(Pri_sym, T)))
     write(diff(ci[i], T), dci_chemdT)
 
-    dci_chemdCj = collect(diff(ci_chem, Ck[j]).subs(ci_chem, ci[i]), diff(Pri_sym, Ck[j]) / 
-        (Pri_sym + 1))
+    dci_chemdCj = factor_terms(collect(diff(ci_chem, Ck[j]).subs(ci_chem, ci[i]), diff(Pri_sym, Ck[j]) / 
+        (Pri_sym + 1)))
     write(diff(ci[i], Ck[j]), dci_chemdCj)
 
     subfile.write('The $P_{r, i}$ derivatives are:\n')
@@ -529,7 +627,7 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     dPri_specdT = collect(dPri_specdT, Pri_spec / T).subs(Pri_spec, Pri_sym)
     write(diff(Pri_sym, T), dPri_specdT)
 
-    dCmdCj = diff(Ck[m], Ck[j]) - diff(Ck[m], Ck[Ns])
+    dCmdCj = (1 - KroneckerDelta(m, Ns)) * diff(Ck[m], Ck[j]) + KroneckerDelta(m, Ns) * dCnsdCj
     dPri_specdCj = diff(Pri_spec, Ck[j]).subs(diff(Ck[m], Ck[j]), dCmdCj)
     write(diff(Pri_sym, Ck[j]), dPri_specdCj)
 
@@ -543,8 +641,18 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     dPri_unitydT = collect(dPri_unitydT, Pri_unity_sym / T).subs(Pri_unity_sym, Pri_sym)
     write(diff(Pri_sym, T), dPri_unitydT)
 
+    if not conp:
+        dPri_unitydT = dPri_unitydT.subs(diff(P, T), dPdT).subs(
+            Pri_unity, Pri_sym)
+        dPri_unitydT = collect(dPri_unitydT, Pri_sym / T)
+        write(diff(Pri_sym, T), dPri_unitydT)
+
     dPri_unitydCj = diff(Pri_unity, Ck[j])
     write(diff(Pri_sym, Ck[j]), dPri_unitydCj)
+
+    if not conp:
+        dPri_unitydCj = dPri_unitydCj.subs(diff(P, Ck[j]), dPdCj)
+        write(diff(Pri_sym, Ck[j]), dPri_unitydCj)
 
     subfile.write('The $F_i$ derivatives are:\n')
     subfile.write('\n For Lindemann reactions\n')
@@ -598,8 +706,8 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     dkf_pdepdT = diff(kf_pdep, T)
     #since the kf_pdep is expressed as a log
     #we need to solve for this in terms of dkf/dT
-    mul_term = log(10) * kf_sym[i]
-    assert diff(log(kf_sym[i], 10), T) * mul_term == diff(kf_sym[i], T)
+    mul_term = kf_sym[i]
+    assert diff(log(kf_sym[i]), T) * mul_term == diff(kf_sym[i], T)
     dkf_pdepdT = dkf_pdepdT * mul_term
     write(diff(kf_sym[i], T), dkf_pdepdT)
     #next sub in the corresponding kf derivatives
@@ -609,7 +717,10 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
         (Beta[i], beta_2), (Ea[i], Ea_2)])
     dkf_pdepdT = dkf_pdepdT.subs([(diff(k1_sym, T), dk1dT), 
         (diff(k2_sym, T), dk2dT)])
+    if not conp:
+        dkf_pdepdT = dkf_pdepdT.subs(diff(P, T), dPdT)
     write(diff(kf_sym[i], T), dkf_pdepdT)
+
     #and even futher
     dkf_pdepdT = factor_terms(dkf_pdepdT.subs(kf_pdep, kf_pdep_sym))
     write(diff(kf_sym[i], T), dkf_pdepdT)
@@ -620,20 +731,31 @@ def reaction_derivation(P, Ck, Ctot_sym, Bk, subfile):
     dkf_chebdT = dkf_chebdT.subs(diff(Tred_sym, T), diff(Tred, T))
     write(diff(kf_sym[i], T), dkf_chebdT)
 
-    return nu_sym, nu, omega_sym, omega_k, q, Rop_sym, Rop, ci
+    if not conp:
+        dkf_chebdT = dkf_chebdT.subs([(diff(Pred_sym, P), diff(Pred, P)),
+                            (diff(P, T), dPdT)])
+        dkf_chebdT = factor_terms(dkf_chebdT)
+        write(diff(kf_sym[i], T), dkf_chebdT)
+
+    return omega_sym, dPdT, dPdCj
 
 
 
-def conp_derivation(file):
+def derivation(file, conp=True, thermo_deriv=False):
     write_section('State Variables and Definitions')
     #thermo vars
     Ck = IndexedConc('[C]', t)
 
     #define concentration
-    P = S.pressure
-    V_sym = MyImplicitSymbol('V', t, **assumptions)
-    V = V_sym
-    state_vec = [T, Ck[1], Ck[2], Ck[Ns]]
+    if conp:
+        P = S.pressure
+        P_sym = S.pressure
+        V = MyImplicitSymbol('V', t, **assumptions)
+    else:
+        P = MyImplicitSymbol('P', args=(Ck, T))
+        P_sym = S.pressure
+        V = S.volume
+    state_vec = [T, Ck[1], Ck[2], Ck[Ns - 1]]
 
     #define state vector
     state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
@@ -653,15 +775,14 @@ def conp_derivation(file):
     Ctot_sym = MyImplicitSymbol('[C]', args=(P, T), **assumptions)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
-    Cns_sym = MyImplicitSymbol('[C]_{N_s}', args=(P, T, Ck))
     Cns = Ctot - Sum(Ck[k], (k, 1 , Ns - 1))
-    write_eq(Cns_sym, Cns)
+    write_eq(Ck[Ns], Cns)
 
     #molecular weight
     Cns_simp = 1 - Sum(Ck[k], (k, 1 , Ns - 1)) / Ctot
     assert expand(Cns / Ctot) - expand(Cns_simp) == 0
-    W = Sum(Wi[k] * Ck[k], (k, 1, Ns - 1)) / Ctot_sym + Wi[Ns] * Cns_simp.subs(1 / Ctot, 1 / Ctot_sym)
-    W_new = Wi[Ns] + Sum(Ck[k] * (Wi[k] - Wi[Ns]), (k, 1, Ns - 1)) / Ctot_sym
+    W = Sum(Wk[k] * Ck[k], (k, 1, Ns - 1)) / Ctot_sym + Wk[Ns] * Cns_simp.subs(1 / Ctot, 1 / Ctot_sym)
+    W_new = Wk[Ns] + Sum(Ck[k] * (Wk[k] - Wk[Ns]), (k, 1, Ns - 1)) / Ctot_sym
     assert simplify(W - W_new) == 0
     W = W_new
     
@@ -671,30 +792,52 @@ def conp_derivation(file):
     m = n * W
     density = m / V
     density_sym = MyImplicitSymbol(r'\rho', t)
-    write_eq(density_sym, n_sym * W_sym / V_sym)
+    write_eq(density_sym, n_sym * W_sym / V)
 
     #mass fractions
-    Yi_sym = MyIndexedFunc('Y', args=(density, Ck[k], Wi[k]))
-    Yi = Ck[k] * Wi[k]/ density_sym
+    Yi_sym = MyIndexedFunc('Y', args=(density, Ck[k], Wk[k]))
+    Yi = Ck[k] * Wk[k]/ density_sym
 
     write_eq(Yi_sym[k], Yi)
 
     #get all our thermo symbols
-    cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass, Bk = thermo_derivation(Yi)
+    if thermo_deriv:
+        with filer('thermo_derivation.tex', 'w') as subfile:
+            therm_vals = thermo_derivation(Yi_sym, P, V, n, subfile)
+    else:
+        therm_vals = thermo_derivation(Yi_sym, P, V, n, None)
+    cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
+            cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk = therm_vals
 
     #reaction rates
 
-    with filer('conp_reaction_derivation.tex', 'w') as subfile:
-        nu_sym, nu, omega_sym, omega_k, q, Rop_sym, Rop, ci = \
-            reaction_derivation(P, Ck, Ctot_sym, Bk, subfile)
+    with filer('con{}_reaction_derivation.tex'.format(
+        'p' if conp else 'v'), 'w') as subfile:
+        omega_sym, dPdT, dPdCj = reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, Bk, subfile)
 
     write_section('Jacobian entries')
     write_section('Energy Equation')
+
+    if conp:
+        spec_heat = cp
+        spec_heat_tot = cp_tot
+        spec_heat_mass = cp_mass
+        total_spec_heat = cp_tot_sym
+        energy_mass = h_mass
+        energy = h
+    else:
+        spec_heat = cv
+        spec_heat_tot = cv_tot
+        spec_heat_mass = cv_mass
+        total_spec_heat = cv_tot_sym
+        energy_mass = u_mass
+        energy = u
+
     #temperature derivative
     #in terms of mass fraction
 
     dTdt_sym = diff(T, t)
-    dTdt = -1 / (density_sym * cp_tot_sym) * Sum(h_mass[k] * Wi[k] * omega_sym[k], (k, 1, Ns))
+    dTdt = -1 / (density_sym * total_spec_heat) * Sum(energy_mass[k] * Wk[k] * omega_sym[k], (k, 1, Ns))
     write_eq(diff(T, t), dTdt)
 
     #next we turn into concentrations
@@ -702,21 +845,21 @@ def conp_derivation(file):
     write_eq(diff(T, t), dTdt)
 
     #do some simplifcation of the cp term
-    cp_tot = cp_tot.subs(Sum(cp_mass[k] * Yi_sym[k], (k, 1, Ns)), Sum(cp_mass[k] * Yi, (k, 1, Ns)))
-    write_eq(cp_tot_sym, cp_tot)
-    cp_tot = simplify(cp_tot).subs(density_sym, W_sym * Ctot_sym)
-    write_eq(cp_tot_sym, cp_tot)
+    spec_heat_tot = spec_heat_tot.subs(Sum(spec_heat_mass[k] * Yi_sym[k], (k, 1, Ns)), Sum(spec_heat_mass[k] * Yi, (k, 1, Ns)))
+    write_eq(total_spec_heat, spec_heat_tot)
+    spec_heat_tot = simplify(spec_heat_tot).subs(density_sym, W_sym * Ctot_sym)
+    write_eq(total_spec_heat, spec_heat_tot)
 
-    dTdt = dTdt.subs(W_sym * Ctot_sym * cp_tot_sym, W_sym * Ctot_sym * cp_tot)
+    dTdt = dTdt.subs(W_sym * Ctot_sym * total_spec_heat, W_sym * Ctot_sym * spec_heat_tot)
     write_eq(dTdt_sym, dTdt)
 
     #this will be used many times
-    CkCpSum = Sum(Ck[k] * cp[k], (k, 1, Ns))
+    CkCpSum = Sum(Ck[k] * spec_heat[k], (k, 1, Ns))
     
     #next we swap out the mass cp's
-    dTdt = dTdt.subs(Sum(Wi[k] * Ck[k] * cp_mass[k], (k, 1, Ns)), CkCpSum).subs(
-        Sum(h_mass[k] * Wi[k] * omega_sym[k], (k, 1, Ns)),
-        Sum(h[k] * omega_sym[k], (k, 1, Ns)))
+    dTdt = dTdt.subs(Sum(Wk[k] * Ck[k] * spec_heat_mass[k], (k, 1, Ns)), CkCpSum).subs(
+        Sum(energy_mass[k] * Wk[k] * omega_sym[k], (k, 1, Ns)),
+        Sum(energy[k] * omega_sym[k], (k, 1, Ns)))
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
@@ -737,7 +880,7 @@ def conp_derivation(file):
     write_eq(diff(T, t), dTdt)
 
     num, den = fraction(dTdt)
-    new_den = Sum(Ck[k] * (cp[k] - cp[Ns]), (k, 1, Ns - 1)) + cp[Ns] * Ctot
+    new_den = Sum(Ck[k] * (spec_heat[k] - spec_heat[Ns]), (k, 1, Ns - 1)) + spec_heat[Ns] * Ctot
 
     assert(simplify(den - new_den) == 0)
 
@@ -756,6 +899,11 @@ def conp_derivation(file):
     dTdotdC = simplify(diff(dTdt, Ck[j]))
     write_eq(dTdotdC_sym, dTdotdC)
 
+    if not conp:
+        dTdotdC = dTdotdC.subs([(diff(Ctot_sym, P), diff(Ctot, P)),
+            (diff(P, Ck[j]), dPdCj)])
+        write_eq(dTdotdC_sym, dTdotdC)
+
     #make it more compact for sanity
     num, den = fraction(dTdotdC)
     CkCpSum_full = simplify(CkCpSum_full)
@@ -770,8 +918,8 @@ def conp_derivation(file):
     write_eq(dTdotdC_sym, dTdotdC)
 
     #another level of compactness, replaces the kronecker delta sum
-    dTdotdC = dTdotdC.subs(Sum((cp[Ns] - cp[k]) * KroneckerDelta(j, k), (k, 1, Ns - 1)),
-        (cp[Ns] - cp[j]))
+    dTdotdC = dTdotdC.subs(Sum((spec_heat[Ns] - spec_heat[k]) * KroneckerDelta(j, k), (k, 1, Ns - 1)),
+        (spec_heat[Ns] - spec_heat[j]))
     write_eq(dTdotdC_sym, dTdotdC)
 
     #now expand to replace with the dT/dt term
@@ -822,21 +970,21 @@ def conp_derivation(file):
     write_eq(dTdotdT_sym, dTdotdT)
 
     #the final simplification is of the [C]cp[ns] term
-    dTdotdT = dTdotdT.subs(Ctot_sym * diff(cp[Ns], T), diff(cp[Ns], T) * Sum(Ck[k], (k, 1, Ns - 1)) +
-        diff(cp[Ns], T) * Ck[Ns])
+    dTdotdT = dTdotdT.subs(Ctot_sym * diff(spec_heat[Ns], T), diff(spec_heat[Ns], T) * Sum(Ck[k], (k, 1, Ns - 1)) +
+        diff(spec_heat[Ns], T) * Ck[Ns])
     write_eq(dTdotdT_sym, dTdotdT)
 
     num, den = fraction(dTdotdT)
     dTdotdT = simplify(num) / den
     write_eq(dTdotdT_sym, dTdotdT)
 
-    dTdotdT = dTdotdT.subs(diff(cp[Ns], T) * Ck[Ns] + Sum(Ck[k] * diff(cp[k], T), (k, 1, Ns - 1)),
-        Sum(Ck[k] * diff(cp[k], T), (k, 1, Ns)))
+    dTdotdT = dTdotdT.subs(diff(spec_heat[Ns], T) * Ck[Ns] + Sum(Ck[k] * diff(spec_heat[k], T), (k, 1, Ns - 1)),
+        Sum(Ck[k] * diff(spec_heat[k], T), (k, 1, Ns)))
     
     write_eq(dTdotdT_sym, dTdotdT)
     num, den = fraction(dTdotdT)
-    the_sum = Sum(h[k] * diff(omega_sym[k], T) + omega_sym[k] * diff(h[k], T), (k, 1, Ns))
-    num = num.subs(the_sum, Sum(the_sum.function.subs(diff(h[k], T), cp[k]), *the_sum.limits))
+    the_sum = Sum(energy[k] * diff(omega_sym[k], T) + omega_sym[k] * diff(energy[k], T), (k, 1, Ns))
+    num = num.subs(the_sum, Sum(the_sum.function.subs(diff(energy[k], T), spec_heat[k]), *the_sum.limits))
     dTdotdT = T * (collect(simplify(num / T), dTdt_sym) / den)
     write_eq(dTdotdT_sym, dTdotdT)
     
@@ -872,9 +1020,9 @@ if __name__ == '__main__':
             with open(self.name, self.mode) as file:
                 file.writelines(self.lines)
 
-    with filer('thermo_derivation.tex', 'w') as file:
-        thermo_derivation(IndexedBase('Y'), file)
+    #with filer('conp_derivation.tex', 'w') as file:
+    #    derivation(file, True, True)
 
-    with filer('conp_derivation.tex', 'w') as file:
-        conp_derivation(file)
+    with filer('conv_derivation.tex', 'w') as file:
+        derivation(file, False, False)
     
