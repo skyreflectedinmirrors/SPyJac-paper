@@ -44,7 +44,7 @@ class volume(with_metaclass(Singleton, NumberSymbol)):
     is_number = True
     is_algebraic = True
     is_transcendental = False
-    vol_val = 1
+    v_val = 1
 
     def _latex(self, printer):
         return r"V"
