@@ -325,8 +325,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         write(Eq(diff(m_sym, T), 0), dmdT)
         dmdT = factor_terms(dmdT)
         write(diff(m_sym, T), dmdT)
-        import pdb
-        pdb.set_trace()
+
         dndT = solve(Eq(dmdT, 0), diff(n_sym, T))[0]
         register_equal(diff(n_sym, T), dndT)
         write(diff(n_sym, T), dndT)
@@ -354,8 +353,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         dPdCj = assert_subs(dPdCj, (diff(n_sym, Ck[j]), dndCj))
         write(diff(P, Ck[j]), dPdCj)
 
-        dPdCj = assert_subs(dPdCj, Sum((1 - Wk[k] / Wk[Ns]) * KroneckerDelta(k, j), (k, 1, Ns - 1)),
-            1 - Wk[j] / Wk[Ns])
+        dPdCj = assert_subs(dPdCj, (Sum((1 - Wk[k] / Wk[Ns]) * KroneckerDelta(k, j), (k, 1, Ns - 1)),
+            1 - Wk[j] / Wk[Ns]))
         register_equal(diff(P, Ck[j]), dPdCj)
         write(diff(P, Ck[j]), dPdCj)
 
@@ -546,12 +545,12 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     register_equal(diff(Tred_sym, T), diff(Tred, T))
     Pred_sym = MyImplicitSymbol(r'\tilde{P}', P)
     if not conp:
-        register_equal(diff(Pred_sym, P), diff(Pred, P))
+        register_equal(diff(Pred_sym, T), diff(Pred, T))
 
     Nt, Np = symbols('N_T N_P')
     eta = IndexedBase(r'\eta')
-    kf_cheb = Sum(Sum(eta[i, j] * chebyshevt(m - 1, Tred_sym) * chebyshevt(j - 1, Pred_sym), 
-        (j, 1, Np)), (m, 1, Nt))
+    kf_cheb = Sum(eta[i, j] * chebyshevt(m - 1, Tred_sym) * chebyshevt(j - 1, Pred_sym),
+        (j, 1, Np), (m, 1, Nt))
     kf_cheb_sym = Function('k_f')(T, P_sym)
     write(log(kf_cheb_sym, 10), kf_cheb)
     write(Tred_sym, Tred)
@@ -688,7 +687,6 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     subfile.write('For third body enhanced reactions\n')
     dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
                                 (Ctot, Ctot_sym))
-    write(diff(ci_thd_sym, T), dci_thddT)
     if not conp:
         dci_thddT = assert_subs(dci_thddT, (diff(P, T), dPdT),
                                             (Ctot, Ctot_sym))
@@ -802,7 +800,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     if not conp:
         dPri_unitydT = assert_subs(dPri_unitydT, (diff(P, T), dPdT),
-            (Pri_unity, Pri_sym))
+            (Pri_unity, Pri_sym),
+            assumptions=[(Pri_unity, Pri_sym)])
         dPri_unitydT = collect(dPri_unitydT, Pri_sym / T)
         write(diff(Pri_sym, T), dPri_unitydT)
 
@@ -899,7 +898,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     if not conp:
         dkf_chebdT = assert_subs(dkf_chebdT,
-                        (diff(Pred_sym, P), diff(Pred, P)),
+                        (diff(Pred_sym, T), diff(Pred, T)),
                         (diff(P, T), dPdT))
         dkf_chebdT = factor_terms(dkf_chebdT)
         write(diff(kf_sym[i], T), dkf_chebdT)
@@ -935,11 +934,11 @@ def derivation(file, conp=True, thermo_deriv=False):
         ','.join([str(diff(x, t)) for x in state_vec[:-1]]),
         str(diff(state_vec[-1], t))))
 
-    n_sym = MyImplicitSymbol('n', t, **assumptions)
+    n_sym = MyImplicitSymbol('n', args=(Ck, T), **assumptions)
     n = P * V / (R * T)
     write_eq(n_sym, n)
 
-    Ctot_sym = MyImplicitSymbol('[C]', args=(P, T), **assumptions)
+    Ctot_sym = MyImplicitSymbol('[C]', args=(Ck, T), **assumptions)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
     register_equal(Ctot_sym, Ctot)
@@ -1209,11 +1208,14 @@ if __name__ == '__main__':
             with open(self.name, self.mode) as file:
                 file.writelines(self.lines)
 
-    with filer('conp_derivation.tex', 'w') as file:
-        derivation(file, True, True)
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description='generates derivations for SPyJac')
+    parser.add_argument('-conv', '--constant_volume',
+                         action='store_true',
+                         default=False)
 
-    equivalences = {}
+    args = parser.parse_args()
+    conv = args.constant_volume
 
-    with filer('conv_derivation.tex', 'w') as file:
-        derivation(file, False, False)
-    
+    with filer('con{}_derivation.tex'.format('v' if conv else 'p'), 'w') as file:
+        derivation(file, not conv, True)
