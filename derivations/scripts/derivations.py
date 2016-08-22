@@ -1,6 +1,7 @@
 from sympy.interactive.printing import init_printing
 from sympy.simplify.radsimp import collect, fraction
 from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify, signsimp
+from sympy.simplify.ratsimp import ratsimp
 from sympy.solvers.solvers import solve
 from sympy.core.symbol import symbols, Symbol
 from sympy.core.relational import Eq
@@ -262,6 +263,10 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, Bk, subfile):
         write(diff(n_sym, Ck[j]), dndCj)
 
         dPdCj = dPdCj.subs(diff(n_sym, Ck[j]), dndCj)
+        write(diff(P, Ck[j]), dPdCj)
+
+        dPdCj = dPdCj.subs(Sum((1 - Wk[k] / Wk[Ns]) * KroneckerDelta(k, j), (k, 1, Ns - 1)),
+            1 - Wk[j] / Wk[Ns])
         write(diff(P, Ck[j]), dPdCj)
 
     #define for later use
@@ -863,13 +868,12 @@ def derivation(file, conp=True, thermo_deriv=False):
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
-
     write_eq(diff(T, t), dTdt)
 
     #next expand the summation for derivative taking
-    CkCpSum_full = Sum(CkCpSum.function, (CkCpSum.limits[0][0], CkCpSum.limits[0][1], CkCpSum.limits[0][2] - 1)) +\
+    CkCpSum_full = Sum(CkCpSum.function, 
+        (CkCpSum.limits[0][0], CkCpSum.limits[0][1], CkCpSum.limits[0][2] - 1)) +\
         CkCpSum.function.subs(CkCpSum.limits[0][0], CkCpSum.limits[0][2])
-    write_eq(diff(T, t), dTdt)
     
     #and simplify the full sum more
     dTdt = dTdt.subs(CkCpSum, CkCpSum_full)
@@ -904,34 +908,42 @@ def derivation(file, conp=True, thermo_deriv=False):
             (diff(P, Ck[j]), dPdCj)])
         write_eq(dTdotdC_sym, dTdotdC)
 
-    #make it more compact for sanity
-    num, den = fraction(dTdotdC)
+    #Compact the CkCpSum back to a more reasonble representation
+    #for sanity
     CkCpSum_full = simplify(CkCpSum_full)
     def __powsimp(expr):
         assert len(expr.args) == 2
         expr, power = expr.args
         return simplify(expr)**power
 
-    num = factor_terms(simplify(num).subs(CkCpSum_full, CkCpSum))
-    den = __powsimp(den).subs(CkCpSum_full, CkCpSum)
-    dTdotdC = num / den
+    dTdotdC_rep = 0
+    for term in Add.make_args(dTdotdC):
+        num, den = fraction(term)
+        num = factor_terms(simplify(num).subs(CkCpSum_full, CkCpSum))
+        if isinstance(den, Pow):
+            den = __powsimp(den).subs(CkCpSum_full, CkCpSum)
+        else:
+            den = simplify(den).subs(CkCpSum_full, CkCpSum)
+        dTdotdC_rep = dTdotdC_rep + num / den
+    dTdotdC = dTdotdC_rep
     write_eq(dTdotdC_sym, dTdotdC)
 
     #another level of compactness, replaces the kronecker delta sum
-    dTdotdC = dTdotdC.subs(Sum((spec_heat[Ns] - spec_heat[k]) * KroneckerDelta(j, k), (k, 1, Ns - 1)),
-        (spec_heat[Ns] - spec_heat[j]))
+    dTdotdC = dTdotdC.subs([(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1),
+        (Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)), spec_heat[j])])
     write_eq(dTdotdC_sym, dTdotdC)
 
     #now expand to replace with the dT/dt term
     def __factor_denom(expr):
-        num, den = fraction(expr)
+        num, den = fraction(ratsimp(expr))
         arg, power = den.args
-        return Add(*[x / arg for x in Add.make_args(num)]) / arg**(power - 1)
+        return Add(*[simplify(x) / arg for x in Add.make_args(num)]) / arg**(power - 1)
 
     dTdotdC = __factor_denom(dTdotdC)
     write_eq(dTdotdC_sym, dTdotdC)
 
-    dTdotdC = dTdotdC.subs(dTdt_simple, dTdt_sym)
+    dTdotdC = collect(dTdotdC, dTdt_simple)
+    dTdotdC = dTdotdC.subs(-dTdt_simple, -dTdt_sym)
     write_eq(dTdotdC_sym, dTdotdC)
 
     file.write('Temperature derivative\n')
@@ -945,6 +957,10 @@ def derivation(file, conp=True, thermo_deriv=False):
     dTdotdT = diff(starting, T)
 
     write_eq(dTdotdT_sym, dTdotdT)
+
+    #sub in dPdT
+    if not conp:
+        dTdotdT = dTdotdT.subs(diff(P, T), dPdT)
 
     #first up, go back to Ctot_sym
     dTdotdT = dTdotdT.subs(Ctot, Ctot_sym)
@@ -966,26 +982,31 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdT_sym, dTdotdT)
 
     #and replace the dTdt term
-    dTdotdT = dTdotdT.subs(dTdt_simple, dTdt_sym)
+    dTdotdT = dTdotdT.subs(dTdt_simple, dTdt_sym).subs(
+        -dTdt_simple, dTdt_sym)
     write_eq(dTdotdT_sym, dTdotdT)
 
-    #the final simplification is of the [C]cp[ns] term
-    dTdotdT = dTdotdT.subs(Ctot_sym * diff(spec_heat[Ns], T), diff(spec_heat[Ns], T) * Sum(Ck[k], (k, 1, Ns - 1)) +
-        diff(spec_heat[Ns], T) * Ck[Ns])
-    write_eq(dTdotdT_sym, dTdotdT)
-
+    #the next simplification is of the [C]cp[ns] term
+    dTdotdT = dTdotdT.subs(
+        Ctot_sym * diff(spec_heat[Ns], T),
+        diff(spec_heat[Ns], T) * Sum(Ck[k], (k, 1, Ns - 1)) +
+        Sum(diff(spec_heat[k], T) * Ck[k], (k, Ns, Ns)))
     num, den = fraction(dTdotdT)
     dTdotdT = simplify(num) / den
     write_eq(dTdotdT_sym, dTdotdT)
 
-    dTdotdT = dTdotdT.subs(diff(spec_heat[Ns], T) * Ck[Ns] + Sum(Ck[k] * diff(spec_heat[k], T), (k, 1, Ns - 1)),
-        Sum(Ck[k] * diff(spec_heat[k], T), (k, 1, Ns)))
-    
-    write_eq(dTdotdT_sym, dTdotdT)
+    #next we expand the [C] term
+    dTdotdT = dTdotdT.subs(Ctot_sym, Sum(Ck[k], (k, 1, Ns)))
     num, den = fraction(dTdotdT)
-    the_sum = Sum(energy[k] * diff(omega_sym[k], T) + omega_sym[k] * diff(energy[k], T), (k, 1, Ns))
-    num = num.subs(the_sum, Sum(the_sum.function.subs(diff(energy[k], T), spec_heat[k]), *the_sum.limits))
-    dTdotdT = T * (collect(simplify(num / T), dTdt_sym) / den)
+    num = simplify(num)
+    assert isinstance(num, Sum)
+    num_f = num.function
+    #collect dTdt terms
+    num_f = collect(num.function, dTdt_sym * Ck[k])
+    #and finally substitute the energy derivative
+    num_f = num_f.subs(diff(energy[k], T), spec_heat[k])
+    num = Sum(num_f, *num.limits)
+    dTdotdT = num / den
     write_eq(dTdotdT_sym, dTdotdT)
     
     write_section(r'$\dot{C_k}$ Derivatives')
@@ -1020,8 +1041,8 @@ if __name__ == '__main__':
             with open(self.name, self.mode) as file:
                 file.writelines(self.lines)
 
-    #with filer('conp_derivation.tex', 'w') as file:
-    #    derivation(file, True, True)
+    with filer('conp_derivation.tex', 'w') as file:
+        derivation(file, True, True)
 
     with filer('conv_derivation.tex', 'w') as file:
         derivation(file, False, False)
