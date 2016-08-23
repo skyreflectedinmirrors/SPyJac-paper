@@ -105,7 +105,7 @@ def register_equal(v1, v2=None):
     else:
         assert v2 is not None
         __add(v1, v2)
-    
+
 
 def assert_subs(obj, *subs_args, **kw_args):
     """
@@ -144,14 +144,14 @@ def assert_subs(obj, *subs_args, **kw_args):
             sum_var = next(v for v in KD.args if v == v1.limits[0][0])
             other_var = next(v for v in KD.args if v != sum_var)
             #and finally, return test equal
-            #on the collapsed sum 
+            #on the collapsed sum
             return test_equal(Mul(*[x.subs(sum_var, other_var) for x in args if x != KD]),
                 v2)
         #sum of vals to Ns -> sum vals to Ns - 1 + val_ns
         if isinstance(v1, Sum) and v2.has(Sum) and isinstance(v2, Add):
             lim = v1.limits[0]
             #get the Ns term, and test equivalence
-            v2Ns = next((x for x in v2.args if 
+            v2Ns = next((x for x in v2.args if
                 test_equal(v1.function.subs(lim[0], lim[2]), x)),
                 None)
             assert v2Ns is not None
@@ -211,7 +211,7 @@ t = symbols('t', **assumptions)
 
 
 #thermo vars
-T = MyImplicitSymbol('T', t, **assumptions)  
+T = MyImplicitSymbol('T', t, **assumptions)
 
 #mechanism size
 Ns = S.Ns
@@ -301,7 +301,7 @@ def thermo_derivation(Yi_sym, P, V, n, subfile=None):
     Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
     s = MyIndexedFunc(r'S', T)
     if subfile:
-        write(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc), 
+        write(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc),
             expand(Sfunc))
 
     Bk = simplify(Sfunc / R - hfunc / (R * T))
@@ -406,7 +406,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     Rop = Ropf_sym[i] - Ropr_sym[i]
     write(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
-    
+
     kf_sym = MyIndexedFunc(r'{k_f}', T)
     Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
     write(Ropf_sym[i], Ropf)
@@ -431,7 +431,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write_dummy(latex(Eq(ci[i], ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
     register_equal(ci[i], ci_fall)
 
-    ci_chem = (1 / (1 + Pri_sym)) * Fi_sym  
+    ci_chem = (1 / (1 + Pri_sym)) * Fi_sym
     write_dummy(latex(Eq(ci[i], ci_chem)) + r'\text{\quad for chemically-activated bimolecular reactions}')
     register_equal(ci[i], ci_chem)
 
@@ -440,15 +440,15 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(kf_sym[i], kf)
     register_equal(kf_sym[i], kf)
 
-    
+
     write_sec('Equilibrium Constants')
     Kp_sym = MyIndexedFunc(r'{K_p}', args=(T, a))
     Kc_sym = MyIndexedFunc(r'{K_c}', args=(T))
     write(Kc_sym[i], Kp_sym[i] * ((Patm / (R * T))**Sum(nu_sym[k, i], (k, 1, Ns))))
 
-    write_dummy(latex(Kp_sym[i]) + ' = ' + 
+    write_dummy(latex(Kp_sym[i]) + ' = ' +
         r'\text{exp}(\frac{\Delta S^{\circ}_k}{R_u} - \frac{\Delta H^{\circ}_k}{R_u T})')
-    write_dummy(latex(Kp_sym[i]) + ' = ' + 
+    write_dummy(latex(Kp_sym[i]) + ' = ' +
         r'\text{exp}(\sum_{k=1}^{N_s}\frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T})')
 
     B_sym = MyIndexedFunc('B', T)
@@ -472,7 +472,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     kr_sym = MyIndexedFunc(r'{k_r}', args=(T))
     write(kr_sym[i], kf_sym[i] / Kc_sym[i])
     register_equal(kr_sym[i], kf_sym[i] / Kc_sym[i])
-    
+
     write_sec('Third Body Efficiencies')
     thd_bdy_eff = IndexedBase(r'\alpha')
     ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
@@ -481,8 +481,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(ci_thd_sym, ci_thd)
 
     ci_thd = assert_subs(ci_thd, (Ctot_sym, Ctot))
-    ci_thd = assert_subs(ci_thd, (Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)), 
-        Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns - 1)) + 
+    ci_thd = assert_subs(ci_thd, (Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)),
+        Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns - 1)) +
         (1 - thd_bdy_eff[Ns, i]) * Cns))
     write(ci_thd_sym, ci_thd)
 
@@ -490,7 +490,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(ci_thd_sym, ci_thd)
     register_equal(ci_thd_sym, ci_thd)
 
-    write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}') 
+    write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}')
 
     write_sec('Falloff Reactions')
     k0 = Symbol('A_0') * T**Symbol(r'\beta_0') * exp(-Symbol('E_{a, 0}') / (R * T))
@@ -559,7 +559,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     #cheb
     subfile.write('For Chebyshev reactions\n')
     Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
-    Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1) 
+    Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1)
     Pred = simplify((2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10)))
     Tred_sym = MyImplicitSymbol(r'\tilde{T}', T)
     register_equal(diff(Tred_sym, T), diff(Tred, T))
@@ -590,7 +590,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dCkdCj = diff(Ck[k], Ck[j])
     write_dummy(r'\frac{\partial [C_k]}{\partial [C_j]} =' + latex(
         dCkdCj))
-    
+
     dCnsdCj_orig = diff(Cns, Ck[j])
     dCnsdCj = assert_subs(dCnsdCj_orig, (Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), S.One))
     if not conp:
@@ -620,7 +620,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         else:
             return Product(Ck[l]**nuv[l, i], (l, 1, k - 1), (l, k + 1, Ns))
 
-    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1) * 
+    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1) *
         __mod_prod_sum(k), (k, 1, Ns - 1)) - \
         nu_f[Ns, i] * Ck[Ns]**(nu_f[Ns, i] - 1) * __mod_prod_sum(Ns)
     write(diff(Ropf / kf_sym[i], Ck[j]), dRopfdCj)
@@ -715,8 +715,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     dci_thddCj = diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), Ck[j])
     dci_thddCj = assert_subs(simplify(dci_thddCj),
-            (Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) * 
-                KroneckerDelta(j, k), (k, 1, Ns - 1)), 
+            (Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) *
+                KroneckerDelta(j, k), (k, 1, Ns - 1)),
             thd_bdy_eff[Ns, i] - thd_bdy_eff[j, i]))
     write(diff(ci_thd_sym, Ck[j]), dci_thddCj)
     if not conp:
@@ -839,7 +839,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dFi_linddCj = diff(Fi_lind, Ck[j])
     write(diff(Fi_sym, T), dFi_linddT)
     write(diff(Fi_sym, Ck[j]), dFi_linddCj)
-    
+
     subfile.write('For Troe reactions\n')
     dFi_troedT = diff(Fi_troe_sym, T)
     dFi_troedCj = diff(Fi_troe_sym, Ck[j])
@@ -854,7 +854,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(diff(Fcent_sym, T), dFcentdT)
     write(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
     dFi_troedPri = factor_terms(
-        assert_subs(diff(Fi_troe, Pri_sym), 
+        assert_subs(diff(Fi_troe, Pri_sym),
             (Fi_troe, Fi_troe_sym)))
     write(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
 
@@ -900,7 +900,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         (Beta[i], beta_2), (Ea[i], Ea_2),
         assumptions=[(kf_sym[i], k2_sym), (A[i], A_2), (Ea[i], Ea_2), (Beta[i], beta_2)])
     register_equal(diff(k2_sym, T), dk2dT)
-    dkf_pdepdT = assert_subs(dkf_pdepdT, (diff(k1_sym, T), dk1dT), 
+    dkf_pdepdT = assert_subs(dkf_pdepdT, (diff(k1_sym, T), dk1dT),
         (diff(k2_sym, T), dk2dT))
     if not conp:
         dkf_pdepdT = assert_subs(dkf_pdepdT, (diff(P, T), dPdT))
@@ -1060,16 +1060,16 @@ def derivation(file, conp=True, thermo_deriv=False):
 
     #this will be used many times
     CkCpSum = Sum(Ck[k] * spec_heat[k], (k, 1, Ns))
-    
+
     #next we swap out the mass cp's
-    dTdt = assert_subs(dTdt, (Wk[k] * spec_heat_mass[k], 
+    dTdt = assert_subs(dTdt, (Wk[k] * spec_heat_mass[k],
         spec_heat[k]), (Wk[k] * energy_mass[k], energy[k]))
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
     write_eq(dTdt_sym, dTdt)
     register_equal(dTdt_sym, dTdt_simple)
-    
+
     #and simplify the full sum more
     dTdt = assert_subs(dTdt, (CkCpSum, Sum(Ck[k] * spec_heat[k], (k, 1, Ns - 1)) + Cns * spec_heat[Ns]))
     write_eq(dTdt_sym, dTdt)
@@ -1133,7 +1133,8 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdC_sym, dTdotdC)
 
     dTdotdC = collect(dTdotdC, dTdt_simple)
-    dTdotdC = assert_subs(dTdotdC, (-dTdt_simple, -dTdt_sym))
+    dTdotdC = assert_subs(dTdotdC, (-dTdt_simple, -dTdt_sym),
+        (dTdt_simple, dTdt_sym))
     write_eq(dTdotdC_sym, dTdotdC)
 
     file.write('Temperature derivative\n')
@@ -1172,7 +1173,8 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdT_sym, dTdotdT)
 
     #and replace the dTdt term
-    dTdotdT = assert_subs(dTdotdT, (dTdt_simple, dTdt_sym))
+    dTdotdT = assert_subs(dTdotdT, (dTdt_simple, dTdt_sym),
+        (-dTdt_simple, -dTdt_sym))
     write_eq(dTdotdT_sym, dTdotdT)
 
     #the next simplification is of the [C] terms
@@ -1180,11 +1182,15 @@ def derivation(file, conp=True, thermo_deriv=False):
     num = assert_subs(num, (Ctot_sym, Sum(Ck[k], (k, 1, Ns))))
     dTdotdT = num / den
     write_eq(dTdotdT_sym, dTdotdT)
-    
+
     num = assert_subs(num, (Sum(Ck[k], (k, 1, Ns)), Sum(Ck[k], (k, Ns, Ns)) + Sum(Ck[k], (k, 1, Ns - 1))))
     num = collect(simplify(num), dTdt_sym)
-    num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)), 
-        Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
+    if conp:
+        num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)),
+            Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
+    else:
+        num = assert_subs(num, (-diff(spec_heat[Ns], T) * Sum(Ck[k], (k, Ns, Ns)),
+            Sum(-diff(spec_heat[k], T) * Ck[k], (k, Ns, Ns))))
     num = collect(simplify(num), dTdt_sym)
 
     dTdotdT = num / den
@@ -1193,7 +1199,7 @@ def derivation(file, conp=True, thermo_deriv=False):
     #and finally substitute the energy derivative
     dTdotdT = assert_subs(dTdotdT, (diff(energy[k], T), spec_heat[k]))
     write_eq(dTdotdT_sym, dTdotdT)
-    
+
     write_section(r'$\dot{C_k}$ Derivatives')
 
     #concentration Jacobian equations
@@ -1211,7 +1217,7 @@ if __name__ == '__main__':
             self.lines = [r'\documentclass[a4paper,10pt]{article}' + '\n' +
                            r'\usepackage[utf8]{inputenc}' + '\n'
                            r'\usepackage{amsmath}' + '\n' +
-                           r'\usepackage{breqn}' + '\n' + 
+                           r'\usepackage{breqn}' + '\n' +
                            r'\begin{document}' + '\n']
             self.regex = re.compile('{equation}')
 
