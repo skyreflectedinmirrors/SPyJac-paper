@@ -211,7 +211,7 @@ class IndexedFunc(IndexedBase):
 
         @property
         def free_symbols(self):
-            return super(Indexed, self).free_symbols.union(*[
+            return super(IndexedFunc.IndexedFuncValue, self).free_symbols.union(*[
             set([x]) if not isinstance(x, IndexedFunc.IndexedFuncValue) else
             x.free_symbols for x in self._get_iter_func()])
 

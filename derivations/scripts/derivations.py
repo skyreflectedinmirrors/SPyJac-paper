@@ -3,7 +3,7 @@ from sympy.simplify.radsimp import collect, fraction
 from sympy.simplify.simplify import simplify, cancel, separatevars, sum_simplify, signsimp
 from sympy.simplify.ratsimp import ratsimp
 from sympy.solvers.solvers import solve
-from sympy.core.symbol import symbols, Symbol
+from sympy.core.symbol import symbols, Symbol, Wild
 from sympy.core.relational import Eq
 from sympy.core.sympify import sympify
 from sympy.core.mul import Mul
@@ -117,8 +117,20 @@ def assert_subs(obj, *subs_args, **kw_args):
     """
 
     def test_equal(v1, v2):
+        def __rep_dummy_sum(arg):
+            out_terms = []
+            for term in Mul.make_args(arg):
+                if isinstance(term, Sum) and term.limits[0][1] == term.limits[0][2]:
+                    out_terms.append(term.function.subs(term.limits[0][0], term.limits[0][1]))
+                else:
+                    out_terms.append(arg)
+        #weed out dummy sums
+        v1 = __rep_dummy_sum(v1)
+        v2 = __rep_dummy_sum(v2)
+
         if v1 == v2:
             return True
+
         #special cases
         #kronecker delta collapses
         if v1.has(KroneckerDelta) and isinstance(v1, Sum):
@@ -155,16 +167,23 @@ def assert_subs(obj, *subs_args, **kw_args):
 
         if v1 in equivalences:
             return any(v1t == v2 for v1t in equivalences[v1])
+        elif -v1 in equivalences:
+            return any(v1t == -v2 for v1t in equivalences[-v1])
         if v2 in equivalences:
             return any(v2t == v1 for v2t in equivalences[v2])
+        elif -v2 in equivalences:
+            return any(v2t == -v1 for v2t in equivalences[-v2])
+
         if simplify(v1 - v2) == 0:
             return True
-        for equiv in equivalences:
-            if v1.has(equiv):
+
+        for equiv in v1.free_symbols:
+            if equiv in equivalences:
                 for eq in equivalences[equiv]:
                     v1test = v1.subs(equiv, eq)
                     if test_equal(v1test, v2):
                         return True
+
         return False
 
     for arg in subs_args:
@@ -362,6 +381,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     Ctot = P / (R * T)
     Cns = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
     write(Ck[Ns], Cns)
+    register_equal(Ck[Ns], Cns)
 
     omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P_sym))
     write(diff(Ck[k], t), omega_sym[k])
@@ -941,32 +961,40 @@ def derivation(file, conp=True, thermo_deriv=False):
     Ctot_sym = MyImplicitSymbol('[C]', args=(Ck, T), **assumptions)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
-    register_equal(Ctot_sym, Ctot)
-    register_equal(Ctot_sym, n_sym / V)
+    register_equal([(Ctot_sym, Ctot), (Ctot_sym, n_sym / V),
+        (Ctot_sym, Sum(Ck[k], (k, 1, Ns)))])
     Cns = Ctot - Sum(Ck[k], (k, 1 , Ns - 1))
     write_eq(Ck[Ns], Cns)
     register_equal(Ck[Ns], Cns)
+    register_equal(Ck[Ns], assert_subs(Cns, (Ctot, Ctot_sym)))
+
+    #mole fractions
+    Xk = IndexedBase('X')
+    register_equal([(Xk[k], Ck[k] / Ctot_sym)])
 
     #molecular weight
-    Cns_simp = 1 - Sum(Ck[k], (k, 1 , Ns - 1)) / Ctot
-    assert expand(Cns / Ctot) - expand(Cns_simp) == 0
-    W = Sum(Wk[k] * Ck[k], (k, 1, Ns - 1)) / Ctot_sym + Wk[Ns] * Cns_simp.subs(1 / Ctot, 1 / Ctot_sym)
-    W_new = Wk[Ns] + Sum(Ck[k] * (Wk[k] - Wk[Ns]), (k, 1, Ns - 1)) / Ctot_sym
-    assert simplify(W - W_new) == 0
-    W = W_new
-    
     W_sym = MyImplicitSymbol('W', t)
+    W = Sum(Wk[k] * Xk[k], (k, 1, Ns))
     write_eq(W_sym, W)
-    register_equal(W_sym, W)
+    W = simplify(assert_subs(W, (Xk[k], Ck[k] / Ctot_sym)))
+    write_eq(W_sym, W)
+    Cns_sym = assert_subs(Cns, (Ctot, Ctot_sym))
+    W = assert_subs(W, (Sum(Wk[k] * Ck[k], (k, 1, Ns)),
+        Sum(Wk[k] * Ck[k], (k, 1, Ns - 1)) + Wk[Ns] * Cns_sym))
+    write_eq(W_sym, W)
+    W = simplify(W)
+    write_eq(W_sym, W)
 
+    #mass, density
     m = n * W
     density = m / V
     m_sym = MyImplicitSymbol('m', args=(T, Ck))
     density_sym = MyImplicitSymbol(r'\rho', t)
     write_eq(density_sym, n_sym * W_sym / V)
+    register_equal(density_sym, W_sym * Ctot_sym)
 
     #mass fractions
-    Yi_sym = MyIndexedFunc('Y', args=(density, Ck[k], Wk[k]))
+    Yi_sym = IndexedBase('Y')
     Yi = Ck[k] * Wk[k]/ density_sym
 
     write_eq(Yi_sym[k], Yi)
@@ -1005,61 +1033,54 @@ def derivation(file, conp=True, thermo_deriv=False):
         energy_mass = u_mass
         energy = u
 
+    register_equal(Wk[k] * spec_heat_mass[k], spec_heat[k])
+    register_equal(Wk[k] * energy_mass[k], energy[k])
+    register_equal(diff(energy[k], T), spec_heat[k])
+
     #temperature derivative
     #in terms of mass fraction
 
     dTdt_sym = diff(T, t)
     dTdt = -1 / (density_sym * total_spec_heat) * Sum(energy_mass[k] * Wk[k] * omega_sym[k], (k, 1, Ns))
-    write_eq(diff(T, t), dTdt)
+    write_eq(dTdt_sym, dTdt)
 
     #next we turn into concentrations
-    dTdt = dTdt.subs(density_sym, W_sym * Ctot_sym)
-    write_eq(diff(T, t), dTdt)
+    dTdt = assert_subs(dTdt, (density_sym, W_sym * Ctot_sym))
+    write_eq(dTdt_sym, dTdt)
 
     #do some simplifcation of the cp term
-    spec_heat_tot = spec_heat_tot.subs(Sum(spec_heat_mass[k] * Yi_sym[k], (k, 1, Ns)), Sum(spec_heat_mass[k] * Yi, (k, 1, Ns)))
+    spec_heat_tot = assert_subs(spec_heat_tot, (Yi_sym[k], Yi))
     write_eq(total_spec_heat, spec_heat_tot)
-    spec_heat_tot = simplify(spec_heat_tot).subs(density_sym, W_sym * Ctot_sym)
+    spec_heat_tot = assert_subs(simplify(spec_heat_tot), (density_sym, W_sym * Ctot_sym))
     write_eq(total_spec_heat, spec_heat_tot)
+    register_equal(total_spec_heat, spec_heat_tot)
 
-    dTdt = dTdt.subs(W_sym * Ctot_sym * total_spec_heat, W_sym * Ctot_sym * spec_heat_tot)
+    dTdt = assert_subs(dTdt, (total_spec_heat, spec_heat_tot))
     write_eq(dTdt_sym, dTdt)
 
     #this will be used many times
     CkCpSum = Sum(Ck[k] * spec_heat[k], (k, 1, Ns))
     
     #next we swap out the mass cp's
-    dTdt = dTdt.subs(Sum(Wk[k] * Ck[k] * spec_heat_mass[k], (k, 1, Ns)), CkCpSum).subs(
-        Sum(energy_mass[k] * Wk[k] * omega_sym[k], (k, 1, Ns)),
-        Sum(energy[k] * omega_sym[k], (k, 1, Ns)))
+    dTdt = assert_subs(dTdt, (Wk[k] * spec_heat_mass[k], 
+        spec_heat[k]), (Wk[k] * energy_mass[k], energy[k]))
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
-    write_eq(diff(T, t), dTdt)
-
-    #next expand the summation for derivative taking
-    CkCpSum_full = Sum(CkCpSum.function, 
-        (CkCpSum.limits[0][0], CkCpSum.limits[0][1], CkCpSum.limits[0][2] - 1)) +\
-        CkCpSum.function.subs(CkCpSum.limits[0][0], CkCpSum.limits[0][2])
+    write_eq(dTdt_sym, dTdt)
+    register_equal(dTdt_sym, dTdt_simple)
     
     #and simplify the full sum more
-    dTdt = dTdt.subs(CkCpSum, CkCpSum_full)
-    write_eq(diff(T, t), dTdt)
-    CkCpSum_full_new = CkCpSum_full.subs(Ck[Ns], Cns)
-    dTdt = dTdt.subs(CkCpSum_full, CkCpSum_full_new)
-    CkCpSum_full = CkCpSum_full_new
-    write_eq(diff(T, t), dTdt)
+    dTdt = assert_subs(dTdt, (CkCpSum, Sum(Ck[k] * spec_heat[k], (k, 1, Ns - 1)) + Cns * spec_heat[Ns]))
+    write_eq(dTdt_sym, dTdt)
 
     num, den = fraction(dTdt)
-    new_den = Sum(Ck[k] * (spec_heat[k] - spec_heat[Ns]), (k, 1, Ns - 1)) + spec_heat[Ns] * Ctot
+    den = assert_subs(simplify(den), (Ctot, Ctot_sym))
 
-    assert(simplify(den - new_den) == 0)
-
-    new_den = new_den.subs(Ctot, Ctot_sym)
-    CkCpSum_full = new_den
-
-    dTdt = num / new_den
-    write_eq(diff(T, t), dTdt)
+    dTdt = num / den
+    CkCpSum_full = den
+    register_equal(CkCpSum_full, CkCpSum)
+    write_eq(dTdt_sym, dTdt)
 
     #Temperature jacobian entries
 
@@ -1071,13 +1092,12 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdC_sym, dTdotdC)
 
     if not conp:
-        dTdotdC = dTdotdC.subs([(diff(Ctot_sym, P), diff(Ctot, P)),
-            (diff(P, Ck[j]), dPdCj)])
+        dTdotdC = assert_subs(dTdotdC, (diff(Ctot_sym, P), diff(Ctot, P)),
+            (diff(P, Ck[j]), dPdCj))
         write_eq(dTdotdC_sym, dTdotdC)
 
     #Compact the CkCpSum back to a more reasonble representation
     #for sanity
-    CkCpSum_full = simplify(CkCpSum_full)
     def __powsimp(expr):
         assert len(expr.args) == 2
         expr, power = expr.args
@@ -1086,18 +1106,21 @@ def derivation(file, conp=True, thermo_deriv=False):
     dTdotdC_rep = 0
     for term in Add.make_args(dTdotdC):
         num, den = fraction(term)
-        num = factor_terms(simplify(num).subs(CkCpSum_full, CkCpSum))
+        num = factor_terms(
+            assert_subs(simplify(num), (CkCpSum_full, CkCpSum)))
         if isinstance(den, Pow):
-            den = __powsimp(den).subs(CkCpSum_full, CkCpSum)
+            den = assert_subs(__powsimp(den),
+                (CkCpSum_full, CkCpSum))
         else:
-            den = simplify(den).subs(CkCpSum_full, CkCpSum)
+            den = assert_subs(simplify(den),
+                (CkCpSum_full, CkCpSum))
         dTdotdC_rep = dTdotdC_rep + num / den
     dTdotdC = dTdotdC_rep
     write_eq(dTdotdC_sym, dTdotdC)
 
     #another level of compactness, replaces the kronecker delta sum
-    dTdotdC = dTdotdC.subs([(Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1),
-        (Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)), spec_heat[j])])
+    dTdotdC = assert_subs(dTdotdC, (Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1),
+        (Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)), spec_heat[j]))
     write_eq(dTdotdC_sym, dTdotdC)
 
     #now expand to replace with the dT/dt term
@@ -1110,7 +1133,7 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdC_sym, dTdotdC)
 
     dTdotdC = collect(dTdotdC, dTdt_simple)
-    dTdotdC = dTdotdC.subs(-dTdt_simple, -dTdt_sym)
+    dTdotdC = assert_subs(dTdotdC, (-dTdt_simple, -dTdt_sym))
     write_eq(dTdotdC_sym, dTdotdC)
 
     file.write('Temperature derivative\n')
@@ -1119,7 +1142,7 @@ def derivation(file, conp=True, thermo_deriv=False):
     #up next the temperature derivative
     dTdotdT_sym = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
     #first we must sub in the actual form of C, as the temperature derivative is non-zero
-    starting = dTdt.subs(Ctot_sym, Ctot)
+    starting = assert_subs(dTdt, (Ctot_sym, Ctot))
     write_eq(dTdt_sym, starting)
     dTdotdT = diff(starting, T)
 
@@ -1127,7 +1150,7 @@ def derivation(file, conp=True, thermo_deriv=False):
 
     #sub in dPdT
     if not conp:
-        dTdotdT = dTdotdT.subs(diff(P, T), dPdT)
+        dTdotdT = assert_subs(dTdotdT, (diff(P, T), dPdT))
 
     #first up, go back to Ctot_sym
     dTdotdT = dTdotdT.subs(Ctot, Ctot_sym)
@@ -1138,9 +1161,9 @@ def derivation(file, conp=True, thermo_deriv=False):
     for arg in Add.make_args(dTdotdT):
         num, den = fraction(arg)
         if isinstance(den, Pow):
-            rv = rv + num / __powsimp(den).subs(CkCpSum_full, CkCpSum)
+            rv = rv + num / assert_subs(__powsimp(den), (CkCpSum_full, CkCpSum))
         else:
-            rv = rv + num / simplify(den).subs(CkCpSum_full, CkCpSum)
+            rv = rv + num / assert_subs(simplify(den), (CkCpSum_full, CkCpSum))
     dTdotdT = rv
     write_eq(dTdotdT_sym, dTdotdT)
 
@@ -1149,31 +1172,26 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(dTdotdT_sym, dTdotdT)
 
     #and replace the dTdt term
-    dTdotdT = dTdotdT.subs(dTdt_simple, dTdt_sym).subs(
-        -dTdt_simple, dTdt_sym)
+    dTdotdT = assert_subs(dTdotdT, (dTdt_simple, dTdt_sym))
     write_eq(dTdotdT_sym, dTdotdT)
 
-    #the next simplification is of the [C]cp[ns] term
-    dTdotdT = dTdotdT.subs(
-        Ctot_sym * diff(spec_heat[Ns], T),
-        diff(spec_heat[Ns], T) * Sum(Ck[k], (k, 1, Ns - 1)) +
-        Sum(diff(spec_heat[k], T) * Ck[k], (k, Ns, Ns)))
+    #the next simplification is of the [C] terms
     num, den = fraction(dTdotdT)
-    dTdotdT = simplify(num) / den
-    write_eq(dTdotdT_sym, dTdotdT)
-
-    #next we expand the [C] term
-    dTdotdT = dTdotdT.subs(Ctot_sym, Sum(Ck[k], (k, 1, Ns)))
-    num, den = fraction(dTdotdT)
-    num = simplify(num)
-    assert isinstance(num, Sum)
-    num_f = num.function
-    #collect dTdt terms
-    num_f = collect(num.function, dTdt_sym * Ck[k])
-    #and finally substitute the energy derivative
-    num_f = num_f.subs(diff(energy[k], T), spec_heat[k])
-    num = Sum(num_f, *num.limits)
+    num = assert_subs(num, (Ctot_sym, Sum(Ck[k], (k, 1, Ns))))
     dTdotdT = num / den
+    write_eq(dTdotdT_sym, dTdotdT)
+    
+    num = assert_subs(num, (Sum(Ck[k], (k, 1, Ns)), Sum(Ck[k], (k, Ns, Ns)) + Sum(Ck[k], (k, 1, Ns - 1))))
+    num = collect(simplify(num), dTdt_sym)
+    num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)), 
+        Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
+    num = collect(simplify(num), dTdt_sym)
+
+    dTdotdT = num / den
+    write_eq(dTdotdT_sym, dTdotdT)
+
+    #and finally substitute the energy derivative
+    dTdotdT = assert_subs(dTdotdT, (diff(energy[k], T), spec_heat[k]))
     write_eq(dTdotdT_sym, dTdotdT)
     
     write_section(r'$\dot{C_k}$ Derivatives')
