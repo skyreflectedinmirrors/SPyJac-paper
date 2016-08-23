@@ -958,7 +958,7 @@ def derivation(file, conp=True, thermo_deriv=False):
     n = P * V / (R * T)
     write_eq(n_sym, n)
 
-    Ctot_sym = MyImplicitSymbol('[C]', args=(Ck, T), **assumptions)
+    Ctot_sym = MyImplicitSymbol('[C]', args=(T, P), **assumptions)
     Ctot = P / (R * T)
     write_eq(Ctot_sym, Ctot)
     register_equal([(Ctot_sym, Ctot), (Ctot_sym, n_sym / V),
