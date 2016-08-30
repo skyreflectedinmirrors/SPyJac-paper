@@ -791,7 +791,11 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(diff(Pri_sym, T), dPri_mixdT)
 
     dPri_mixdCj = assert_subs(diff(Pri_mix, Ck[j]), (diff(ci_thd_sym, Ck[j]), dci_thddCj))
+    dPri_mixdCj = assert_subs(dPri_mixdCj, (Sum((-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i])
+            * KroneckerDelta(j, k), (k, 1, Ns - 1)),
+        -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
     write(diff(Pri_sym, Ck[j]), dPri_mixdCj)
+
 
     subfile.write('For species $m$ as the third body\n')
 
