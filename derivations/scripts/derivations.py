@@ -386,14 +386,15 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P_sym))
     write(diff(Ck[k], t), omega_sym[k])
 
-    q = MyIndexedFunc('q', args=(Ck, T))
-    omega_k = Sum(nu_sym[k, i] * q[i], (i, 1, Nr))
+    q_sym = MyIndexedFunc('q', args=(Ck, T))
+    omega_k = Sum(nu_sym[k, i] * q_sym[i], (i, 1, Nr))
     write(omega_sym[k], omega_k)
 
     Rop_sym = MyIndexedFunc('R', args=(Ck, T))
     ci = MyIndexedFunc('c', args=(Ck, T))
+    q = Rop_sym[i] * ci[i]
 
-    write(q[i], Rop_sym[i] * ci[i])
+    write(q_sym[i], q)
 
     #arrhenius coeffs
     A = IndexedBase(r'A')
@@ -406,6 +407,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     Rop = Ropf_sym[i] - Ropr_sym[i]
     write(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
+    register_equal(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
 
     kf_sym = MyIndexedFunc(r'{k_f}', T)
     Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
@@ -578,10 +580,10 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
 
     write_sec('Derivatives')
     write(diff(omega_sym[k], T), diff(omega_k, T))
-    write(diff(q[i], T), diff(Rop_sym[i] * ci[i], T))
+    write(diff(q_sym[i], T), diff(q, T))
 
     write(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]))
-    write(diff(q[i], Ck[k]), diff(Rop_sym[i] * ci[i], Ck[j]))
+    write(diff(q_sym[i], Ck[k]), diff(q, Ck[j]))
 
     write_sec('Rate of Progress Derivatives')
     write(diff(Ropf_sym, T), diff(Ropf, T))
@@ -688,9 +690,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(diff(Ropr_sym[i], T), dRoprdT)
     register_equal(diff(Ropr_sym[i], T), dRoprdT)
 
-    dRopdT = assert_subs(diff(Rop, T), (diff(Ropf_sym[i], T), dRopfdT),
+    dRop_nonexpdT = assert_subs(diff(Rop, T), (diff(Ropf_sym[i], T), dRopfdT),
         (diff(Ropr_sym[i], T), dRoprdT))
-    write(diff(Rop_sym[i], T), dRopdT)
+    write(diff(Rop_sym[i], T), dRop_nonexpdT)
 
     subfile.write('For all reversible reactions\n')
     #now do dRop/dCj
