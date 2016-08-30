@@ -123,7 +123,8 @@ def assert_subs(obj, *subs_args, **kw_args):
                 if isinstance(term, Sum) and term.limits[0][1] == term.limits[0][2]:
                     out_terms.append(term.function.subs(term.limits[0][0], term.limits[0][1]))
                 else:
-                    out_terms.append(arg)
+                    out_terms.append(term)
+            return Mul(*out_terms)
         #weed out dummy sums
         v1 = __rep_dummy_sum(v1)
         v2 = __rep_dummy_sum(v2)
