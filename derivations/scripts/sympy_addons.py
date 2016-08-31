@@ -78,7 +78,7 @@ class ImplicitSymbol(Symbol):
             if a.has(old):
                 new_func = [x if x != a else a.subs(old, new) 
                                 for x in funcof]
-                return ImplicitSymbol(str(self), new_func)
+                return self.__class__(str(self), new_func)
         return self
 
     @property
@@ -117,7 +117,7 @@ class IndexedFunc(IndexedBase):
         return obj
 
     def _eval_simplify(self, ratio=1.7, measure=None):
-        return IndexedFunc(self.label,
+        return self.__class__(self.label,
             *[simplify(x, ratio=ratio, measure=measure)
                          for x in self._get_iter_func()])
 
@@ -174,7 +174,7 @@ class IndexedFunc(IndexedBase):
             return funcof
 
         def _get_df(self, a, wrt):
-            return IndexedFunc(self.base_str.format(
+            return self.base.__class__(self.base_str.format(
                     str(self.base), str(a)), args=self.functional_form)[self.indices]
 
         def _eval_diff(self, wrt, **kw_args):
