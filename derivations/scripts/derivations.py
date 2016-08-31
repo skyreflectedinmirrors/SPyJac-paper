@@ -92,7 +92,17 @@ def write_dummy_eq(text, **kw_args):
 
 def write_section(title, **kw_args):
     writer = file if not 'myfile' in kw_args else kw_args['myfile']
-    writer.write(r'\section{{{}}}'.format(title) + '\n')
+    writer.write(r'\{0}section{{{1}}}'.format(
+        '' if not 'sub' in kw_args or not kw_args['sub'] else 'sub', title) + '\n')
+
+def write_cases(variable, case_list, **kw_args):
+    writer = file if not 'myfile' in kw_args else kw_args['myfile']
+    writer.write(r'\begin{dgroup}' + '\n')
+
+    for case_var, case_text in case_list:
+        writer.write(r'\begin{{dmath}} {} = {}\text{{\quad if {}}}\end{{dmath}}'.format(
+            latex(variable), latex(case_var), case_text) + '\n')
+    writer.write(r'\end{dgroup}' + '\n')
 
 equivalences = {}
 def register_equal(v1, v2=None):
@@ -317,8 +327,10 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         write_eq(*args, myfile=subfile)
     def write_dummy(*args):
         write_dummy_eq(*args, myfile=subfile)
-    def write_sec(*args):
-        write_section(*args, myfile=subfile)
+    def write_sec(*args, **kw_args):
+        write_section(*args, myfile=subfile, **kw_args)
+    def write_case(*args):
+        write_cases(*args, myfile=subfile)
 
     write_sec('Definitions')
     nu_f = IndexedBase(r'\nu^{\prime}')
@@ -434,11 +446,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P_sym))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
     write_dummy(latex(Eq(ci[i], ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
-    register_equal(ci[i], ci_fall)
 
     ci_chem = (1 / (1 + Pri_sym)) * Fi_sym
     write_dummy(latex(Eq(ci[i], ci_chem)) + r'\text{\quad for chemically-activated bimolecular reactions}')
-    register_equal(ci[i], ci_chem)
 
     write_sec('Forward Reaction Rate')
     kf = A[i] * (T**Beta[i]) * exp(-Ea[i] / (R * T))
@@ -504,10 +514,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     kinf_sym = MyImplicitSymbol(r'k_{\infty, i}', T)
     Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
     write_dummy(latex(Eq(Pri_sym, Pri_mix)) + r'\text{\quad for the mixture as the third body}')
-    register_equal(Pri_sym, Pri_mix)
     Pri_spec = Ck[m] * k0_sym / kinf_sym
     write_dummy(latex(Eq(Pri_sym, Pri_spec)) + r'\text{\quad for species $m$ as the third body}')
-    register_equal(Pri_sym, Pri_spec)
 
     Fi_lind = 1
     write_dummy(latex(Eq(Fi_sym, Fi_lind)) + r'\text{\quad for Lindemann}')
@@ -613,7 +621,6 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial [C_j]} =' + latex(
         dCnsdCj_pow))
     if not conp:
-
         dCnsdCj_pow = simplify(assert_subs(dCnsdCj_pow, (diff(P, Ck[j]), dPdCj)))
         write_dummy(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{k, i}}}{\partial [C_j]} =' + latex(
             dCnsdCj_pow))
@@ -705,11 +712,11 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(diff(Rop_sym[i], Ck[j]), dRopdCj)
 
     write_sec(r'Third-Body\slash Pressure-Depencence Derivatives')
-    subfile.write('For elementary reactions\n')
+    write_sec('Elementary reactions\n', sub=True)
     write(diff(ci[i], T), diff(ci_elem, T))
     write(diff(ci[i], Ck[j]), diff(ci_elem, Ck[j]))
 
-    subfile.write('For third body enhanced reactions\n')
+    write_sec('Third body enhanced reactions', sub=True)
     dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
                                 (Ctot, Ctot_sym))
     if not conp:
@@ -719,10 +726,10 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     register_equal(diff(ci_thd_sym, T), dci_thddT)
 
     dci_thddCj = diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), Ck[j])
-    dci_thddCj = assert_subs(simplify(dci_thddCj),
-            (Sum((thd_bdy_eff[Ns, i] - thd_bdy_eff[k, i]) *
+    dci_thddCj = assert_subs(dci_thddCj,
+            (Sum((-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i]) *
                 KroneckerDelta(j, k), (k, 1, Ns - 1)),
-            thd_bdy_eff[Ns, i] - thd_bdy_eff[j, i]))
+            -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
     write(diff(ci_thd_sym, Ck[j]), dci_thddCj)
     if not conp:
         dci_thddCj = assert_subs(simplify(dci_thddCj), (diff(P, Ck[j]), dPdCj))
@@ -737,11 +744,12 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         write(diff(ci_thd_sym, Ck[j]), dci_unity_dCj)
     register_equal(diff(ci_thd_sym, Ck[j]), dci_unity_dCj)
 
-    subfile.write('For unimolecular/recombination fall-off reactions\n')
+    write_sec('Unimolecular/recombination fall-off reactions', sub=True)
     dci_falldT = factor_terms(
         collect(
             assert_subs(diff(ci_fall, T),
-            (ci_fall, ci[i])),
+                        (ci_fall, ci[i]),
+                        assumptions=[(ci_fall, ci[i])]),
         diff(Pri_sym, T)))
     write(diff(ci[i], T), dci_falldT)
 
@@ -749,24 +757,27 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dci_falldCj = factor_terms(
         collect(
             assert_subs(diff(ci_fall, Ck[j]),
-                (ci_fall, ci[i]))
+                (ci_fall, ci[i]),
+                assumptions=[(ci_fall, ci[i])])
             , diff(Pri_sym, Ck[j]) / (Pri_sym + 1)))
     write(diff(ci[i], Ck[j]), dci_falldCj)
 
-    subfile.write('For chemically-activated bimolecular reactions\n')
+    write_sec('Chemically-activated bimolecular reactions', sub=True)
     dci_chemdT = factor_terms(
         collect(
-            assert_subs(diff(ci_chem, T), (ci_chem, ci[i])),
+            assert_subs(diff(ci_chem, T), (ci_chem, ci[i]),
+                assumptions=[(ci_chem, ci[i])]),
             diff(Pri_sym, T)))
     write(diff(ci[i], T), dci_chemdT)
 
     dci_chemdCj = factor_terms(
         collect(
-            assert_subs(diff(ci_chem, Ck[j]), (ci_chem, ci[i])),
+            assert_subs(diff(ci_chem, Ck[j]), (ci_chem, ci[i]),
+                assumptions=[(ci_chem, ci[i])]),
             diff(Pri_sym, Ck[j]) / (Pri_sym + 1)))
     write(diff(ci[i], Ck[j]), dci_chemdCj)
 
-    subfile.write('The $P_{r, i}$ derivatives are:\n')
+    write_sec('$P_{r, i}$ derivatives', sub=True)
     dPri_mixdT = assert_subs(diff(Pri_mix, T), (diff(ci_thd_sym, T), dci_thddT))
     A_inf, Beta_inf = symbols(r'A_{\infty} \beta_{\infty}')
     Ea_inf = Symbol(r'E_{a, \infty}')
@@ -785,11 +796,46 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         (kf_sym[i], k0_sym))
     register_equal(diff(k0_sym, T), dk0dT)
 
-    dPri_mixdT = assert_subs(dPri_mixdT, (diff(k0_sym, T), dk0dT),
-        (diff(kinf_sym, T), dkinfdT))
-    dPri_mixdT = assert_subs(collect(dPri_mixdT, Pri_mix / T), (Pri_mix, Pri_sym))
+    def __get_pri_fac_terms(dPri_dT, dPri_dCj, descriptor):
+        #simplify the dPri/dT term
+        #find terms with Pr in them
+        dPri_dT_prifac = Add(*[x for x in Add.make_args(dPri_dT) if x.has(Pri_sym)])
+        dPri_dT_prifac = dPri_dT_prifac / Pri_sym
+        dPri_dT_prifac_sym = Symbol(r'\Theta_{{P_{{r,i}}, \partial T, {}}}'.format(descriptor))
+        register_equal(dPri_dT_prifac_sym, dPri_dT_prifac)
+
+        #and the non Pr terms
+        dPri_dT_noprifac = Add(*[x for x in Add.make_args(dPri_dT) if not x.has(Pri_sym)])
+        dPri_dT_noprifac_sym = Symbol(r'\bar{{\theta}}_{{P_{{r, i}}, \partial T, {}}}'.format(descriptor))
+        register_equal(dPri_dT_noprifac_sym, dPri_dT_noprifac)
+
+        #now do the dPri/dCj term
+        dPri_dCj_fac = dPri_dCj / (k0_sym / kinf_sym)
+        dPri_dCj_fac_sym = Symbol(r'\bar{{\theta}}_{{P_{{r, i}}, \partial [C][j], {}}}'.format(descriptor))
+        register_equal(dPri_dCj_fac_sym, dPri_dCj_fac)
+
+        #and sub in
+        dPri_dT = assert_subs(dPri_dT, (dPri_dT_prifac, dPri_dT_prifac_sym),
+            (dPri_dT_noprifac, dPri_dT_noprifac_sym))
+        dPri_dCj = assert_subs(dPri_dCj, (dPri_dCj_fac, dPri_dCj_fac_sym))
+
+        #write the substituted forms
+        write(diff(Pri_sym, T), dPri_dT)
+        write(diff(Pri_sym, Ck[j]), dPri_dCj)
+
+        write(dPri_dT_prifac_sym, dPri_dT_prifac)
+        write(dPri_dT_noprifac_sym, dPri_dT_noprifac)
+        write(dPri_dCj_fac_sym, dPri_dCj_fac)
+
+
+        return dPri_dT, dPri_dT_prifac, dPri_dT_prifac_sym, dPri_dT_noprifac, dPri_dT_noprifac_sym,\
+            dPri_dCj, dPri_dCj_fac, dPri_dCj_fac_sym
 
     subfile.write('\nFor the mixture as the third body\n')
+    dPri_mixdT = assert_subs(dPri_mixdT, (diff(k0_sym, T), dk0dT),
+        (diff(kinf_sym, T), dkinfdT))
+    dPri_mixdT = assert_subs(collect(dPri_mixdT, Pri_mix / T), (Pri_mix, Pri_sym),
+        assumptions=[(Pri_mix, Pri_sym)])
     write(diff(Pri_sym, T), dPri_mixdT)
 
     dPri_mixdCj = assert_subs(diff(Pri_mix, Ck[j]), (diff(ci_thd_sym, Ck[j]), dci_thddCj))
@@ -798,19 +844,27 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
     write(diff(Pri_sym, Ck[j]), dPri_mixdCj)
 
+    subfile.write('Simplifying:\n')
+    dPri_mixdT, dPri_mixdT_prifac, dPri_mixdT_prifac_sym, dPri_mixdT_noprifac, dPri_mixdT_noprifac_sym,\
+            dPri_mixdCj, dPri_mixdCj_fac, dPri_mixdCj_fac_sym = __get_pri_fac_terms(dPri_mixdT, dPri_mixdCj, "mix")
 
     subfile.write('For species $m$ as the third body\n')
 
     dPri_specdT = diff(Pri_spec, T)
     dPri_specdT = assert_subs(dPri_specdT, (diff(k0_sym, T), dk0dT),
         (diff(kinf_sym, T), dkinfdT))
-    dPri_specdT = assert_subs(collect(dPri_specdT, Pri_spec / T), (Pri_spec, Pri_sym))
+    dPri_specdT = assert_subs(collect(dPri_specdT, Pri_spec / T), (Pri_spec, Pri_sym),
+        assumptions=[(Pri_spec, Pri_sym)])
     write(diff(Pri_sym, T), dPri_specdT)
 
     dCmdCj = (1 - KroneckerDelta(m, Ns)) * diff(Ck[m], Ck[j]) + KroneckerDelta(m, Ns) * dCnsdCj
     register_equal(diff(Ck[m], Ck[j]), dCmdCj)
     dPri_specdCj = assert_subs(diff(Pri_spec, Ck[j]), (diff(Ck[m], Ck[j]), dCmdCj))
     write(diff(Pri_sym, Ck[j]), dPri_specdCj)
+
+    subfile.write('Simplifying:\n')
+    dPri_specdT, dPri_specdT_prifac, dPri_specdT_prifac_sym, dPri_specdT_noprifac, dPri_specdT_noprifac_sym,\
+            dPri_specdCj, dPri_specdCj_fac, dPri_specdCj_fac_sym = __get_pri_fac_terms(dPri_specdT, dPri_specdCj, "spec")
 
     subfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     Pri_unity = assert_subs(Pri_mix, (ci_thd_sym, ci_thd))
@@ -841,7 +895,39 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         dPri_unitydCj = assert_subs(dPri_unitydCj, (diff(P, Ck[j]), dPdCj))
         write(diff(Pri_sym, Ck[j]), dPri_unitydCj)
 
-    subfile.write('The $F_i$ derivatives are:\n')
+    subfile.write('Simplifying:\n')
+    dPri_unitydT, dPri_unitydT_prifac, dPri_unitydT_prifac_sym, dPri_unitydT_noprifac, dPri_unitydT_noprifac_sym,\
+            dPri_unitydCj, dPri_unitydCj_fac, dPri_unitydCj_fac_sym = __get_pri_fac_terms(dPri_unitydT, dPri_unitydCj, "unity")
+
+    #finally we make a generic version for simplification
+    subfile.write('Thus we write:\n')
+    dPri_dT_prifac_sym = Symbol(r'\Theta_{P_{r,i}, \partial T}')
+    dPri_dT_noprifac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial T}')
+    dPri_dCj_fac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial [C][j]}')
+    dPri_dT = assert_subs(dPri_mixdT, (dPri_mixdT_prifac_sym, dPri_dT_prifac_sym),
+        (dPri_mixdT_noprifac_sym, dPri_dT_noprifac_sym),
+        assumptions=[(dPri_mixdT_prifac_sym, dPri_dT_prifac_sym),
+        (dPri_mixdT_noprifac_sym, dPri_dT_noprifac_sym)])
+    dPri_dCj = assert_subs(dPri_mixdCj, (dPri_mixdCj_fac_sym, dPri_dCj_fac_sym),
+        assumptions=[(dPri_mixdCj_fac_sym, dPri_dCj_fac_sym)])
+
+    write(diff(Pri_sym, T), dPri_dT)
+    write(diff(Pri_sym, Ck[j]), dPri_dCj)
+    register_equal(diff(Pri_sym, T), dPri_dT)
+    register_equal(diff(Pri_sym, Ck[j]), dPri_dCj)
+
+    subfile.write('For\n')
+    write_case(dPri_dT_prifac_sym, [(dPri_mixdT_prifac, "mix"),
+        (dPri_specdT_prifac, "species"),
+        (dPri_unitydT_prifac, "unity")])
+    write_case(dPri_dT_noprifac_sym, [(dPri_mixdT_noprifac, "mix"),
+        (dPri_specdT_noprifac, "species"),
+        (dPri_unitydT_noprifac, "unity")])
+    write_case(dPri_dCj_fac_sym, [(dPri_mixdCj_fac, "mix"),
+        (dPri_specdCj_fac, "species"),
+        (dPri_unitydCj_fac, "unity")])
+
+    write_sec('$F_i$ derivatives', sub=True)
     subfile.write('\n For Lindemann reactions\n')
 
     dFi_linddT = diff(Fi_lind, T)
@@ -888,11 +974,11 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     register_equal(diff(Btroe_sym, Pri_sym), dBtroedPri)
 
     subfile.write('Thus\n')
-    dFi_troedFcent = factor_terms(
+    dFi_troedFcent = factor_terms(simplify(
             assert_subs(dFi_troedFcent,
             (diff(Atroe_sym, Fcent_sym), dAtroedFcent),
             (diff(Btroe_sym, Fcent_sym), dBtroedFcent)
-            ))
+            )))
     write(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
     register_equal(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
 
@@ -905,6 +991,31 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     register_equal(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
 
     subfile.write('And\n')
+    dFi_troedT = assert_subs(dFi_troedT, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
+        (diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent),
+        (diff(Pri_sym, T), dPri_dT))
+    dFi_troedT = simplify(dFi_troedT)
+
+    dFi_troedT_fac = dFi_troedT / Fi_troe_sym
+    dFi_troedT_fac_sym = Symbol(r'\Theta_{F_i, \partial T, Troe}')
+    register_equal(dFi_troedT_fac_sym, dFi_troedT_fac)
+
+    dFi_troedT = assert_subs(dFi_troedT, (dFi_troedT_fac, dFi_troedT_fac_sym))
+    write(diff(Fi_sym, T), dFi_troedT)
+
+    dFi_troedCj = assert_subs(dFi_troedCj, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
+        (diff(Pri_sym, Ck[j]), dPri_dCj))
+    dFi_troedCj = simplify(dFi_troedCj)
+    dFi_troedCj_fac = dFi_troedCj / Fi_troe_sym
+    dFi_troedCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j], Troe}')
+    register_equal(dFi_troedCj_fac_sym, dFi_troedCj_fac)
+
+    dFi_troedCj = assert_subs(dFi_troedCj, (dFi_troedCj_fac, dFi_troedCj_fac_sym))
+    write(diff(Fi_sym, Ck[j]), dFi_troedCj)
+
+    subfile.write('Where\n')
+    write(dFi_troedT_fac_sym, dFi_troedT_fac)
+    write(dFi_troedCj_fac_sym, dFi_troedCj_fac)
 
 
     subfile.write('For SRI reactions\n')
@@ -918,18 +1029,100 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     subfile.write('Where\n')
     dXdPri = assert_subs(diff(X, Pri_sym), (X, X_sym))
     write(diff(X_sym, Pri_sym), dXdPri)
-    write_dummy(r'\frac{\partial X}{\partial [C]_j} = ' + latex(diff(X_sym, Ck[j])))
+    register_equal(diff(X_sym, Pri_sym), dXdPri)
 
-    subfile.write('Thus\n')
+    write(r'\frac{\partial X}{\partial [C]_j} = ' + latex(diff(X_sym, Ck[j])))
 
+    subfile.write('And\n')
+    dFi_sridT = simplify(
+        assert_subs(dFi_sridT, (diff(X_sym, Pri_sym), dXdPri),
+        (diff(Pri_sym, T), dPri_dT)))
+
+    dFi_sridT_fac = dFi_sridT / Fi_sym
+    dFi_sridT_fac_sym = Symbol(r'\Theta_{F_i, \partial T, SRI}')
+    register_equal(dFi_sridT_fac_sym, dFi_sridT_fac)
+    dFi_sridT = assert_subs(dFi_sridT, (dFi_sridT_fac, dFi_sridT_fac_sym))
+    write(diff(Fi_sym, T), dFi_sridT)
+
+    dFi_sridCj = simplify(
+            assert_subs(dFi_sridCj, (diff(X_sym, Pri_sym), dXdPri),
+            (diff(Pri_sym, Ck[j]), dPri_dCj)))
+
+    dFi_sridCj_fac = dFi_sridCj / Fi_sym
+    dFi_sridCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j], SRI}')
+    register_equal(dFi_sridCj_fac_sym, dFi_sridCj_fac)
+    dFi_sridCj = assert_subs(dFi_sridCj, (dFi_sridCj_fac, dFi_sridCj_fac_sym))
+    write(diff(Fi_sym, Ck[j]), dFi_sridCj)
+
+    subfile.write('Where\n')
+    write(dFi_sridT_fac_sym, dFi_sridT_fac)
+    write(dFi_sridCj_fac_sym, dFi_sridCj_fac)
+
+    subfile.write('Simplifying:\n')
+    dFi_dT_fac_sym = Symbol(r'\Theta_{F_i, \partial T}')
+    dFi_dT = assert_subs(dFi_troedT,
+        (dFi_troedT_fac_sym, dFi_dT_fac_sym),
+        (Fi_troe_sym, Fi_sym),
+        assumptions=[(dFi_troedT_fac_sym, dFi_dT_fac_sym),
+            (Fi_troe_sym, Fi_sym)])
+    write(diff(Fi_sym, T), dFi_dT)
+    register_equal(diff(Fi_sym, T), dFi_dT)
+
+    dFi_dCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j]}')
+    dFi_dCj = assert_subs(dFi_troedCj,
+        (dFi_troedCj_fac_sym, dFi_dCj_fac_sym),
+        (Fi_troe_sym, Fi_sym),
+        assumptions=[(dFi_troedCj_fac_sym, dFi_dCj_fac_sym),
+        (Fi_troe_sym, Fi_sym)])
+    write(diff(Fi_sym, Ck[j]), dFi_dCj)
+    register_equal(diff(Fi_sym, Ck[j]), dFi_dCj)
+
+    subfile.write('Where:\n')
+
+    dFi_linddT_fac = dFi_linddT / Fi_sym
+    write_case(dFi_dT_fac_sym, [(dFi_linddT_fac, 'Lindemann'),
+        (dFi_troedT_fac, 'Troe'),
+        (dFi_sridT_fac, 'SRI')])
+
+    dFi_linddCj_fac = dFi_linddCj / Fi_sym
+    write_case(dFi_dCj_fac_sym, [(dFi_linddCj_fac, 'Lindemann'),
+        (dFi_troedCj_fac, 'Troe'),
+        (dFi_sridCj_fac, 'SRI')])
+
+    write_sec('Unimolecular/recombination fall-off reactions (complete)', sub=True)
+    def __subs_ci_terms(dci_dT, dci_dCj, ci_term):
+        dci_dT = assert_subs(expand(
+                assert_subs(dci_dT,
+                (diff(Fi_sym, T), dFi_dT),
+                (diff(Pri_sym, T), dPri_dT))),
+            (ci_term, ci[i]),
+            assumptions=[(ci_term, ci[i])])
+        dci_dT = factor_terms(collect(dci_dT,
+            [ci[i], Pri_sym]))
+
+        dci_dCj = assert_subs(expand(assert_subs(dci_dCj,
+                (diff(Fi_sym, Ck[j]), dFi_dCj),
+                (diff(Pri_sym, Ck[j]), dPri_dCj))),
+            (ci_term, ci[i]),
+            assumptions=[(ci_term, ci[i])])
+        dci_dCj = factor_terms(collect(dci_dCj,
+            [ci[i], Pri_sym]))
+        write(diff(ci[i], T), dci_dT)
+        write(diff(ci[i], Ck[j]), dci_dCj)
+        return dci_dT, dci_dCj
+
+    dci_falldT, dci_falldCj = __subs_ci_terms(dci_falldT, dci_falldCj, ci_fall)
+
+    write_sec('Chemically activated reactions (complete)', sub=True)
+
+    dci_chemdT, dci_chemdCj = __subs_ci_terms(dci_chemdT, dci_chemdCj, ci_chem)
 
     write_sec('Pressure-dependent reaction derivatives')
     subfile.write('For PLog reactions\n')
     dkf_pdepdT = diff(kf_pdep, T)
     #since the kf_pdep is expressed as a log
     #we need to solve for this in terms of dkf/dT
-    mul_term = kf_sym[i]
-    assert diff(log(kf_sym[i]), T) * mul_term == diff(kf_sym[i], T)
+    mul_term = diff(kf_sym[i], T) / diff(log(kf_sym[i]), T)
     dkf_pdepdT = dkf_pdepdT * mul_term
     write(diff(kf_sym[i], T), dkf_pdepdT)
     #next sub in the corresponding kf derivatives
@@ -969,13 +1162,11 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dqdT_exp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_expdT),
         (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
         assumptions=[(diff(Rop_sym[i], T), dRop_expdT)])
-    dqdT_exp = simplify(dqdT_exp)
     write(diff(q_sym[i], T), dqdT_exp)
     subfile.write('For non-explicit reversible reactions')
     dqdT_nonexp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_nonexpdT),
         (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
         assumptions=[(diff(Rop_sym[i], T), dRop_nonexpdT)])
-    dqdT_exp = simplify(dqdT_nonexp)
     write(diff(q_sym[i], T), dqdT_nonexp)
 
     return omega_sym, dPdT, dPdCj
@@ -1148,7 +1339,8 @@ def derivation(file, conp=True, thermo_deriv=False):
 
     if not conp:
         dTdotdC = assert_subs(dTdotdC, (diff(Ctot_sym, P), diff(Ctot, P)),
-            (diff(P, Ck[j]), dPdCj))
+            (diff(P, Ck[j]), dPdCj),
+            assumptions=[(diff(Ctot_sym, P), diff(Ctot, P))])
         write_eq(dTdotdC_sym, dTdotdC)
 
     #Compact the CkCpSum back to a more reasonble representation
