@@ -46,9 +46,9 @@ class MyImplicitSymbol(ImplicitSymbol):
         if isinstance(arg, IndexedConc) and \
                     isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
                     isinstance(wrt.base, IndexedConc):
-            return MyImplicitSymbol(self.base_str.format(
+            return self.__class__(self.base_str.format(
                     str(self.name), str(wrt)), args=self.functional_form)
-        return MyImplicitSymbol(self.base_str.format(
+        return self.__class__(self.base_str.format(
                 str(self.name), str(arg)), args=self.functional_form)
 
 class MyIndexedFunc(IndexedFunc):
