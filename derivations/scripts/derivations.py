@@ -856,10 +856,13 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     subfile.write('where\n')
     troe_collect_poly = 2 * Atroe_sym / (Btroe_sym**3)
     dFi_troedFcent = assert_subs(factor_terms(
-        diff(Fi_troe, Fcent_sym), (Fi_troe, Fi_troe_sym)))
+        diff(Fi_troe, Fcent_sym)), (Fi_troe, Fi_troe_sym))
+    write(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+
     dFcentdT = diff(Fcent, T)
     write(diff(Fcent_sym, T), dFcentdT)
-    write(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+    register_equal(diff(Fcent_sym, T), dFcentdT)
+
     dFi_troedPri = factor_terms(
         assert_subs(diff(Fi_troe, Pri_sym),
             (Fi_troe, Fi_troe_sym)))
@@ -871,9 +874,35 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dAtroedPri = diff(Atroe, Pri_sym)
     dBtroedPri = diff(Btroe, Pri_sym)
     write(diff(Atroe_sym, Fcent_sym), dAtroedFcent)
+    register_equal(diff(Atroe_sym, Fcent_sym), dAtroedFcent)
+
     write(diff(Btroe_sym, Fcent_sym), dBtroedFcent)
+    register_equal(diff(Btroe_sym, Fcent_sym), dBtroedFcent)
+
     write(diff(Atroe_sym, Pri_sym), dAtroedPri)
+    register_equal(diff(Atroe_sym, Pri_sym), dAtroedPri)
+
     write(diff(Btroe_sym, Pri_sym), dBtroedPri)
+    register_equal(diff(Btroe_sym, Pri_sym), dBtroedPri)
+
+    subfile.write('Thus\n')
+    dFi_troedFcent = factor_terms(
+            assert_subs(dFi_troedFcent,
+            (diff(Atroe_sym, Fcent_sym), dAtroedFcent),
+            (diff(Btroe_sym, Fcent_sym), dBtroedFcent)
+            ))
+    write(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+    register_equal(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+
+    dFi_troedPri = factor_terms(
+        assert_subs(dFi_troedPri,
+            (diff(Atroe_sym, Pri_sym), dAtroedPri),
+            (diff(Btroe_sym, Pri_sym), dBtroedPri))
+        )
+    write(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
+    register_equal(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
+
+    subfile.write('And\n')
 
 
     subfile.write('For SRI reactions\n')
@@ -888,6 +917,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     dXdPri = assert_subs(diff(X, Pri_sym), (X, X_sym))
     write(diff(X_sym, Pri_sym), dXdPri)
     write_dummy(r'\frac{\partial X}{\partial [C]_j} = ' + latex(diff(X_sym, Ck[j])))
+
+    subfile.write('Thus\n')
+
 
     write_sec('Pressure-dependent reaction derivatives')
     subfile.write('For PLog reactions\n')
@@ -929,6 +961,20 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
                         (diff(P, T), dPdT))
         dkf_chebdT = factor_terms(dkf_chebdT)
         write(diff(kf_sym[i], T), dkf_chebdT)
+
+    write_sec('Jacobian Update Form')
+    subfile.write('For explicit reversible reactions')
+    dqdT_exp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_expdT),
+        (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
+        assumptions=[(diff(Rop_sym[i], T), dRop_expdT)])
+    dqdT_exp = simplify(dqdT_exp)
+    write(diff(q_sym[i], T), dqdT_exp)
+    subfile.write('For non-explicit reversible reactions')
+    dqdT_nonexp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_nonexpdT),
+        (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
+        assumptions=[(diff(Rop_sym[i], T), dRop_nonexpdT)])
+    dqdT_exp = simplify(dqdT_nonexp)
+    write(diff(q_sym[i], T), dqdT_nonexp)
 
     return omega_sym, dPdT, dPdCj
 
