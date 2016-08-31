@@ -33,7 +33,9 @@ out_dir = os.path.realpath(os.path.join(
 init_printing()
 
 class CustomLatexPrinter(LatexPrinter):
-    pass
+    def _print_ExpBase(self, expr, exp=None):
+        tex = r"\operatorname{exp}\left({%s}\right)" % self._print(expr.args[0])
+        return self._do_exponent(tex, exp)
 
 #override default latex print method
 def latex(expr, **settings):
