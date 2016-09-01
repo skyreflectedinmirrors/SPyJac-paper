@@ -132,8 +132,23 @@ def assert_subs(obj, *subs_args, **kw_args):
         def __rep_dummy_sum(arg):
             out_terms = []
             for term in Mul.make_args(arg):
-                if isinstance(term, Sum) and term.limits[0][1] == term.limits[0][2]:
-                    out_terms.append(term.function.subs(term.limits[0][0], term.limits[0][1]))
+                if isinstance(term, Sum) or isinstance(term, Product):
+                    limit_list = ()
+                    for limit in term.limits:
+                        #test that we can actually compare the limits
+                        try:
+                            if limit[1] >= limit[2]: #and that the second >= first
+                                #no sum/product
+                                continue
+                        except:
+                            pass
+                        #valid limit
+                        limit_list = limit_list + (limit,)
+                    if not limit_list:
+                        #no remaining valid limits
+                        out_terms.append(term.function.subs(term.limits[0][0], term.limits[0][1]))
+                    else:
+                        out_terms.append(term.__class__(term.function, *limit_list))
                 else:
                     out_terms.append(term)
             return Mul(*out_terms)
@@ -161,21 +176,42 @@ def assert_subs(obj, *subs_args, **kw_args):
             return test_equal(Mul(*[x.subs(sum_var, other_var) for x in args if x != KD]),
                 v2)
         #sum of vals to Ns -> sum vals to Ns - 1 + val_ns
-        if isinstance(v1, Sum) and v2.has(Sum) and isinstance(v2, Add):
+        #OR
+        #product of vals to Ns -> product vals to Ns - 1 * val_ns
+        #OR
+        #the reverse
+        def __sum_test(v1, v2):
             lim = v1.limits[0]
             #get the Ns term, and test equivalence
             v2Ns = next((x for x in v2.args if
                 test_equal(v1.function.subs(lim[0], lim[2]), x)),
                 None)
-            assert v2Ns is not None
+            retv = True
+            retv = retv and v2Ns is not None
 
             #get the sum term in v2
             v2sum = next((arg for arg in v2.args if arg != v2Ns), None)
-            assert v2sum is not None
-            assert v2sum.function == v1.function
-            assert v2sum.limits[0][0] == lim[0]
-            assert v2sum.limits[0][1] == lim[1]
-            assert v2sum.limits[0][2] + 1 == lim[2]
+            retv = retv and v2sum is not None
+            retv = retv and v2sum.function == v1.function
+            retv = retv and v2sum.limits[0][0] == lim[0]
+            retv = retv and v2sum.limits[0][1] == lim[1]
+            retv = retv and v2sum.limits[0][2] + 1 == lim[2]
+            return retv
+
+        if (isinstance(v1, Sum) and v2.has(Sum) and isinstance(v2, Add))\
+            or (isinstance(v1, Product) and v2.has(Product) and isinstance(v2, Mul)):
+            if __sum_test(v1, v2):
+                return True
+        if (isinstance(v2, Sum) and v1.has(Sum) and isinstance(v1, Add))\
+            or (isinstance(v2, Product) and v1.has(Product) and isinstance(v1, Mul)):
+            if __sum_test(v2, v1):
+                return True
+
+        #test switch of sum variable
+        if (((isinstance(v1, Sum) and isinstance(v2, Sum)) or
+            (isinstance(v1, Product) and isinstance(v2, Product))) and
+            v2.function.subs(v2.limits[0][0], v1.limits[0][0]) == v1.function and
+            v2.limits[0][1:] == v1.limits[0][1:]):
             return True
 
         if v1 in equivalences:
