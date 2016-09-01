@@ -722,7 +722,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     if not conp:
         dci_thddT = assert_subs(dci_thddT, (diff(P, T), dPdT),
                                             (Ctot, Ctot_sym))
-        write(diff(ci_thd_sym, T), dci_thddT)
+    write(diff(ci_thd_sym, T), dci_thddT)
     register_equal(diff(ci_thd_sym, T), dci_thddT)
 
     dci_thddCj = diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), Ck[j])
