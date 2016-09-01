@@ -1,6 +1,6 @@
 from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton, S
-from sympy.core.numbers import NumberSymbol, mpf_norm
+from sympy.core.numbers import NumberSymbol, mpf_norm, Integer
 from mpmath.libmp.libmpf import from_float
 
 """
