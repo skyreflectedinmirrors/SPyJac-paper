@@ -358,7 +358,7 @@ def thermo_derivation(Yi_sym, P, V, n, subfile=None):
     return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
             cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk
 
-def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subfile):
+def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_sym, subfile):
     def write(*args):
         write_eq(*args, myfile=subfile)
     def write_dummy(*args):
@@ -633,7 +633,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     write(diff(q_sym[i], Ck[k]), diff(q, Ck[j]))
 
     write_sec('Rate of Progress Derivatives')
-    write(diff(Ropf_sym, T), diff(Ropf, T))
+
+    write_sec('Concentration Derivatives', sub=True)
     write(diff(Ropf_sym, Ck[k]), diff(Ropf, Ck[j]))
 
     dCkdCj = diff(Ck[k], Ck[j])
@@ -666,52 +667,167 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         if kval == Ns:
             return Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1))
         else:
-            return Product(Ck[l]**nuv[l, i], (l, 1, k - 1), (l, k + 1, Ns))
+            return Product(Ck[l]**nuv[l, i], (l, 1, kval - 1), (l, kval + 1, Ns))
 
-    dRopfdCj = Sum(nu_f[k, i] * Ck[k] ** (nu_f[k, i] - 1) *
-        __mod_prod_sum(k), (k, 1, Ns - 1)) - \
-        nu_f[Ns, i] * Ck[Ns]**(nu_f[Ns, i] - 1) * __mod_prod_sum(Ns)
-    write(diff(Ropf / kf_sym[i], Ck[j]), dRopfdCj)
+    def __inner_func(kval, fwd=True):
+        nuv = nu_f if fwd else nu_r
+        return nuv[kval, i] * Ck[kval] ** (nuv[kval, i] - 1) * __mod_prod_sum(kval, fwd)
 
     def __create_dRopdCj(fwd=True):
-        nuv = nu_f if fwd else nu_r
         krate = kf_sym[i] if fwd else kr_sym[i]
         return krate * Sum((dCkdCj + dCnsdCj * KroneckerDelta(k, Ns)) *\
-                nuv[k, i] * Ck[k] ** (nuv[k, i] - 1) * __mod_prod_sum(k, fwd), (k, 1, Ns))
+               __inner_func(k, fwd), (k, 1, Ns))
 
     dRopfdCj = __create_dRopdCj()
+    write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
+
+    dRopfdCj = assert_subs(expand(dRopfdCj, power_base=False, power_exp=False),
+        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
+            -__inner_func(Ns, True)),
+        (Sum(KroneckerDelta(k, j) * __inner_func(k, True), (k, 1, Ns)),
+            __inner_func(j, True))
+        )
+
+    dRopfdCj = simplify(dRopfdCj)
+    write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
+
+    #define the S terms
+    Sfwd = IndexedBase(r'S^{\prime}')
+    write(Sfwd[l], __inner_func(l, True))
+    register_equal(Sfwd[j], __inner_func(j, True))
+    register_equal(Sfwd[Ns], __inner_func(Ns, True))
+    #and sub in
+    dRopfdCj = assert_subs(dRopfdCj, (__inner_func(j, True),
+        Sfwd[j]), (__inner_func(Ns, True), Sfwd[Ns]))
     write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
     register_equal(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
 
     dRoprdCj = __create_dRopdCj(False)
     write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
+
+    dRoprdCj = assert_subs(expand(dRoprdCj, power_base=False, power_exp=False),
+        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
+            -__inner_func(Ns, False)),
+        (Sum(KroneckerDelta(k, j) * __inner_func(k, False), (k, 1, Ns)),
+            __inner_func(j, False))
+        )
+
+    dRoprdCj = simplify(dRoprdCj)
+    write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
+
+    #define the S terms
+    Srev = IndexedBase(r'S^{\prime\prime}')
+    write(Srev[l], __inner_func(l, False))
+    register_equal(Srev[j], __inner_func(j, False))
+    register_equal(Srev[Ns], __inner_func(Ns, False))
+    #and sub in
+    dRoprdCj = assert_subs(dRoprdCj, (__inner_func(j, False),
+        Srev[j]), (__inner_func(Ns, False), Srev[Ns]))
+    write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
     register_equal(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
+    subfile.write('For all reversible reactions\n')
+    #now do dRop/dCj
+    dRopdCj = assert_subs(diff(Rop, Ck[j]),
+        (diff(Ropf_sym[i], Ck[j]), dRopfdCj),
+        (diff(Ropr_sym[i], Ck[j]), dRoprdCj))
+    write(diff(Rop_sym[i], Ck[j]), dRopdCj)
+
+    write_sec('Temperature Derivative', sub=True)
+
+    write(Ropf_sym, Ropf)
     dkfdT = assert_subs(factor_terms(diff(kf, T)), (kf, kf_sym[i]))
     write(diff(kf_sym[i], T), dkfdT)
     register_equal(diff(kf_sym[i], T), dkfdT)
 
-    dRopfdT = assert_subs(diff(Ropf, T), (diff(kf_sym[i], T), dkfdT),
-        (Ropf, Ropf_sym[i]))
-    write(diff(Ropf_sym[i], T), dRopfdT)
-    register_equal(diff(Ropf_sym[i], T), dRopfdT)
+
+    def get_dr_dt(fwd=True, explicit=True, writetofile=True):
+        Ropt_sym = Ropf_sym if fwd else Ropr_sym
+        Rop_temp = Ropf if fwd else Ropr
+        nuv = nu_f if fwd else nu_r
+        Sval = Sfwd if fwd else Srev
+
+        #sub in Cns for proper temperature derivative
+        Rop_temp = assert_subs(Rop_temp, (Product(Ck[k]**nuv[k, i], (k, 1, Ns)),
+            Cns**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))))
+
+        if writetofile:
+            write(Ropt_sym, Rop_temp)
+
+        dRoptdT = diff(Rop_temp, T)
+        if writetofile:
+            write(diff(Ropt_sym, T), dRoptdT)
+
+        #sub in Ck[Ns]
+        dRoptdT = expand_mul(simplify(assert_subs(dRoptdT, (Cns, Ck[Ns]))))
+
+        #and go back original product
+        dRoptdT = assert_subs(dRoptdT, (Ck[Ns] * Ck[Ns]**(nuv[Ns, i] - 1), Ck[Ns]**nuv[Ns, i]))
+        dRoptdT = assert_subs(dRoptdT, (Ck[Ns]**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)),
+            Product(Ck[k]**nuv[k, i], (k, 1, Ns))))
+
+        #and sub in C
+        dRoptdT = assert_subs(dRoptdT, (Ctot, Ctot_sym))
+
+        if writetofile:
+            write(diff(Ropt_sym, T), dRoptdT)
+
+        #finally sub in the S term
+        #need to modify the inner function to use k as the sum variable
+        inner = __inner_func(Ns, fwd=fwd)
+
+        #make sure it's equivalent before we mess with it
+        assert_subs(dRoptdT,
+            (inner, Sval[Ns]))
+
+        #switch the sum variable
+        inner = assert_subs(inner,
+            (__mod_prod_sum(Ns, fwd=fwd),
+                Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))))
+        #and force a subsitution
+        dRoptdT = assert_subs(dRoptdT,
+            (inner, Sval[Ns]),
+            assumptions=[(inner, Sval[Ns])])
+
+        ksym = kf_sym if fwd else kr_sym
+        dkdT = dkfdT if fwd else (dkr_rexpdT if explicit else dkrdT)
+
+        dRoptdT = assert_subs(dRoptdT, (diff(ksym[i], T), dkdT),
+            (Ropf if fwd else Ropr, Ropt_sym[i]),
+            assumptions=[(diff(ksym[i], T), dkdT)])
+
+        write(diff(Ropt_sym[i], T), dRoptdT)
+        register_equal(diff(Ropt_sym[i], T), dRoptdT)
+
+        return dRoptdT
+
+    dRopfdT = get_dr_dt()
 
     subfile.write('For reactions with explicit reverse Arrhenius coefficients\n')
 
+    #set up the correct variables
     A_rexp = IndexedBase(r'{A_{r}}')
     Beta_rexp = IndexedBase(r'{\beta_r}')
     Ea_rexp = IndexedBase(r'{E_{a,r}}')
     kr_rexp = A_rexp[i] * T**Beta_rexp[i] * exp(-Ea_rexp[i] / (R * T))
-    Ropr_rexp = kr_rexp * Product(Ck[l]**nu_r[k, i], (k, 1, Ns))
+    Ropr_rexp = kr_rexp * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
     register_equal(Ropr_rexp, Ropr_sym[i])
-    dRopr_rexpdT =  diff(Ropr_rexp, T)
-    dRopr_rexpdT = assert_subs(factor_terms(dRopr_rexpdT), (Ropr_rexp, Ropr_sym[i]))
+
+    #find the reverse derivative
+    dkr_rexpdT = assert_subs(factor_terms(diff(kr_rexp, T)), (kr_rexp, kr_sym[i]),
+        assumptions=[(kr_rexp, kr_sym[i])])
+
+    #and the derivative of Rop
+    dRopr_rexpdT = get_dr_dt(fwd=False, explicit=True, writetofile=False)
+
     dRop_expdT = dRopfdT - dRopr_rexpdT
     dRop_expdT = assert_subs(dRop_expdT, (Ropf, Ropf_sym[i]))
 
     write(diff(Rop_sym[i], T), dRop_expdT)
 
     subfile.write('For non-explicit reversible reactions\n')
+
+    #find dkr/dT
     dkrdT = diff(kf_sym[i] / Kc_sym[i], T)
     write(diff(kr_sym[i], T), dkrdT)
     dkrdT = assert_subs(dkrdT, (diff(kf_sym[i], T), dkfdT))
@@ -731,21 +847,14 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
     register_equal(diff(kr_sym[i], T), dkrdT)
 
     #now the full dRdT
-    dRoprdT = assert_subs(diff(Ropr, T), (diff(kr_sym[i], T), dkrdT))
-    dRoprdT = assert_subs(dRoprdT, (Ropr, Ropr_sym[i]))
+    dRoprdT = get_dr_dt(fwd=False, explicit=False, writetofile=False)
+
     write(diff(Ropr_sym[i], T), dRoprdT)
     register_equal(diff(Ropr_sym[i], T), dRoprdT)
 
     dRop_nonexpdT = assert_subs(diff(Rop, T), (diff(Ropf_sym[i], T), dRopfdT),
         (diff(Ropr_sym[i], T), dRoprdT))
     write(diff(Rop_sym[i], T), dRop_nonexpdT)
-
-    subfile.write('For all reversible reactions\n')
-    #now do dRop/dCj
-    dRopdCj = assert_subs(diff(Rop, Ck[j]),
-        (diff(Ropf_sym[i], Ck[j]), dRopfdCj),
-        (diff(Ropr_sym[i], Ck[j]), dRoprdCj))
-    write(diff(Rop_sym[i], Ck[j]), dRopdCj)
 
     write_sec(r'Third-Body\slash Pressure-Depencence Derivatives')
     write_sec('Elementary reactions\n', sub=True)
@@ -1194,16 +1303,35 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, subf
         write(diff(kf_sym[i], T), dkf_chebdT)
 
     write_sec('Jacobian Update Form')
-    subfile.write('For explicit reversible reactions')
+    write_sec('Temperature Derivatives', sub=True)
+
+    domegadT = diff(omega_k, T)
+    dqdT_temp = Symbol(r'\Theta_{\partial T, i}')
+    register_equal(dqdT_temp, diff(q_sym[i], T))
+
+    write(Eq(Jac_sym[k + 1, 1], diff(omega_sym[k], T)), domegadT)
+
+    domegadT = assert_subs(domegadT, (diff(q_sym[i], T), dqdT_temp))
+    write(Jac_sym[k + 1, 1], domegadT)
+
+    subfile.write('Converting to update form:\n')
+    domegadT = domegadT.function
+
+    write_dummy(latex(Jac_sym[k + 1, 1]) + r'\pluseq' + latex(domegadT) + r'\text{\quad} k = 1, \ldots, N_{sp} - 1')
+
+    subfile.write('For explicit reversible reactions\n')
     dqdT_exp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_expdT),
         (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
         assumptions=[(diff(Rop_sym[i], T), dRop_expdT)])
-    write(diff(q_sym[i], T), dqdT_exp)
+    write(Eq(dqdT_temp, diff(q_sym[i], T)), dqdT_exp)
     subfile.write('For non-explicit reversible reactions')
     dqdT_nonexp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_nonexpdT),
         (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
         assumptions=[(diff(Rop_sym[i], T), dRop_nonexpdT)])
-    write(diff(q_sym[i], T), dqdT_nonexp)
+    write(Eq(dqdT_temp, diff(q_sym[i], T)), dqdT_nonexp)
+
+    write_sec('Concentration Derivatives', sub=True)
+
 
     return omega_sym, dPdT, dPdCj
 
@@ -1291,11 +1419,13 @@ def derivation(file, conp=True, thermo_deriv=False):
     cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
             cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk = therm_vals
 
+    Jac = IndexedBase(r'\mathcal{J}', (Ns - 1, Ns - 1))
+
     #reaction rates
     with filer('con{}_reaction_derivation.tex'.format(
         'p' if conp else 'v'), 'w') as subfile:
         omega_sym, dPdT, dPdCj = reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym,
-             n_sym, m_sym, Bk, subfile)
+             n_sym, m_sym, Bk, Jac, subfile)
 
     write_section('Jacobian entries')
     write_section('Energy Equation')
@@ -1437,7 +1567,7 @@ def derivation(file, conp=True, thermo_deriv=False):
         dTdotdT = assert_subs(dTdotdT, (diff(P, T), dPdT))
 
     #first up, go back to Ctot_sym
-    dTdotdT = dTdotdT.subs(Ctot, Ctot_sym)
+    dTdotdT = assert_subs(dTdotdT, (Ctot, Ctot_sym))
     write_eq(dTdotdT_sym, dTdotdT)
 
     #and collapse the cp sum
@@ -1501,6 +1631,8 @@ if __name__ == '__main__':
                            r'\usepackage[utf8]{inputenc}' + '\n'
                            r'\usepackage{amsmath}' + '\n' +
                            r'\usepackage{breqn}' + '\n' +
+                           r'\newcommand{\pluseq}{\mathrel{{+}{=}}}' + '\n' +
+                           r'\newcommand{\minuseq}{\mathrel{{-}{=}}}' + '\n' +
                            r'\begin{document}' + '\n']
             self.regex = re.compile('{equation}')
 
