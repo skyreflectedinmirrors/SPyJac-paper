@@ -16,7 +16,7 @@ from sympy.core.function import UndefinedFunction, Function, diff, Derivative, e
 from sympy.functions.elementary.exponential import exp, log, sqrt
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.functions.special.polynomials import chebyshevt, chebyshevu
-from sympy.core.numbers import Rational, Float
+from sympy.core.numbers import Rational, Float, Integer
 from sympy.core.exprtools import factor_terms
 from sympy.core.relational import Equality
 from sympy.core.singleton import S
@@ -92,8 +92,12 @@ def write_dummy_eq(text, **kw_args):
 
 def write_section(title, **kw_args):
     writer = file if not 'myfile' in kw_args else kw_args['myfile']
-    writer.write(r'\{0}section{{{1}}}'.format(
-        '' if not 'sub' in kw_args or not kw_args['sub'] else 'sub', title) + '\n')
+    sec_type = ''
+    if 'sub' in kw_args and kw_args['sub']:
+        sec_type = 'sub'
+    elif 'subsub' in kw_args and kw_args['subsub']:
+        sec_type = 'subsub'
+    writer.write(r'\{0}section{{{1}}}'.format(sec_type, title) + '\n')
 
 def write_cases(variable, case_list, **kw_args):
     writer = file if not 'myfile' in kw_args else kw_args['myfile']
@@ -222,6 +226,9 @@ def assert_subs(obj, *subs_args, **kw_args):
             return any(v2t == v1 for v2t in equivalences[v2])
         elif -v2 in equivalences:
             return any(v2t == -v1 for v2t in equivalences[-v2])
+
+        if expand(v1 - v2) == 0:
+            return True
 
         if simplify(v1 - v2) == 0:
             return True
@@ -470,9 +477,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(Ropr_sym[i], Ropr)
     register_equal(Ropr_sym[i], Ropr)
 
-    write_sec('Pressure Dependent Forms')
+    write_sec('Third-body effect')
     #write the various ci forms
-    ci_elem = 1
+    ci_elem = Integer(1)
     write_dummy('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
 
     ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, T, P_sym))
@@ -524,7 +531,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(kr_sym[i], kf_sym[i] / Kc_sym[i])
     register_equal(kr_sym[i], kf_sym[i] / Kc_sym[i])
 
-    write_sec('Third Body Efficiencies')
+    write_sec('Third-Body Efficiencies')
     thd_bdy_eff = IndexedBase(r'\alpha')
     ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
     write(ci_thd_sym, ci_thd)
@@ -541,7 +548,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(ci_thd_sym, ci_thd)
     register_equal(ci_thd_sym, ci_thd)
 
-    write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third body}')
+    write_dummy(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third-body}')
 
     write_sec('Falloff Reactions')
     k0 = Symbol('A_0') * T**Symbol(r'\beta_0') * exp(-Symbol('E_{a, 0}') / (R * T))
@@ -549,9 +556,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     k0_sym = MyImplicitSymbol(r'k_{0, i}', T)
     kinf_sym = MyImplicitSymbol(r'k_{\infty, i}', T)
     Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
-    write_dummy(latex(Eq(Pri_sym, Pri_mix)) + r'\text{\quad for the mixture as the third body}')
+    write_dummy(latex(Eq(Pri_sym, Pri_mix)) + r'\text{\quad for the mixture as the third-body}')
     Pri_spec = Ck[m] * k0_sym / kinf_sym
-    write_dummy(latex(Eq(Pri_sym, Pri_spec)) + r'\text{\quad for species $m$ as the third body}')
+    write_dummy(latex(Eq(Pri_sym, Pri_spec)) + r'\text{\quad for species $m$ as the third-body}')
 
     Fi_lind = 1
     write_dummy(latex(Eq(Fi_sym, Fi_lind)) + r'\text{\quad for Lindemann}')
@@ -587,7 +594,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(X_sym, X)
     register_equal(X_sym, X)
 
-    write_sec('Pressure-dependent Reactions')
+    write_sec('Pressure-Dependent Reactions')
 
     #pdep
     subfile.write('For PLog reactions\n')
@@ -731,6 +738,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dRopdCj = assert_subs(diff(Rop, Ck[j]),
         (diff(Ropf_sym[i], Ck[j]), dRopfdCj),
         (diff(Ropr_sym[i], Ck[j]), dRoprdCj))
+    register_equal(diff(Rop_sym[i], Ck[j]), dRopdCj)
     write(diff(Rop_sym[i], Ck[j]), dRopdCj)
 
     write_sec('Temperature Derivative', sub=True)
@@ -741,7 +749,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     register_equal(diff(kf_sym[i], T), dkfdT)
 
 
-    def get_dr_dt(fwd=True, explicit=True, writetofile=True):
+    def get_dr_dt(fwd=True, explicit=True, writetofile=True,
+                    plog=False, cheb=False):
         Ropt_sym = Ropf_sym if fwd else Ropr_sym
         Rop_temp = Ropf if fwd else Ropr
         nuv = nu_f if fwd else nu_r
@@ -790,7 +799,20 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
             assumptions=[(inner, Sval[Ns])])
 
         ksym = kf_sym if fwd else kr_sym
-        dkdT = dkfdT if fwd else (dkr_rexpdT if explicit else dkrdT)
+        if fwd:
+            if plog:
+                dkdT = dkf_pdepdT
+            elif cheb:
+                dkdT = dkf_chebdT
+            else:
+                dkdT = dkfdT
+        else:
+            if plog:
+                dkdT = dkr_pdepdT
+            elif cheb:
+                dkdT = dkr_chebdT
+            else:
+                dkdT = dkr_rexpdT if explicit else dkrdT
 
         dRoptdT = assert_subs(dRoptdT, (diff(ksym[i], T), dkdT),
             (Ropf if fwd else Ropr, Ropt_sym[i]),
@@ -827,23 +849,31 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     subfile.write('For non-explicit reversible reactions\n')
 
-    #find dkr/dT
-    dkrdT = diff(kf_sym[i] / Kc_sym[i], T)
-    write(diff(kr_sym[i], T), dkrdT)
-    dkrdT = assert_subs(dkrdT, (diff(kf_sym[i], T), dkfdT))
-    dkrdT = assert_subs(dkrdT, (kf_sym[i] / Kc_sym[i], kr_sym[i]))
-    dkrdT = factor_terms(dkrdT)
-    write(diff(kr_sym[i], T), dkrdT)
+    def get_dkr_dT(dkfdTval, writetofile=True):
+        #find dkr/dT
+        dkrdT = diff(kf_sym[i] / Kc_sym[i], T)
+        if writetofile:
+            write(diff(kr_sym[i], T), dkrdT)
+        dkrdT = assert_subs(dkrdT, (diff(kf_sym[i], T), dkfdTval),
+            assumptions=[(diff(kf_sym[i], T), dkfdTval)])
+        dkrdT = assert_subs(dkrdT, (kf_sym[i] / Kc_sym[i], kr_sym[i]))
+        dkrdT = factor_terms(dkrdT)
+        if writetofile:
+            write(diff(kr_sym[i], T), dkrdT)
 
-    #dkcdT
-    dKcdT = diff(Kc, T)
-    dKcdT = assert_subs(dKcdT, (Kc, Kc_sym[i]))
-    write(diff(Kc_sym[i], T), dKcdT)
-    register_equal(diff(Kc_sym[i], T), dKcdT)
+        #dkcdT
+        dKcdT = diff(Kc, T)
+        dKcdT = assert_subs(dKcdT, (Kc, Kc_sym[i]))
+        if writetofile:
+            write(diff(Kc_sym[i], T), dKcdT)
+            register_equal(diff(Kc_sym[i], T), dKcdT)
 
-    #sub into dkrdT
-    dkrdT = assert_subs(dkrdT, (diff(Kc_sym[i], T), dKcdT))
-    write(diff(kr_sym[i], T), dkrdT)
+        #sub into dkrdT
+        dkrdT = assert_subs(dkrdT, (diff(Kc_sym[i], T), dKcdT))
+        write(diff(kr_sym[i], T), dkrdT)
+        return dkrdT
+
+    dkrdT = get_dkr_dT(dkfdT)
     register_equal(diff(kr_sym[i], T), dkrdT)
 
     #now the full dRdT
@@ -856,19 +886,18 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         (diff(Ropr_sym[i], T), dRoprdT))
     write(diff(Rop_sym[i], T), dRop_nonexpdT)
 
-    write_sec(r'Third-Body\slash Pressure-Depencence Derivatives')
+    write_sec(r'Third-Body\slash Falloff Derivatives')
     write_sec('Elementary reactions\n', sub=True)
     write(diff(ci[i], T), diff(ci_elem, T))
     write(diff(ci[i], Ck[j]), diff(ci_elem, Ck[j]))
 
-    write_sec('Third body enhanced reactions', sub=True)
+    write_sec('Third-body enhanced reactions', sub=True)
     dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
                                 (Ctot, Ctot_sym))
     if not conp:
         dci_thddT = assert_subs(dci_thddT, (diff(P, T), dPdT),
                                             (Ctot, Ctot_sym))
     write(diff(ci_thd_sym, T), dci_thddT)
-    register_equal(diff(ci_thd_sym, T), dci_thddT)
 
     dci_thddCj = diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), Ck[j])
     dci_thddCj = assert_subs(dci_thddCj,
@@ -881,7 +910,28 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         write(diff(ci_thd_sym, Ck[j]), dci_thddCj)
     register_equal(diff(ci_thd_sym, Ck[j]), dci_thddCj)
 
+    subfile.write(r'For species $m$ as the third-body' + '\n')
+    dci_spec_dT = diff(Ck[m], T) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
+                        assert_subs(diff(Cns, T), (Ctot, Ctot_sym))
+    if not conp:
+        dci_spec_dT = assert_subs(dci_spec_dT, (diff(P, Ck[j]), dPdCj))
+
+    write(diff(ci[i], T), dci_spec_dT)
+
+    dci_spec_dCj = diff(Ck[m], Ck[j]) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
+                        dCnsdCj
+
+    write(diff(ci[i], Ck[j]), dci_spec_dCj)
+
+
     subfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
+    dci_unity_dT = assert_subs(diff(Ctot, T),
+                                (Ctot, Ctot_sym))
+    if not conp:
+        dci_unity_dT = assert_subs(dci_unity_dT, (diff(P, T), dPdT),
+                                                (Ctot, Ctot_sym))
+    write(diff(ci_thd_sym, T), dci_unity_dT)
+
     dci_unity_dCj = diff(Ctot, Ck[j])
     write(diff(ci_thd_sym, Ck[j]), dci_unity_dCj)
     if not conp:
@@ -922,8 +972,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
             diff(Pri_sym, Ck[j]) / (Pri_sym + 1)))
     write(diff(ci[i], Ck[j]), dci_chemdCj)
 
-    write_sec('$P_{r, i}$ derivatives', sub=True)
-    dPri_mixdT = assert_subs(diff(Pri_mix, T), (diff(ci_thd_sym, T), dci_thddT))
+    write_sec(r'Reduced Pressure derivatives', sub=True)
+    dPri_mixdT = assert_subs(diff(Pri_mix, T), (diff(ci_thd_sym, T), dci_thddT),
+        assumptions=[(diff(ci_thd_sym, T), dci_thddT)])
     A_inf, Beta_inf = symbols(r'A_{\infty} \beta_{\infty}')
     Ea_inf = Symbol(r'E_{a, \infty}')
     register_equal([(A[i], A_inf), (Beta[i], Beta_inf), (Ea[i], Ea_inf), (kf_sym[i], kinf_sym)])
@@ -993,7 +1044,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dPri_mixdT, dPri_mixdT_prifac, dPri_mixdT_prifac_sym, dPri_mixdT_noprifac, dPri_mixdT_noprifac_sym,\
             dPri_mixdCj, dPri_mixdCj_fac, dPri_mixdCj_fac_sym = __get_pri_fac_terms(dPri_mixdT, dPri_mixdCj, "mix")
 
-    subfile.write('For species $m$ as the third body\n')
+    subfile.write('For species $m$ as the third-body\n')
 
     dPri_specdT = diff(Pri_spec, T)
     dPri_specdT = assert_subs(dPri_specdT, (diff(k0_sym, T), dk0dT),
@@ -1072,7 +1123,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         (dPri_specdCj_fac, "species"),
         (dPri_unitydCj_fac, "unity")])
 
-    write_sec('$F_i$ derivatives', sub=True)
+    write_sec('Falloff Blending Factor derivatives', sub=True)
     subfile.write('\n For Lindemann reactions\n')
 
     dFi_linddT = diff(Fi_lind, T)
@@ -1258,7 +1309,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     dci_falldT, dci_falldCj = __subs_ci_terms(dci_falldT, dci_falldCj, ci_fall)
 
-    write_sec('Chemically activated reactions (complete)', sub=True)
+    write_sec('Chemically-activated bimolecular reactions (complete)', sub=True)
 
     dci_chemdT, dci_chemdCj = __subs_ci_terms(dci_chemdT, dci_chemdCj, ci_chem)
 
@@ -1289,6 +1340,33 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dkf_pdepdT = factor_terms(dkf_pdepdT)
     write(diff(kf_sym[i], T), dkf_pdepdT)
 
+    #assemble the Rop derivatives
+    dRopf_pdepdT = get_dr_dt(plog=True, writetofile=False)
+    dkr_pdepdT = get_dkr_dT(dkf_pdepdT, writetofile=False)
+    dRopr_pdepdT = get_dr_dt(plog=True, fwd=False, writetofile=False)
+    dRop_pdepdT = dRopf_pdepdT - dRopr_pdepdT
+
+    #transfer dkf_pdepdT / kf_sym for a temporary variable for simplification
+    def __complex_collect(obj, term_list, expand=False):
+        if not isinstance(term_list, list):
+            term_list = [term_list]
+        temp_syms = [Symbol('temp{}'.format(i)) for i in range(len(term_list))]
+        temp = Symbol('temp')
+        cobj = assert_subs(obj,
+            *[(term_list[i], temp_syms[i]) for i in range(len(term_list))],
+            assumptions=[(term_list[i], temp_syms[i]) for i in range(len(term_list))])
+        if expand:
+            cobj = factor_terms(collect(expand_mul(cobj), temp_syms))
+        else:
+            cobj = collect(cobj, temp_syms)
+        return assert_subs(cobj,
+            *[(temp_syms[i], term_list[i]) for i in range(len(term_list))],
+            assumptions=[(temp_syms[i], term_list[i]) for i in range(len(term_list))])
+
+    dRop_pdepdT = __complex_collect(dRop_pdepdT, dkf_pdepdT / kf_sym[i])
+    dRop_pdepdT = collect(dRop_pdepdT, Ctot_sym / T)
+    write(diff(Rop_sym[i], T), dRop_pdepdT)
+
     subfile.write('For Chebyshev reactions\n')
     dkf_chebdT = diff(kf_cheb, T) * mul_term
     write(diff(kf_sym[i], T), dkf_chebdT)
@@ -1302,36 +1380,238 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         dkf_chebdT = factor_terms(dkf_chebdT)
         write(diff(kf_sym[i], T), dkf_chebdT)
 
+    #assemble the Rop derivatives
+    dRopf_chebdT = get_dr_dt(cheb=True, writetofile=False)
+    dkr_chebdT = get_dkr_dT(dkf_chebdT, writetofile=False)
+    dRopr_chebdT = get_dr_dt(cheb=True, fwd=False, writetofile=False)
+    dRop_chebdT = dRopf_chebdT - dRopr_chebdT
+    #do the same trick as for plog, where we sub out for a temporary variable
+    dRop_chebdT = __complex_collect(dRop_chebdT, dkf_chebdT / kf_sym[i])
+    dRop_chebdT = collect(dRop_chebdT, Ctot_sym / T)
+    write(diff(Rop_sym[i], T), dRop_chebdT)
+
     write_sec('Jacobian Update Form')
     write_sec('Temperature Derivatives', sub=True)
 
     domegadT = diff(omega_k, T)
-    dqdT_temp = Symbol(r'\Theta_{\partial T, i}')
-    register_equal(dqdT_temp, diff(q_sym[i], T))
+    domegadCj = diff(omega_k, Ck[j])
 
     write(Eq(Jac_sym[k + 1, 1], diff(omega_sym[k], T)), domegadT)
-
-    domegadT = assert_subs(domegadT, (diff(q_sym[i], T), dqdT_temp))
-    write(Jac_sym[k + 1, 1], domegadT)
+    write(Eq(Jac_sym[k + 1, j + 1], diff(omega_sym[k], Ck[j])), domegadCj)
 
     subfile.write('Converting to update form:\n')
     domegadT = domegadT.function
+    domegadCj = domegadCj.function
 
     write_dummy(latex(Jac_sym[k + 1, 1]) + r'\pluseq' + latex(domegadT) + r'\text{\quad} k = 1, \ldots, N_{sp} - 1')
+    write_dummy(latex(Jac_sym[k + 1, j + 1]) + r'\pluseq' + latex(domegadCj) + r'\text{\quad} k,j = 1, \ldots, N_{sp} - 1')
 
-    subfile.write('For explicit reversible reactions\n')
-    dqdT_exp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_expdT),
+    dRopdT_temp = Symbol(r'\Theta_{\partial T, i}')
+
+    dqdT = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRopdT_temp),
         (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
-        assumptions=[(diff(Rop_sym[i], T), dRop_expdT)])
-    write(Eq(dqdT_temp, diff(q_sym[i], T)), dqdT_exp)
-    subfile.write('For non-explicit reversible reactions')
-    dqdT_nonexp = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRop_nonexpdT),
-        (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
-        assumptions=[(diff(Rop_sym[i], T), dRop_nonexpdT)])
-    write(Eq(dqdT_temp, diff(q_sym[i], T)), dqdT_nonexp)
+        assumptions=[(diff(Rop_sym[i], T), dRopdT_temp)])
+
+    write_sec('Explicit reversible reactions', subsub=True)
+    write(diff(q_sym[i], T), dqdT)
+    write(dRopdT_temp, dRop_expdT)
+
+    write_sec('Non-explicit reversible reactions', subsub=True)
+    write(diff(q_sym[i], T), dqdT)
+    write(dRopdT_temp, dRop_nonexpdT)
+
+    write_sec('Pressure-dependent reactions', subsub=True)
+
+    dqdT_pdep = assert_subs(dqdT,
+        (ci[i], ci_elem),
+        (diff(ci[i], T), diff(ci_elem, T)),
+        assumptions=[(ci[i], ci_elem),
+        (diff(ci[i], T), diff(ci_elem, T))])
+    write(diff(q_sym[i], T), dqdT_pdep)
+
+    subfile.write('For PLog reactions:\n')
+    write(dRopdT_temp, dRop_pdepdT)
+    subfile.write('For Chebyshev reactions:\n')
+    write(dRopdT_temp, dRop_chebdT)
+
+    write_sec('Pressure independent reactions', subsub=True)
+
+    dqdT_ind = assert_subs(dqdT,
+        (ci[i], ci_elem),
+        (diff(ci[i], T), diff(ci_elem, T)),
+        assumptions=[(ci[i], ci_elem),
+        (diff(ci[i], T), diff(ci_elem, T))])
+    write(diff(q_sym[i], T), dqdT_ind)
+
+    write_sec('Third-body enhanced reactions', subsub=True)
+    subfile.write('For mixture as third-body:\n')
+    dqdT_thd = assert_subs(dqdT,
+        (ci[i], ci_thd_sym),
+        (diff(ci[i], T), dci_thddT),
+        assumptions=[(ci[i], ci_thd_sym),
+        (diff(ci[i], T), dci_thddT)])
+    write(diff(q_sym[i], T), dqdT_thd)
+
+    subfile.write('For species $m$ as third-body:\n')
+    dqdT_spec_thd = assert_subs(dqdT,
+        (ci[i], Ck[m]),
+        (diff(ci[i], T), dci_spec_dCj),
+        assumptions=[(ci[i], Ck[m]),
+        (diff(ci[i], T), dci_spec_dCj)])
+    write(diff(q_sym[i], T), dqdT_spec_thd)
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$ for all species j:\n')
+    dqdT_unity_thd = assert_subs(dqdT,
+        (ci[i], Ctot_sym),
+        (diff(ci[i], T), dci_unity_dT),
+        assumptions=[(ci[i], Ctot_sym),
+        (diff(ci[i], T), dci_unity_dT)])
+    dqdT_unity_thd = collect(dqdT_unity_thd, Ctot_sym)
+    write(diff(q_sym[i], T), dqdT_unity_thd)
+
+    write_sec('Falloff reactions', subsub=True)
+
+    dummy_collector = (Beta_0 - Beta_inf + Ea_0 / (R * T) - Ea_inf / (R * T)) / T
+    subfile.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
+    dqdT_fall_thd = assert_subs(dqdT,
+        (diff(ci[i], T), dci_falldT),
+        assumptions=[(diff(ci[i], T), dci_falldT)])
+    dqdT_fall_thd = collect(dqdT_fall_thd, ci[i])
+
+    write(diff(q_sym[i], T), dqdT_fall_thd)
+
+    subfile.write('For mixture as third-body:\n')
+    dqdT_fall_mix_thd = assert_subs(dqdT_fall_thd,
+        (dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
+        (dPri_dT_prifac_sym, dPri_mixdT_prifac),
+        assumptions=[(dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
+            (dPri_dT_prifac_sym, dPri_mixdT_prifac)])
+
+    Rdiff_term_orig = next(x for x in Add.make_args(dqdT_fall_mix_thd) if x.has(Ropf_sym[i] - Ropr_sym[i]))
+    assert(isinstance(Rdiff_term_orig, Mul) and any(x == (Ropf_sym[i] - Ropr_sym[i]) for x in Mul.make_args(Rdiff_term_orig)))
+    Rdiff_term = collect(__complex_collect(Rdiff_term_orig / (Ropf_sym[i] - Ropr_sym[i]),
+        dummy_collector, expand=True), [Ctot_sym, ci[i]]) * (Ropf_sym[i] - Ropr_sym[i])
+    dqdT_fall_mix_thd = Add(*[x if x != Rdiff_term_orig else Rdiff_term for x in Add.make_args(dqdT_fall_mix_thd)])
+    write(diff(q_sym[i], T), dqdT_fall_mix_thd)
+    sys.exit(1)
+
+    subfile.write('For species $m$ as third-body:\n')
+    dqdT_fall_spec_thd = assert_subs(dqdT_fall_thd,
+        (dPri_dT_noprifac_sym, dPri_specdT_noprifac),
+        (dPri_dT_prifac_sym, dPri_specdT_prifac),
+        assumptions=[(dPri_dT_noprifac_sym, dPri_specdT_noprifac),
+        (dPri_dT_prifac_sym, dPri_specdT_prifac)])
+    dqdT_fall_spec_thd = collect(dqdT_fall_spec_thd, ci[i])
+    dqdT_fall_spec_thd = __complex_collect(dqdT_fall_spec_thd, dummy_collector)
+    dqdT_fall_spec_thd = collect(dqdT_fall_spec_thd, Ropf_sym[i] - Ropr_sym[i])
+    write(diff(q_sym[i], T), dqdT_fall_spec_thd)
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    dqdT_fall_unity_thd = assert_subs(dqdT_fall_thd,
+        (dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
+        (dPri_dT_prifac_sym, dPri_unitydT_prifac),
+        assumptions=[(dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
+        (dPri_dT_prifac_sym, dPri_unitydT_prifac)])
+    dqdT_fall_unity_thd = collect(dqdT_fall_unity_thd, ci[i])
+    dqdT_fall_unity_thd = __complex_collect(dqdT_fall_unity_thd, dummy_collector - 1)
+    dqdT_fall_unity_thd = collect(dqdT_fall_unity_thd, Ropf_sym[i] - Ropr_sym[i])
+    write(diff(q_sym[i], T), dqdT_fall_unity_thd)
+
+    subfile.write(r'\textbf{Chemically-activated bimolecular reactions}:' + '\n')
+    dqdT_chem_thd = assert_subs(dqdT,
+        (diff(ci[i], T), dci_chemdT),
+        assumptions=[(diff(ci[i], T), dci_chemdT)])
+    dqdT_chem_thd = collect(dqdT_chem_thd, ci[i])
+    write(diff(q_sym[i], T), dqdT_chem_thd)
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$ or for species $m$ as third body:\n')
+    assert dPri_unitydT_noprifac == dPri_specdT_noprifac
+    dqdT_chem_unity_thd = assert_subs(dqdT_chem_thd,
+        (dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
+        assumptions=[(dPri_dT_noprifac_sym, dPri_unitydT_noprifac)])
+    write(diff(q_sym[i], T), dqdT_chem_unity_thd)
+
 
     write_sec('Concentration Derivatives', sub=True)
+    domegadCj = diff(omega_k, Ck[j])
+    write(Eq(Jac_sym[k + 1, j + 1], diff(omega_sym[k], Ck[j])), domegadCj)
 
+    subfile.write('Converting to Jacobian Update form:\n')
+    domegadCj = domegadCj.function
+    write_dummy(latex(Jac_sym[k + 1, j + 1]) + r'\pluseq' + latex(domegadCj))
+
+    dqdCj = diff(q, Ck[j])
+    dqdCj = assert_subs(dqdCj,
+        (diff(Rop_sym[i], Ck[j]), dRopdCj))
+    write(diff(q_sym[k], Ck[j]), dqdCj)
+
+    write_sec('Pressure-dependent reactions', subsub=True)
+
+    dqdCj_pdep = assert_subs(dqdCj,
+        (ci[i], ci_elem),
+        (diff(ci[i], Ck[j]), diff(ci_elem, Ck[j])),
+        assumptions=[(ci[i], ci_elem),
+        (diff(ci[i], Ck[j]), diff(ci_elem, Ck[j]))])
+    write(diff(q_sym[k], Ck[j]), dqdCj_pdep)
+
+    write_sec('Pressure independent reactions', subsub=True)
+
+    dqdCj_ind = assert_subs(dqdCj,
+        (ci[i], ci_elem),
+        (diff(ci[i], Ck[j]), diff(ci_elem, Ck[j])),
+        assumptions=[(ci[i], ci_elem),
+        (diff(ci[i], Ck[j]), diff(ci_elem, Ck[j]))])
+    write(diff(q_sym[k], Ck[j]), dqdCj_ind)
+
+    write_sec('Third-body enhanced reactions', subsub=True)
+
+    subfile.write('For mixture as third-body\n')
+    dqdCj_thd = assert_subs(dqdCj,
+        (ci[i], ci_thd_sym),
+        (diff(ci[i], Ck[j]), dci_thddCj),
+        assumptions=[(ci[i], ci_thd_sym),
+        (diff(ci[i], Ck[j]), dci_thddCj)]
+        )
+
+    write(diff(q_sym[k], Ck[j]), dqdCj_thd)
+
+    subfile.write('For species $m$ as third-body\n')
+    dqdCj_thd_spec = assert_subs(dqdCj,
+        (ci[i], Ck[m]),
+        (diff(ci[i], Ck[j]), dci_spec_dCj),
+        assumptions=[(ci[i], Ck[m]),
+        (diff(ci[i], Ck[j]), dci_spec_dCj)]
+        )
+
+    write(diff(q_sym[k], Ck[j]), dqdCj_thd_spec)
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    dqdCj_thd_unity = assert_subs(dqdCj,
+        (ci[i], Ctot_sym),
+        (diff(ci[i], Ck[j]), dci_unity_dCj),
+        assumptions=[(ci[i], Ctot_sym),
+        (diff(ci[i], Ck[j]), dci_unity_dCj)]
+        )
+
+    write(diff(q_sym[k], Ck[j]), dqdCj_thd_unity)
+
+    write_sec('Falloff Reactions', subsub=True)
+    subfile.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
+    dqdCj_fall_thd = assert_subs(dqdCj,
+        (diff(ci[i], Ck[j]), dci_falldCj),
+        assumptions=[(diff(ci[i], Ck[j]), dci_falldCj)])
+    dqdT_fall_thd = collect(dqdCj_fall_thd, ci[i])
+    write(diff(q_sym[i], Ck[j]), dqdCj_fall_thd)
+
+    subfile.write(r'If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    dqdCj_fall_unity_thd = assert_subs(dqdCj_fall_thd,
+        (dPri_dCj_fac_sym, dPri_unitydCj_fac),
+        assumptions=[(dPri_dCj_fac_sym, dPri_unitydCj_fac)])
+    dqdCj_fall_unity_thd = collect(dqdCj_fall_unity_thd, ci[i])
+    write(diff(q_sym[i], Ck[j]), dqdCj_fall_unity_thd)
+
+
+    sys.exit(1)
 
     return omega_sym, dPdT, dPdCj
 
@@ -1631,6 +1911,7 @@ if __name__ == '__main__':
                            r'\usepackage[utf8]{inputenc}' + '\n'
                            r'\usepackage{amsmath}' + '\n' +
                            r'\usepackage{breqn}' + '\n' +
+                           r'\usepackage[colorlinks=false]{hyperref}' + '\n'
                            r'\newcommand{\pluseq}{\mathrel{{+}{=}}}' + '\n' +
                            r'\newcommand{\minuseq}{\mathrel{{-}{=}}}' + '\n' +
                            r'\begin{document}' + '\n']

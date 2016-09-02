@@ -6,6 +6,7 @@ from sympy.core.singleton import S
 from sympy.core.add import Add
 from sympy.core.function import Derivative
 from sympy.functions.special.tensor_functions import KroneckerDelta
+from sympy.simplify.simplify import simplify
 
 base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
 base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
