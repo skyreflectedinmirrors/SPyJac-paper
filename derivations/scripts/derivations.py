@@ -1201,26 +1201,27 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dFi_troedT = simplify(dFi_troedT)
 
     dFi_troedT_fac = dFi_troedT / Fi_troe_sym
-    dFi_troedT_fac_sym = Symbol(r'\Theta_{F_i, \partial T, Troe}')
-    register_equal(dFi_troedT_fac_sym, dFi_troedT_fac)
 
-    dFi_troedT = assert_subs(dFi_troedT, (dFi_troedT_fac, dFi_troedT_fac_sym))
+    #used many places
+    dFi_dT_fac_sym = Symbol(r'\Theta_{F_i, \partial T}')
+    dFi_dCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j]}')
+
+    dFi_troedT = assert_subs(dFi_troedT, (dFi_troedT_fac, dFi_dT_fac_sym),
+        assumptions=[(dFi_troedT_fac, dFi_dT_fac_sym)])
     write(diff(Fi_sym, T), dFi_troedT)
 
     dFi_troedCj = assert_subs(dFi_troedCj, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
         (diff(Pri_sym, Ck[j]), dPri_dCj))
     dFi_troedCj = simplify(dFi_troedCj)
     dFi_troedCj_fac = dFi_troedCj / Fi_troe_sym
-    dFi_troedCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j], Troe}')
-    register_equal(dFi_troedCj_fac_sym, dFi_troedCj_fac)
 
-    dFi_troedCj = assert_subs(dFi_troedCj, (dFi_troedCj_fac, dFi_troedCj_fac_sym))
+    dFi_troedCj = assert_subs(dFi_troedCj, (dFi_troedCj_fac, dFi_dCj_fac_sym),
+        assumptions=[(dFi_troedCj_fac, dFi_dCj_fac_sym)])
     write(diff(Fi_sym, Ck[j]), dFi_troedCj)
 
     subfile.write('Where\n')
-    write(dFi_troedT_fac_sym, dFi_troedT_fac)
-    write(dFi_troedCj_fac_sym, dFi_troedCj_fac)
-
+    write(dFi_dT_fac_sym, dFi_troedT_fac)
+    write(dFi_dCj_fac_sym, dFi_troedCj_fac)
 
     subfile.write('For SRI reactions\n')
     dFi_sridT = factor_terms(
@@ -1243,9 +1244,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         (diff(Pri_sym, T), dPri_dT)))
 
     dFi_sridT_fac = dFi_sridT / Fi_sym
-    dFi_sridT_fac_sym = Symbol(r'\Theta_{F_i, \partial T, SRI}')
-    register_equal(dFi_sridT_fac_sym, dFi_sridT_fac)
-    dFi_sridT = assert_subs(dFi_sridT, (dFi_sridT_fac, dFi_sridT_fac_sym))
+    dFi_sridT = assert_subs(dFi_sridT, (dFi_sridT_fac, dFi_dT_fac_sym),
+        assumptions=[(dFi_sridT_fac, dFi_dT_fac_sym)])
     write(diff(Fi_sym, T), dFi_sridT)
 
     dFi_sridCj = simplify(
@@ -1253,31 +1253,24 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
             (diff(Pri_sym, Ck[j]), dPri_dCj)))
 
     dFi_sridCj_fac = dFi_sridCj / Fi_sym
-    dFi_sridCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j], SRI}')
-    register_equal(dFi_sridCj_fac_sym, dFi_sridCj_fac)
-    dFi_sridCj = assert_subs(dFi_sridCj, (dFi_sridCj_fac, dFi_sridCj_fac_sym))
+    dFi_sridCj = assert_subs(dFi_sridCj, (dFi_sridCj_fac, dFi_dCj_fac_sym),
+        assumptions=[(dFi_sridCj_fac, dFi_dCj_fac_sym)])
     write(diff(Fi_sym, Ck[j]), dFi_sridCj)
 
     subfile.write('Where\n')
-    write(dFi_sridT_fac_sym, dFi_sridT_fac)
-    write(dFi_sridCj_fac_sym, dFi_sridCj_fac)
+    write(dFi_dT_fac_sym, dFi_sridT_fac)
+    write(dFi_dCj_fac_sym, dFi_sridCj_fac)
 
     subfile.write('Simplifying:\n')
-    dFi_dT_fac_sym = Symbol(r'\Theta_{F_i, \partial T}')
     dFi_dT = assert_subs(dFi_troedT,
-        (dFi_troedT_fac_sym, dFi_dT_fac_sym),
         (Fi_troe_sym, Fi_sym),
-        assumptions=[(dFi_troedT_fac_sym, dFi_dT_fac_sym),
-            (Fi_troe_sym, Fi_sym)])
+        assumptions=[(Fi_troe_sym, Fi_sym)])
     write(diff(Fi_sym, T), dFi_dT)
     register_equal(diff(Fi_sym, T), dFi_dT)
 
-    dFi_dCj_fac_sym = Symbol(r'\Theta_{F_i, \partial [C][j]}')
     dFi_dCj = assert_subs(dFi_troedCj,
-        (dFi_troedCj_fac_sym, dFi_dCj_fac_sym),
         (Fi_troe_sym, Fi_sym),
-        assumptions=[(dFi_troedCj_fac_sym, dFi_dCj_fac_sym),
-        (Fi_troe_sym, Fi_sym)])
+        assumptions=[(Fi_troe_sym, Fi_sym)])
     write(diff(Fi_sym, Ck[j]), dFi_dCj)
     register_equal(diff(Fi_sym, Ck[j]), dFi_dCj)
 
@@ -1476,10 +1469,9 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dqdT_unity_thd = collect(dqdT_unity_thd, Ctot_sym)
     write(diff(q_sym[i], T), dqdT_unity_thd)
 
-    write_sec('Falloff reactions', subsub=True)
+    write_sec('Unimolecular\slash recombination fall-off reactions', subsub=True)
 
     dummy_collector = (Beta_0 - Beta_inf + Ea_0 / (R * T) - Ea_inf / (R * T)) / T
-    subfile.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
     dqdT_fall_thd = assert_subs(dqdT,
         (diff(ci[i], T), dci_falldT),
         assumptions=[(diff(ci[i], T), dci_falldT)])
@@ -1504,36 +1496,78 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
         write(diff(q_sym[i], T), dq)
         return dci, dq
 
-    subfile.write('For mixture as third-body:\n')
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dci_fallmix_dT, dqdT_fall_mix_thd = __get_ci_dT(dci_falldT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
         dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]], expand=True)
 
-    subfile.write('For species $m$ as third-body:\n')
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dci_fallspec_dT, dqdT_fall_spec_thd = __get_ci_dT(dci_falldT, dPri_specdT_prifac, dPri_specdT_noprifac,
         dummy_collector, [ci[i]])
 
-    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dci_fallunity_dT, dqdT_fall_unity_thd = __get_ci_dT(dci_falldT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
         collect(dummy_collector - 1/T, 1/T), [ci[i]])
 
-    subfile.write(r'\textbf{Chemically-activated bimolecular reactions}:' + '\n')
+    write_sec(r'Chemically-activated bimolecular reactions', subsub=True)
     dqdT_chem_thd = assert_subs(dqdT,
         (diff(ci[i], T), dci_chemdT),
         assumptions=[(diff(ci[i], T), dci_chemdT)])
     dqdT_chem_thd = collect(dqdT_chem_thd, ci[i])
     write(diff(q_sym[i], T), dqdT_chem_thd)
 
-    subfile.write('For mixture as third-body:\n')
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dci_chemmix_dT, dqdT_chem_mix_thd = __get_ci_dT(dci_chemdT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
         dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]])
 
-    subfile.write('For species $m$ as third-body:\n')
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dci_chemspec_dT, dqdT_chem_spec_thd = __get_ci_dT(dci_chemdT, dPri_specdT_prifac, dPri_specdT_noprifac,
         dummy_collector, [ci[i]])
 
-    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dci_chemunity_dT, dqdT_chem_unity_thd = __get_ci_dT(dci_chemdT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
         collect(dummy_collector - 1/T, 1/T), [ci[i]])
+
+    write_sec('Falloff Blending Function Forms', subsub=True)
+    def __get_fi_dT(starting_form, pri_fac, no_pri_fac, fi_fac):
+        dfi = assert_subs(starting_form,
+            (dFi_dT_fac_sym, fi_fac),
+            (dPri_dT_prifac_sym, pri_fac),
+            (dPri_dT_noprifac_sym, no_pri_fac),
+            assumptions=[(dFi_dT_fac_sym, fi_fac),
+            (dPri_dT_prifac_sym, pri_fac),
+            (dPri_dT_noprifac_sym, no_pri_fac)])
+        write(dFi_dT_fac_sym, dfi)
+        return dfi
+
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddT_mix = __get_fi_dT(dFi_linddT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_linddT_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedT_mix = __get_fi_dT(dFi_troedT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_troedT_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridT_mix = __get_fi_dT(dFi_sridT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_sridT_fac)
+
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddT_spec = __get_fi_dT(dFi_linddT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_linddT_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedT_spec = __get_fi_dT(dFi_troedT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_troedT_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridT_spec = __get_fi_dT(dFi_sridT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_sridT_fac)
+
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddT_unity = __get_fi_dT(dFi_linddT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_linddT_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedT_unity = __get_fi_dT(dFi_troedT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_troedT_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridT_unity = __get_fi_dT(dFi_sridT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_sridT_fac)
 
     write_sec('Concentration Derivatives', sub=True)
     domegadCj = diff(omega_k, Ck[j])
@@ -1568,7 +1602,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     write_sec('Third-body enhanced reactions', subsub=True)
 
-    subfile.write('For mixture as third-body\n')
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dqdCj_thd = assert_subs(dqdCj,
         (ci[i], ci_thd_sym),
         (diff(ci[i], Ck[j]), dci_thddCj),
@@ -1578,7 +1612,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     write(diff(q_sym[k], Ck[j]), dqdCj_thd)
 
-    subfile.write('For species $m$ as third-body\n')
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dqdCj_thd_spec = assert_subs(dqdCj,
         (ci[i], Ck[m]),
         (diff(ci[i], Ck[j]), dci_spec_dCj),
@@ -1588,7 +1622,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     write(diff(q_sym[k], Ck[j]), dqdCj_thd_spec)
 
-    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dqdCj_thd_unity = assert_subs(dqdCj,
         (ci[i], Ctot_sym),
         (diff(ci[i], Ck[j]), dci_unity_dCj),
@@ -1623,15 +1657,15 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dqdCj_fall_thd = collect(dqdCj_fall_thd, ci[i])
     write(diff(q_sym[i], Ck[j]), dqdCj_fall_thd)
 
-    subfile.write('For mixture as third-body\n')
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n')
 
     dci_fallmix_dCj, dqdCj_fall_mix_thd = __get_ci_dcj(dci_falldCj, dPri_mixdCj_fac, [ci[i]])
 
-    subfile.write('For species $m$ as third-body\n')
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
 
     dci_fallspec_dCj, dqdCj_fall_spec_thd = __get_ci_dcj(dci_falldCj, dPri_specdCj_fac, [ci[i]])
 
-    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
 
     dci_fallunity_dCj, dqdCj_fall_unity_thd = __get_ci_dcj(dci_falldCj, dPri_unitydCj_fac, [ci[i]])
 
@@ -1644,18 +1678,57 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dqdCj_chem_thd = collect(dqdCj_chem_thd, ci[i])
     write(diff(q_sym[i], Ck[j]), dqdCj_chem_thd)
 
-    subfile.write('For mixture as third-body\n')
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n')
 
     dci_chemmix_dCj, dqdCj_chem_mix_thd = __get_ci_dcj(dci_chemdCj, dPri_mixdCj_fac, [ci[i]])
 
-    subfile.write('For species $m$ as third-body\n')
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
 
     dci_chemspec_dCj, dqdCj_chem_spec_thd = __get_ci_dcj(dci_chemdCj, dPri_specdCj_fac, [ci[i]])
 
-    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
 
     dci_chemunity_dCj, dqdCj_chem_unity_thd = __get_ci_dcj(dci_chemdCj, dPri_unitydCj_fac, [ci[i]])
-    sys.exit(1)
+
+    write_sec('Falloff Blending Function Forms', subsub=True)
+    def __get_fi_dcj(starting_form, pri_fac, fi_fac):
+        dfi = assert_subs(starting_form,
+            (dFi_dCj_fac_sym, fi_fac),
+            (dPri_dCj_fac_sym, pri_fac),
+            assumptions=[(dFi_dCj_fac_sym, fi_fac),
+            (dPri_dCj_fac_sym, pri_fac)])
+        write(dFi_dCj_fac_sym, dfi)
+        return dfi
+
+    subfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddCj_mix = __get_fi_dcj(dFi_linddCj, dPri_mixdCj_fac, dFi_linddCj_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedCj_mix = __get_fi_dcj(dFi_troedCj, dPri_mixdCj_fac, dFi_troedCj_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridCj_mix = __get_fi_dcj(dFi_sridCj, dPri_mixdCj_fac, dFi_sridCj_fac)
+
+    subfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddCj_spec = __get_fi_dcj(dFi_linddCj, dPri_specdCj_fac, dFi_linddCj_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedCj_spec = __get_fi_dcj(dFi_troedCj, dPri_specdCj_fac, dFi_troedCj_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridCj_spec = __get_fi_dcj(dFi_sridCj, dPri_specdCj_fac, dFi_sridCj_fac)
+
+    subfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
+    subfile.write('For Lindemann\n')
+    dFi_linddCj_unity = __get_fi_dcj(dFi_linddCj, dPri_unitydCj_fac, dFi_linddCj_fac)
+
+    subfile.write('For Troe\n')
+    dFi_troedCj_unity = __get_fi_dcj(dFi_troedCj, dPri_unitydCj_fac, dFi_troedCj_fac)
+
+    subfile.write('For SRI\n')
+    dFi_sridCj_unity = __get_fi_dcj(dFi_sridCj, dPri_unitydCj_fac, dFi_sridCj_fac)
 
     return omega_sym, dPdT, dPdCj
 
