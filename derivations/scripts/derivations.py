@@ -165,15 +165,22 @@ def assert_subs(obj, *subs_args, **kw_args):
 
         #special cases
         #kronecker delta collapses
-        if v1.has(KroneckerDelta) and isinstance(v1, Sum):
+        if v1.has(KroneckerDelta) and (isinstance(v1, Sum)
+            or (isinstance(v1, Mul) and v1.has(Sum))):
+            if isinstance(v1, Mul) and v1.has(Sum):
+                #refactor to get the Sum form
+                sumv = next(x for x in Mul.make_args(v1) if isinstance(x, Sum))
+                sumv = Sum(Mul(*([sumv.function] + [x for x in Mul.make_args(v1) if x != sumv])), sumv.limits)
+            else:
+                sumv = v1
             #get the KD term
-            func = v1.function
+            func = sumv.function
             args = Mul.make_args(factor_terms(func))
             KD = next((x for x in args if isinstance(x, KroneckerDelta)), None)
             #check that the substitution is formatted as we thought
             assert KD is not None
             #and that the KD includes the summation variable
-            sum_var = next(v for v in KD.args if v == v1.limits[0][0])
+            sum_var = next(v for v in KD.args if v == sumv.limits[0][0])
             other_var = next(v for v in KD.args if v != sum_var)
             #and finally, return test equal
             #on the collapsed sum
@@ -689,8 +696,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
 
     dRopfdCj = assert_subs(expand(dRopfdCj, power_base=False, power_exp=False),
-        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
-            -__inner_func(Ns, True)),
+        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
+            __inner_func(Ns, True)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, True), (k, 1, Ns)),
             __inner_func(j, True))
         )
@@ -713,8 +720,8 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
     dRoprdCj = assert_subs(expand(dRoprdCj, power_base=False, power_exp=False),
-        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
-            -__inner_func(Ns, False)),
+        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
+            __inner_func(Ns, False)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, False), (k, 1, Ns)),
             __inner_func(j, False))
         )
@@ -731,6 +738,7 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dRoprdCj = assert_subs(dRoprdCj, (__inner_func(j, False),
         Srev[j]), (__inner_func(Ns, False), Srev[Ns]))
     write(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
+
     register_equal(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
     subfile.write('For all reversible reactions\n')
@@ -1409,7 +1417,6 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     dRopdT_temp = Symbol(r'\Theta_{\partial T, i}')
 
     dqdT = assert_subs(diff(q, T), (diff(Rop_sym[i], T), dRopdT_temp),
-        (Rop_sym[i], Ropf_sym[i] - Ropr_sym[i]),
         assumptions=[(diff(Rop_sym[i], T), dRopdT_temp)])
 
     write_sec('Explicit reversible reactions', subsub=True)
@@ -1480,56 +1487,34 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     write(diff(q_sym[i], T), dqdT_fall_thd)
 
-    subfile.write('For mixture as third-body:\n')
-    dci_fallmix_dT = assert_subs(dci_falldT,
-        (dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
-        (dPri_dT_prifac_sym, dPri_mixdT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
-            (dPri_dT_prifac_sym, dPri_mixdT_prifac)])
+    def __get_ci_dT(starting_form, pri_fac, no_pri_fac, complex_collector, other_collects, expand=False):
+        dci = assert_subs(starting_form,
+            (dPri_dT_noprifac_sym, no_pri_fac),
+            (dPri_dT_prifac_sym, pri_fac),
+            assumptions=[(dPri_dT_noprifac_sym, no_pri_fac),
+                (dPri_dT_prifac_sym, pri_fac)])
 
-    dci_fallmix_dT = __complex_collect(dci_fallmix_dT, dummy_collector, expand=True)
-    dci_fallmix_dT = collect(dci_fallmix_dT,
-        [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]])
-    dqdT_fall_mix_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_fallmix_dT),
-        assumptions=[(diff(ci[i], T), dci_fallmix_dT)]
-        )
-    dqdT_fall_mix_thd = collect(dqdT_fall_mix_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_fall_mix_thd)
+        dci = __complex_collect(dci, complex_collector, expand=expand)
+        dci = collect(dci, other_collects)
+        dq = assert_subs(dqdT,
+            (diff(ci[i], T), dci),
+            assumptions=[(diff(ci[i], T), dci)]
+            )
+        dq = collect(dq, ci[i])
+        write(diff(q_sym[i], T), dq)
+        return dci, dq
+
+    subfile.write('For mixture as third-body:\n')
+    dci_fallmix_dT, dqdT_fall_mix_thd = __get_ci_dT(dci_falldT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
+        dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]], expand=True)
 
     subfile.write('For species $m$ as third-body:\n')
-    dci_fallspec_dT = assert_subs(dci_falldT,
-        (dPri_dT_noprifac_sym, dPri_specdT_noprifac),
-        (dPri_dT_prifac_sym, dPri_specdT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_specdT_noprifac),
-            (dPri_dT_prifac_sym, dPri_specdT_prifac)])
-
-    dci_fallspec_dT = __complex_collect(dci_fallspec_dT, dummy_collector)
-    dci_fallspec_dT = collect(dci_fallspec_dT, [ci[i]])
-
-    dqdT_fall_spec_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_fallspec_dT),
-        assumptions=[(diff(ci[i], T), dci_fallspec_dT)]
-        )
-    dqdT_fall_spec_thd = collect(dqdT_fall_spec_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_fall_spec_thd)
+    dci_fallspec_dT, dqdT_fall_spec_thd = __get_ci_dT(dci_falldT, dPri_specdT_prifac, dPri_specdT_noprifac,
+        dummy_collector, [ci[i]])
 
     subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
-    dci_fallunity_dT = assert_subs(dci_falldT,
-        (dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
-        (dPri_dT_prifac_sym, dPri_unitydT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
-            (dPri_dT_prifac_sym, dPri_unitydT_prifac)])
-
-    dci_fallunity_dT = __complex_collect(dci_fallunity_dT, collect(dummy_collector - 1/T, 1/T))
-    dci_fallunity_dT = collect(dci_fallunity_dT, [ci[i]])
-
-    dqdT_fall_unity_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_fallunity_dT),
-        assumptions=[(diff(ci[i], T), dci_fallunity_dT)]
-        )
-    dqdT_fall_unity_thd = collect(dqdT_fall_unity_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_fall_unity_thd)
+    dci_fallunity_dT, dqdT_fall_unity_thd = __get_ci_dT(dci_falldT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
+        collect(dummy_collector - 1/T, 1/T), [ci[i]])
 
     subfile.write(r'\textbf{Chemically-activated bimolecular reactions}:' + '\n')
     dqdT_chem_thd = assert_subs(dqdT,
@@ -1539,55 +1524,16 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
     write(diff(q_sym[i], T), dqdT_chem_thd)
 
     subfile.write('For mixture as third-body:\n')
-    dci_chemmix_dT = assert_subs(dci_chemdT,
-        (dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
-        (dPri_dT_prifac_sym, dPri_mixdT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_mixdT_noprifac),
-            (dPri_dT_prifac_sym, dPri_mixdT_prifac)])
-
-    dci_chemmix_dT = __complex_collect(dci_chemmix_dT, dummy_collector)
-    dci_chemmix_dT = collect(dci_chemmix_dT,
-        [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]])
-    dqdT_chem_mix_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_chemmix_dT),
-        assumptions=[(diff(ci[i], T), dci_chemmix_dT)]
-        )
-    dqdT_chem_mix_thd = collect(dqdT_chem_mix_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_chem_mix_thd)
+    dci_chemmix_dT, dqdT_chem_mix_thd = __get_ci_dT(dci_chemdT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
+        dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]])
 
     subfile.write('For species $m$ as third-body:\n')
-    dci_chemspec_dT = assert_subs(dci_chemdT,
-        (dPri_dT_noprifac_sym, dPri_specdT_noprifac),
-        (dPri_dT_prifac_sym, dPri_specdT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_specdT_noprifac),
-            (dPri_dT_prifac_sym, dPri_specdT_prifac)])
-
-    dci_chemspec_dT = __complex_collect(dci_chemspec_dT, dummy_collector)
-    dci_chemspec_dT = collect(dci_chemspec_dT, [ci[i]])
-
-    dqdT_chem_spec_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_chemspec_dT),
-        assumptions=[(diff(ci[i], T), dci_chemspec_dT)]
-        )
-    dqdT_chem_spec_thd = collect(dqdT_chem_spec_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_chem_spec_thd)
+    dci_chemspec_dT, dqdT_chem_spec_thd = __get_ci_dT(dci_chemdT, dPri_specdT_prifac, dPri_specdT_noprifac,
+        dummy_collector, [ci[i]])
 
     subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
-    dci_chemunity_dT = assert_subs(dci_chemdT,
-        (dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
-        (dPri_dT_prifac_sym, dPri_unitydT_prifac),
-        assumptions=[(dPri_dT_noprifac_sym, dPri_unitydT_noprifac),
-            (dPri_dT_prifac_sym, dPri_unitydT_prifac)])
-
-    dci_chemunity_dT = __complex_collect(dci_chemunity_dT, collect(dummy_collector - 1/T, 1/T))
-    dci_chemunity_dT = collect(dci_chemunity_dT, [ci[i]])
-
-    dqdT_chem_unity_thd = assert_subs(dqdT,
-        (diff(ci[i], T), dci_chemunity_dT),
-        assumptions=[(diff(ci[i], T), dci_chemunity_dT)]
-        )
-    dqdT_chem_unity_thd = collect(dqdT_chem_unity_thd, ci[i])
-    write(diff(q_sym[i], T), dqdT_chem_unity_thd)
+    dci_chemunity_dT, dqdT_chem_unity_thd = __get_ci_dT(dci_chemdT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
+        collect(dummy_collector - 1/T, 1/T), [ci[i]])
 
     write_sec('Concentration Derivatives', sub=True)
     domegadCj = diff(omega_k, Ck[j])
@@ -1654,20 +1600,61 @@ def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_
 
     write_sec('Falloff Reactions', subsub=True)
     subfile.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
+    def __get_ci_dcj(starting_form, pri_fac, other_collects, complex_collector=None):
+        dci = assert_subs(starting_form,
+            (dPri_dCj_fac_sym, pri_fac),
+            assumptions=[(dPri_dCj_fac_sym, pri_fac)])
+
+        if complex_collector:
+            dci = __complex_collect(dci, complex_collector, expand=True)
+        dci = collect(dci, other_collects)
+        dq = assert_subs(dqdCj,
+            (diff(ci[i], Ck[j]), dci),
+            assumptions=[(diff(ci[i], Ck[j]), dci)]
+            )
+        dq = collect(dq, ci[i])
+        write(diff(q_sym[i], Ck[j]), dq)
+        return dci, dq
+
+    dci_falldCj = __complex_collect(dci_falldCj, k0_sym * dPri_dCj_fac_sym / (kinf_sym * (Pri_sym + 1)), expand=True)
     dqdCj_fall_thd = assert_subs(dqdCj,
         (diff(ci[i], Ck[j]), dci_falldCj),
         assumptions=[(diff(ci[i], Ck[j]), dci_falldCj)])
-    dqdT_fall_thd = collect(dqdCj_fall_thd, ci[i])
+    dqdCj_fall_thd = collect(dqdCj_fall_thd, ci[i])
     write(diff(q_sym[i], Ck[j]), dqdCj_fall_thd)
 
-    subfile.write(r'If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
-    dqdCj_fall_unity_thd = assert_subs(dqdCj_fall_thd,
-        (dPri_dCj_fac_sym, dPri_unitydCj_fac),
-        assumptions=[(dPri_dCj_fac_sym, dPri_unitydCj_fac)])
-    dqdCj_fall_unity_thd = collect(dqdCj_fall_unity_thd, ci[i])
-    write(diff(q_sym[i], Ck[j]), dqdCj_fall_unity_thd)
+    subfile.write('For mixture as third-body\n')
 
+    dci_fallmix_dCj, dqdCj_fall_mix_thd = __get_ci_dcj(dci_falldCj, dPri_mixdCj_fac, [ci[i]])
 
+    subfile.write('For species $m$ as third-body\n')
+
+    dci_fallspec_dCj, dqdCj_fall_spec_thd = __get_ci_dcj(dci_falldCj, dPri_specdCj_fac, [ci[i]])
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+
+    dci_fallunity_dCj, dqdCj_fall_unity_thd = __get_ci_dcj(dci_falldCj, dPri_unitydCj_fac, [ci[i]])
+
+    write_sec('Chemically-activated bimolecular reactions', subsub=True)
+
+    dci_chemdCj = __complex_collect(dci_chemdCj, k0_sym * dPri_dCj_fac_sym / (kinf_sym * (Pri_sym + 1)), expand=True)
+    dqdCj_chem_thd = assert_subs(dqdCj,
+        (diff(ci[i], Ck[j]), dci_chemdCj),
+        assumptions=[(diff(ci[i], Ck[j]), dci_chemdCj)])
+    dqdCj_chem_thd = collect(dqdCj_chem_thd, ci[i])
+    write(diff(q_sym[i], Ck[j]), dqdCj_chem_thd)
+
+    subfile.write('For mixture as third-body\n')
+
+    dci_chemmix_dCj, dqdCj_chem_mix_thd = __get_ci_dcj(dci_chemdCj, dPri_mixdCj_fac, [ci[i]])
+
+    subfile.write('For species $m$ as third-body\n')
+
+    dci_chemspec_dCj, dqdCj_chem_spec_thd = __get_ci_dcj(dci_chemdCj, dPri_specdCj_fac, [ci[i]])
+
+    subfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$:\n')
+
+    dci_chemunity_dCj, dqdCj_chem_unity_thd = __get_ci_dcj(dci_chemdCj, dPri_unitydCj_fac, [ci[i]])
     sys.exit(1)
 
     return omega_sym, dPdT, dPdCj
