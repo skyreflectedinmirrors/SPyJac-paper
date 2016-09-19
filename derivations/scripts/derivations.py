@@ -20,6 +20,7 @@ from sympy.core.numbers import Rational, Float, Integer
 from sympy.core.exprtools import factor_terms
 from sympy.core.relational import Equality
 from sympy.core.singleton import S
+from sympy.printing.repr import srepr
 
 
 from constants import *
@@ -80,33 +81,32 @@ class IndexedConc(MyIndexedFunc):
         return S.Zero
 
 def write_eq(*args, **kw_args):
-    writer = file if not 'myfile' in kw_args else kw_args['myfile']
     if len(args) == 2:
-        writer.write(latex(Eq(args[0], args[1]), mode='equation') + '\n')
+        file.write(latex(Eq(args[0], args[1]), mode='equation') + '\n')
     else:
-        writer.write(latex(*args, mode='equation') + '\n')
+        file.write(latex(*args, mode='equation') + '\n')
+    if 'sympy' in kw_args and kw_args['sympy']:
+        assert len(args) == 2
+        efile.write(args[0], args[1])
 
 def write_dummy_eq(text, **kw_args):
-    writer = file if not 'myfile' in kw_args else kw_args['myfile']
-    writer.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
+    file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
 
 def write_section(title, **kw_args):
-    writer = file if not 'myfile' in kw_args else kw_args['myfile']
     sec_type = ''
     if 'sub' in kw_args and kw_args['sub']:
         sec_type = 'sub'
     elif 'subsub' in kw_args and kw_args['subsub']:
         sec_type = 'subsub'
-    writer.write(r'\{0}section{{{1}}}'.format(sec_type, title) + '\n')
+    file.write(r'\{0}section{{{1}}}'.format(sec_type, title) + '\n')
 
 def write_cases(variable, case_list, **kw_args):
-    writer = file if not 'myfile' in kw_args else kw_args['myfile']
-    writer.write(r'\begin{dgroup}' + '\n')
+    file.write(r'\begin{dgroup}' + '\n')
 
     for case_var, case_text in case_list:
-        writer.write(r'\begin{{dmath}} {} = {}\text{{\quad if {}}}\end{{dmath}}'.format(
+        file.write(r'\begin{{dmath}} {} = {}\text{{\quad if {}}}\end{{dmath}}'.format(
             latex(variable), latex(case_var), case_text) + '\n')
-    writer.write(r'\end{dgroup}' + '\n')
+    file.write(r'\end{dgroup}' + '\n')
 
 equivalences = {}
 def register_equal(v1, v2=None):
@@ -296,7 +296,7 @@ m_sym = S.mass
 #polyfits
 a = IndexedBase('a')
 
-def derivation(file, conp=True, thermo_deriv=False):
+def derivation(file, efile, conp=True, thermo_deriv=False):
     write_section('State Variables and Definitions')
     #thermo vars
     Ck = IndexedConc('[C]', t)
@@ -329,11 +329,11 @@ def derivation(file, conp=True, thermo_deriv=False):
 
     Ctot_sym = MyImplicitSymbol('[C]', args=(T, P), **assumptions)
     Ctot = P / (R * T)
-    write_eq(Ctot_sym, Ctot)
+    write_eq(Ctot_sym, Ctot, sympy=True)
     register_equal([(Ctot_sym, Ctot), (Ctot_sym, n_sym / V),
         (Ctot_sym, Sum(Ck[k], (k, 1, Ns)))])
     Cns = Ctot - Sum(Ck[k], (k, 1 , Ns - 1))
-    write_eq(Ck[Ns], Cns)
+    write_eq(Ck[Ns], Cns, sympy=True)
     register_equal(Ck[Ns], Cns)
     register_equal(Ck[Ns], assert_subs(Cns, (Ctot, Ctot_sym)))
 
@@ -1996,6 +1996,35 @@ if __name__ == '__main__':
             with open(self.name, self.mode) as file:
                 file.writelines(self.lines)
 
+    class equation_file(object):
+        def __init__(self, name, mode):
+            import re
+            self.name = os.path.join(out_dir, name)
+            self.mode = mode
+            self.equations = {}
+
+        def __enter__(self):
+            return self
+
+        def write(self, variable, equation):
+            assert variable not in self.equations
+            self.equations[variable] = equation
+
+        def __exit__(self, type, value, traceback):
+            variables = set()
+            for var, eqn in self.equations.iteritems():
+                variables = variables.union(set([var]).union(eqn.free_symbols))
+            #write equations
+            with open(os.path.join(home_dir, self.name), self.mode) as file:
+                for var in variables:
+                    file.write(srepr(var) + '\n')
+                file.write('\n')
+                for var, eqn in self.equations.iteritems():
+                    file.write(srepr(var) + '\n')
+                    file.write(srepr(eqn) + '\n')
+
+
+
     from argparse import ArgumentParser
     parser = ArgumentParser(description='generates derivations for SPyJac')
     parser.add_argument('-conv', '--constant_volume',
@@ -2006,4 +2035,5 @@ if __name__ == '__main__':
     conv = args.constant_volume
 
     with filer('con{}_derivation.tex'.format('v' if conv else 'p'), 'w') as file:
-        derivation(file, not conv, True)
+        with equation_file('con{}_derivation.sympy'.format('v' if conv else 'p'), 'w') as efile:
+            derivation(file, efile, not conv, True)
