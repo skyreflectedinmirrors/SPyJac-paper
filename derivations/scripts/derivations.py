@@ -297,81 +297,6 @@ m_sym = S.mass
 #polyfits
 a = IndexedBase('a')
 
-
-def thermo_derivation(Yi_sym, P, V, n, subfile=None):
-    def write(*args):
-        write_eq(*args, myfile=subfile)
-    def write_dummy(*args):
-        write_dummy_eq(*args, myfile=subfile)
-    def write_sec(*args):
-        write_section(*args, myfile=subfile)
-    #derivation of thermo constants, e.g. enthalpy, cp, etc.
-
-    cpfunc = R * (a[k, 0] + T * (a[k, 1] + T * (a[k, 2] + T * (a[k, 3] + a[k, 4] * T))))
-    cp = MyIndexedFunc(r'{C_p}', T)
-    cp_mass = MyIndexedFunc(r'{c_p}', T)
-
-    cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T)
-    if hasattr(Yi_sym, '__getitem__'):
-        Yi_sym = Yi_sym[k]
-
-    cp_tot = Sum(Yi_sym * cp_mass[k], (k, 1, Ns))
-    if subfile:
-        write(Eq(Eq(Symbol(r'{C_{p,k}}^{\circ}'), cp[k]), cpfunc),
-            expand(cpfunc))
-        write(diff(cp[k], T), simplify(diff(cpfunc, T)))
-        write(cp_mass[k], cp[k] / Wk[k])
-        write(cp_tot_sym, cp_tot)
-
-    cvfunc = simplify(cpfunc - R)
-    cv = MyIndexedFunc(r'{C_v}', T)
-    cv_mass = MyIndexedFunc(r'{c_v}', T)
-    cv_tot_sym = MyImplicitSymbol(r'\bar{c_v}', T)
-    cv_tot = Sum(Yi_sym * cv_mass[k], (k, 1, Ns))
-    if subfile:
-        write(Eq(Eq(Symbol(r'{C_{v,k}}^{\circ}'), cv[k]), cvfunc),
-            expand(cvfunc))
-        write(diff(cv[k], T), simplify(diff(cvfunc, T)))
-        write(cv_mass[k], cv[k] / Wk[k])
-        write(cv_tot_sym, cv_tot)
-
-    hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T * (a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))))) + a[k, 5])
-    h = MyIndexedFunc(r'H', T)
-    register_equal(h[k], hfunc)
-    h_mass = MyIndexedFunc(r'h', T)
-
-    #check that the dH/dT = cp identity holds
-    if subfile: #only check once
-        assert simplify(diff(hfunc, T) - cpfunc) == 0
-
-    if subfile:
-        write(Eq(Eq(Symbol(r'H_k^{\circ}'), h[k]), hfunc),
-            expand(hfunc))
-        write(diff(h[k], T), simplify(diff(hfunc, T)))
-        write(h_mass[k], h[k] / Wk[k])
-
-    u = MyIndexedFunc(r'U', T)
-    u_mass = MyIndexedFunc(r'u', T)
-    if subfile:
-        write_dummy(r'H_k = U_k + \frac{P V}{n}')
-        write(h[k], u[k] + P * V / n)
-        ufunc = h[k] - P * V / n
-        ufunc = collect(assert_subs(ufunc, (h[k], hfunc)), R)
-        write(u[k], ufunc)
-        assert simplify(diff(ufunc, T) - cvfunc) == 0
-
-    #finally do the entropy and B terms
-    Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
-    s = MyIndexedFunc(r'S', T)
-    if subfile:
-        write(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc),
-            expand(Sfunc))
-
-    Bk = simplify(Sfunc / R - hfunc / (R * T))
-
-    return cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
-            cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk
-
 def reaction_derivation(P, P_sym, V, Wk, W, Ck, Ctot_sym, n_sym, m_sym, Bk, Jac_sym, subfile):
     def write(*args):
         write_eq(*args, myfile=subfile)
@@ -1807,14 +1732,60 @@ def derivation(file, conp=True, thermo_deriv=False):
     write_eq(Yi_sym[k], Yi)
     register_equal(Yi_sym[k], Yi)
 
-    #get all our thermo symbols
-    if thermo_deriv:
-        with filer('thermo_derivation.tex', 'w') as subfile:
-            therm_vals = thermo_derivation(Yi_sym, P, V, n, subfile)
-    else:
-        therm_vals = thermo_derivation(Yi_sym, P, V, n, None)
-    cp, cp_mass, cp_tot_sym, cp_tot, h, h_mass,\
-            cv, cv_mass, cv_tot_sym, cv_tot, u, u_mass, Bk = therm_vals
+    #thermo derivation
+    cpfunc = R * (a[k, 0] + T * (a[k, 1] + T * (a[k, 2] + T * (a[k, 3] + a[k, 4] * T))))
+    cp = MyIndexedFunc(r'{C_p}', T)
+    cp_mass = MyIndexedFunc(r'{c_p}', T)
+
+    cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T)
+
+    cp_tot = Sum(Yi_sym[k] * cp_mass[k], (k, 1, Ns))
+    write_eq(Eq(Eq(Symbol(r'{C_{p,k}}^{\circ}'), cp[k]), cpfunc),
+        expand(cpfunc))
+    write_eq(diff(cp[k], T), simplify(diff(cpfunc, T)))
+    write_eq(cp_mass[k], cp[k] / Wk[k])
+    write_eq(cp_tot_sym, cp_tot)
+
+    cvfunc = simplify(cpfunc - R)
+    cv = MyIndexedFunc(r'{C_v}', T)
+    cv_mass = MyIndexedFunc(r'{c_v}', T)
+    cv_tot_sym = MyImplicitSymbol(r'\bar{c_v}', T)
+    cv_tot = Sum(Yi_sym[k] * cv_mass[k], (k, 1, Ns))
+    write_eq(Eq(Eq(Symbol(r'{C_{v,k}}^{\circ}'), cv[k]), cvfunc),
+        expand(cvfunc))
+    write_eq(diff(cv[k], T), simplify(diff(cvfunc, T)))
+    write_eq(cv_mass[k], cv[k] / Wk[k])
+    write_eq(cv_tot_sym, cv_tot)
+
+    hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T * (a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))))) + a[k, 5])
+    h = MyIndexedFunc(r'H', T)
+    register_equal(h[k], hfunc)
+    h_mass = MyIndexedFunc(r'h', T)
+
+    #check that the dH/dT = cp identity holds
+    assert simplify(diff(hfunc, T) - cpfunc) == 0
+
+    write_eq(Eq(Eq(Symbol(r'H_k^{\circ}'), h[k]), hfunc),
+        expand(hfunc))
+    write_eq(diff(h[k], T), simplify(diff(hfunc, T)))
+    write_eq(h_mass[k], h[k] / Wk[k])
+
+    u = MyIndexedFunc(r'U', T)
+    u_mass = MyIndexedFunc(r'u', T)
+    write_dummy_eq(r'H_k = U_k + \frac{P V}{n}')
+    write_eq(h[k], u[k] + P * V / n)
+    ufunc = h[k] - P * V / n
+    ufunc = collect(assert_subs(ufunc, (h[k], hfunc)), R)
+    write_eq(u[k], ufunc)
+    assert simplify(diff(ufunc, T) - cvfunc) == 0
+
+    #finally do the entropy and B terms
+    Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
+    s = MyIndexedFunc(r'S', T)
+    write_eq(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc),
+        expand(Sfunc))
+
+    Bk = simplify(Sfunc / R - hfunc / (R * T))
 
     Jac = IndexedBase(r'\mathcal{J}', (Ns - 1, Ns - 1))
 
