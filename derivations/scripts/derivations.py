@@ -12,7 +12,7 @@ from sympy.core.power import Pow
 from sympy.tensor.indexed import Idx, IndexedBase
 from sympy.concrete import Sum, Product
 from sympy.printing.latex import LatexPrinter
-from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul
+from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul, count_ops
 from sympy.functions.elementary.exponential import exp, log, sqrt
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.functions.special.polynomials import chebyshevt, chebyshevu
@@ -25,6 +25,7 @@ from sympy.printing.repr import srepr
 
 from constants import *
 from sympy_addons import *
+from reaction_types import *
 import os
 
 home_dir = os.path.dirname(os.path.realpath(__file__))
@@ -32,6 +33,22 @@ out_dir = os.path.realpath(os.path.join(
     home_dir, '..', 'tex'))
 
 init_printing()
+
+#weights taken from http://arxiv.org/pdf/1506.03997.pdf
+#note these are rough estimates and hardware dependent
+#feel free to change
+def count_ops_div(expr, div_weight=34, mul_weight=5, add_weight=3,
+    large_factor=100):
+    expr = count_ops(expr, visual=True)
+    expr = expr.xreplace({Symbol('DIV') : div_weight,
+                          Symbol('MUL') : mul_weight,
+                          Symbol('ADD') : add_weight,
+                          Symbol('NEG') : mul_weight,
+                          Symbol('SUB') : add_weight}
+                          )
+    #everything else is powers, exp, log, etc, so replace with large factor
+    expr = expr.xreplace({x : large_factor for x in expr.free_symbols})
+    return expr
 
 class CustomLatexPrinter(LatexPrinter):
     def _print_ExpBase(self, expr, exp=None):
@@ -285,6 +302,7 @@ k = Idx('k', (1, Ns + 1))
 i = Idx('i', (1, Nr + 1))
 j = Idx('j')
 l = Idx('l')
+m = Idx('m')
 
 Wk = IndexedBase('W')
 
@@ -332,8 +350,10 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Ctot_sym, Ctot, sympy=True)
     register_equal([(Ctot_sym, Ctot), (Ctot_sym, n_sym / V),
         (Ctot_sym, Sum(Ck[k], (k, 1, Ns)))])
-    Cns = Ctot - Sum(Ck[k], (k, 1 , Ns - 1))
+    Cns = Ctot_sym - Sum(Ck[k], (k, 1 , Ns - 1))
     write_eq(Ck[Ns], Cns, sympy=True)
+    Cns = assert_subs(Cns, (Ctot_sym, Ctot))
+    write_eq(Ck[Ns], Cns)
     register_equal(Ck[Ns], Cns)
     register_equal(Ck[Ns], assert_subs(Cns, (Ctot, Ctot_sym)))
 
@@ -346,7 +366,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     W = Sum(Wk[k] * Xk[k], (k, 1, Ns))
     write_eq(W_sym, W)
     W = simplify(assert_subs(W, (Xk[k], Ck[k] / Ctot_sym)))
-    write_eq(W_sym, W)
+    write_eq(W_sym, W, sympy=True)
     Cns_sym = assert_subs(Cns, (Ctot, Ctot_sym))
     W = assert_subs(W, (Sum(Wk[k] * Ck[k], (k, 1, Ns)),
         Sum(Wk[k] * Ck[k], (k, 1, Ns - 1)) + Wk[Ns] * Cns_sym))
@@ -355,8 +375,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(W_sym, W)
 
     #mass, density
-    m = n * W
-    density = m / V
+    mass = n * W
+    density = mass / V
     m_sym = MyImplicitSymbol('m', args=(T, Ck))
     density_sym = MyImplicitSymbol(r'\rho', t)
     write_eq(density_sym, n_sym * W_sym / V)
@@ -369,6 +389,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Yi_sym[k], Yi)
     register_equal(Yi_sym[k], Yi)
 
+    write_section('Thermo Definitions')
+
     #thermo derivation
     cpfunc = R * (a[k, 0] + T * (a[k, 1] + T * (a[k, 2] + T * (a[k, 3] + a[k, 4] * T))))
     cp = MyIndexedFunc(r'{C_p}', T)
@@ -377,9 +399,13 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     cp_tot_sym = MyImplicitSymbol(r'\bar{c_p}', T)
 
     cp_tot = Sum(Yi_sym[k] * cp_mass[k], (k, 1, Ns))
-    write_eq(Eq(Eq(Symbol(r'{C_{p,k}}^{\circ}'), cp[k]), cpfunc),
-        expand(cpfunc))
+    write_eq(Symbol(r'{C_{p,k}}^{\circ}'), cp[k])
+    write_eq(cp[k], cpfunc, sympy=True)
+    write_eq(cp[k], expand(cpfunc))
     write_eq(diff(cp[k], T), simplify(diff(cpfunc, T)))
+    dcpdT = R * (a[k, 1] + T * (2 * a[k, 2] + T * (3 * a[k, 3]  + 4 * a[k, 4] * T)))
+    dcpdT = simplify(diff(cpfunc, T), measure=count_ops_div)
+    write_eq(diff(cp[k], T), dcpdT, sympy=True)
     write_eq(cp_mass[k], cp[k] / Wk[k])
     write_eq(cp_tot_sym, cp_tot)
 
@@ -388,9 +414,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     cv_mass = MyIndexedFunc(r'{c_v}', T)
     cv_tot_sym = MyImplicitSymbol(r'\bar{c_v}', T)
     cv_tot = Sum(Yi_sym[k] * cv_mass[k], (k, 1, Ns))
-    write_eq(Eq(Eq(Symbol(r'{C_{v,k}}^{\circ}'), cv[k]), cvfunc),
-        expand(cvfunc))
+    write_eq(Symbol(r'{C_{v,k}}^{\circ}'), cv[k])
+    write_eq(cv[k], cvfunc, sympy=True)
+    write_eq(cv[k], expand(cvfunc))
     write_eq(diff(cv[k], T), simplify(diff(cvfunc, T)))
+    dcvdT = simplify(diff(cvfunc, T), measure=count_ops_div)
+    write_eq(diff(cv[k], T), dcvdT, sympy=True)
     write_eq(cv_mass[k], cv[k] / Wk[k])
     write_eq(cv_tot_sym, cv_tot)
 
@@ -400,21 +429,23 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     h_mass = MyIndexedFunc(r'h', T)
 
     #check that the dH/dT = cp identity holds
-    assert simplify(diff(hfunc, T) - cpfunc) == 0
-
-    write_eq(Eq(Eq(Symbol(r'H_k^{\circ}'), h[k]), hfunc),
-        expand(hfunc))
-    write_eq(diff(h[k], T), simplify(diff(hfunc, T)))
+    write_eq(Symbol(r'H_k^{\circ}'), h[k])
+    write_eq(h[k], hfunc, sympy=True)
+    write_eq(h[k], expand(hfunc))
+    dhdT = simplify(diff(hfunc, T), measure=count_ops_div)
+    write_eq(diff(h[k], T), dhdT, sympy=True)
     write_eq(h_mass[k], h[k] / Wk[k])
 
+    #and du/dT
     u = MyIndexedFunc(r'U', T)
     u_mass = MyIndexedFunc(r'u', T)
     write_dummy_eq(r'H_k = U_k + \frac{P V}{n}')
     write_eq(h[k], u[k] + P * V / n)
     ufunc = h[k] - P * V / n
     ufunc = collect(assert_subs(ufunc, (h[k], hfunc)), R)
-    write_eq(u[k], ufunc)
-    assert simplify(diff(ufunc, T) - cvfunc) == 0
+    write_eq(u[k], ufunc, sympy=True)
+    dudT = simplify(diff(ufunc, T), measure=count_ops_div)
+    write_eq(diff(u[k], T), dudT, sympy=True)
 
     #finally do the entropy and B terms
     Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
@@ -422,7 +453,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc),
         expand(Sfunc))
 
-    Bk = simplify(Sfunc / R - hfunc / (R * T))
+    Bk = simplify(Sfunc / R - hfunc / (R * T), measure=count_ops_div)
 
     Jac = IndexedBase(r'\mathcal{J}', (Ns - 1, Ns - 1))
 
@@ -441,7 +472,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         #let's get some Pressure definitions out of the way
         file.write('Pressure derivatives')
         P_real = R * T * n_sym / V
-        write_eq(P_sym, P_real)
+        write_eq(P_sym, P_real, sympy=True)
 
         #get values for dP/dT
         dPdT = diff(P_real, T)
@@ -488,9 +519,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(P, Ck[j]), dPdCj)
 
     #define for later use
-    Ctot = P / (R * T)
-    Cns = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
-    write_eq(Ck[Ns], Cns)
+    #Ctot = P / (R * T)
+    #Cns = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
+    #write_eq(Ck[Ns], Cns)
     register_equal(Ck[Ns], Cns)
 
     omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P_sym))
@@ -503,8 +534,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Rop_sym = MyIndexedFunc('R', args=(Ck, T))
     ci = MyIndexedFunc('c', args=(Ck, T))
     q = Rop_sym[i] * ci[i]
+    register_equal(q_sym[k], q)
 
     write_eq(q_sym[i], q)
+    register_equal(q_sym[i], q)
+    omega_k = assert_subs(omega_k, (q_sym[i], q))
+    write_eq(omega_sym[k], omega_k, sympy=True)
 
     #arrhenius coeffs
     A = IndexedBase(r'A')
@@ -516,38 +551,42 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Ropr_sym = MyIndexedFunc(r'{R_r}', args=(Ck, T))
 
     Rop = Ropf_sym[i] - Ropr_sym[i]
-    write_eq(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
+    write_eq(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i], sympy=True)
     register_equal(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
 
     kf_sym = MyIndexedFunc(r'{k_f}', T)
     Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
-    write_eq(Ropf_sym[i], Ropf)
+    write_eq(Ropf_sym[i], Ropf, sympy=True)
     register_equal(Ropf_sym[i], Ropf)
 
     kr_sym = MyIndexedFunc(r'{k_r}', T)
     Ropr = kr_sym[i] * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    write_eq(Ropr_sym[i], Ropr)
+    write_eq(Ropr_sym[i], Ropr, sympy=True)
     register_equal(Ropr_sym[i], Ropr)
 
     write_section('Third-body effect')
     #write the various ci forms
     ci_elem = Integer(1)
     write_dummy_eq('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
+    efile.write_conditional(ci[i], (ci_elem, reaction_type.elementary))
 
     ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, T, P_sym))
     write_dummy_eq('c_{{i}} = {}'.format(latex(ci_thd_sym)) + r'\text{\quad for third-body enhanced reactions}')
+    efile.write_conditional(ci[i], (ci_thd_sym, reaction_type.thd))
 
     Pri_sym = MyImplicitSymbol('P_{r, i}', args=(T, Ck, P_sym))
     Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P_sym))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
     write_dummy_eq(latex(Eq(ci[i], ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
+    efile.write_conditional(ci[i], (ci_fall, reaction_type.pdep, falloff_type.fall))
 
     ci_chem = (1 / (1 + Pri_sym)) * Fi_sym
     write_dummy_eq(latex(Eq(ci[i], ci_chem)) + r'\text{\quad for chemically-activated bimolecular reactions}')
+    efile.write_conditional(ci[i], (ci_chem, reaction_type.pdep, falloff_type.chem))
 
     write_section('Forward Reaction Rate')
     kf = A[i] * (T**Beta[i]) * exp(-Ea[i] / (R * T))
-    write_eq(kf_sym[i], kf)
+    write_eq(kf_sym[i], kf, sympy=True)
     register_equal(kf_sym[i], kf)
 
 
@@ -563,24 +602,25 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     B_sym = MyIndexedFunc('B', T)
     Kc = ((Patm / R)**Sum(nu_sym[k, i], (k, 1, Ns))) * exp(Sum(nu_sym[k, i] * B_sym[k], (k, 1, Ns)))
-    write_eq(Kc_sym[i], Kc)
+    write_eq(Kc_sym[i], Kc, sympy=True)
     register_equal(Kc_sym[i], Kc)
 
     write_dummy_eq(latex(B_sym[k]) + r'= \frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T} - ln(T)')
 
-    Bk = Bk - log(T)
-    Bk_rep = a[k, 6] - a[k, 0] + (a[k, 0] - 1)*log(T) +\
-        T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) + T * \
-            (a[k, 3] * Rational(1, 12) + a[k, 4] * T * Rational(1, 20)))) - \
-        a[k, 5] / T
+    Bk = simplify(Bk - log(T), measure=count_ops_div)
+    #Bk_rep = a[k, 6] - a[k, 0] + (a[k, 0] - 1)*log(T) +\
+    #    T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) + T * \
+    #        (a[k, 3] * Rational(1, 12) + a[k, 4] * T * Rational(1, 20)))) - \
+    #    a[k, 5] / T
 
-    assert simplify(Bk - Bk_rep) == 0
-    write_eq(B_sym[k], Bk_rep)
+    #Bk = assert_subs(Bk, (Bk, Bk_rep))
+    write_eq(B_sym[k], Bk, sympy=True)
 
     write_section('Reverse Reaction Rate')
     kr = kf / Kc
     kr_sym = MyIndexedFunc(r'{k_r}', args=(T))
     write_eq(kr_sym[i], kf_sym[i] / Kc_sym[i])
+    efile.write_conditional(kr_sym[i], (kf_sym[i] / Kc_sym[i], reversible_type.non_explicit))
     register_equal(kr_sym[i], kf_sym[i] / Kc_sym[i])
 
     write_section('Third-Body Efficiencies')
@@ -589,6 +629,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(ci_thd_sym, ci_thd)
     ci_thd = Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns))
     write_eq(ci_thd_sym, ci_thd)
+    efile.write_conditional(ci_thd_sym, (ci_thd, thd_body_type.mix))
 
     ci_thd = assert_subs(ci_thd, (Ctot_sym, Ctot))
     ci_thd = assert_subs(ci_thd, (Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)),
@@ -601,6 +642,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     register_equal(ci_thd_sym, ci_thd)
 
     write_dummy_eq(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third-body}')
+    efile.write_conditional(ci_thd_sym, (Ck[m], thd_body_type.single))
 
     write_section('Falloff Reactions')
     k0 = Symbol('A_0') * T**Symbol(r'\beta_0') * exp(-Symbol('E_{a, 0}') / (R * T))
@@ -609,6 +651,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     kinf_sym = MyImplicitSymbol(r'k_{\infty, i}', T)
     Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
     write_dummy_eq(latex(Eq(Pri_sym, Pri_mix)) + r'\text{\quad for the mixture as the third-body}')
+    efile.write_conditional(Pri_sym, (Pri_mix, 'mix'))
     Pri_spec = Ck[m] * k0_sym / kinf_sym
     write_dummy_eq(latex(Eq(Pri_sym, Pri_spec)) + r'\text{\quad for species $m$ as the third-body}')
 
@@ -2010,18 +2053,33 @@ if __name__ == '__main__':
             assert variable not in self.equations
             self.equations[variable] = equation
 
+        def write_conditional(self, variable, equation):
+            if variable not in self.equations:
+                self.equations[variable] = [equation]
+            else:
+                self.equations[variable].append(equation)
+
         def __exit__(self, type, value, traceback):
             variables = set()
-            for var, eqn in self.equations.iteritems():
-                variables = variables.union(set([var]).union(eqn.free_symbols))
+            for var, eqn in self.equations.items():
+                if isinstance(eqn, list):
+                    variables = variables.union(set([var]))
+                    for e, *conditions in eqn:
+                        variables = variables.union(e.free_symbols)
+                else:
+                    variables = variables.union(set([var]).union(eqn.free_symbols))
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
                 for var in variables:
                     file.write(srepr(var) + '\n')
                 file.write('\n')
-                for var, eqn in self.equations.iteritems():
+                for var, eqn in self.equations.items():
                     file.write(srepr(var) + '\n')
-                    file.write(srepr(eqn) + '\n')
+                    if isinstance(eqn, list):
+                        for e, *conditions in eqn:
+                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), srepr(eqn)))
+                    else:
+                        file.write(srepr(eqn) + '\n')
 
 
 
