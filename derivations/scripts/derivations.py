@@ -565,7 +565,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     kr_sym = MyIndexedFunc(r'{k_r}', T)
     Ropr = kr_sym[i] * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    write_eq(Ropr_sym[i], Ropr, sympy=True, register=True)
+    write_eq(Ropr_sym[i], Ropr, register=True)
 
     write_section('Third-body effect')
     #write the various ci forms
@@ -620,6 +620,14 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_conditional(kr_sym[i], kf_sym[i] / Kc_sym[i], r'\quad if non-explicit',
         enum_conds=reversible_type.non_explicit)
     register_equal(kr_sym[i], kf_sym[i] / Kc_sym[i])
+
+    A_rexp = IndexedBase(r'{A_{r}}')
+    Beta_rexp = IndexedBase(r'{\beta_r}')
+    Ea_rexp = IndexedBase(r'{E_{a,r}}')
+    kr_rexp = A_rexp[i] * T**Beta_rexp[i] * exp(-Ea_rexp[i] / (R * T))
+    Ropr_rexp = kr_rexp * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
+    write_conditional(Ropr_sym[i], Ropr_rexp, r'\quad if explicit', 
+        enum_conds=reversible_type.explicit)
 
     write_section('Third-Body Efficiencies')
     thd_bdy_eff = IndexedBase(r'\alpha')
@@ -733,11 +741,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Pred_sym, Pred, register_equal=True, sympy=True)
 
     write_section('Derivatives')
-    write_eq(diff(omega_sym[k], T), diff(omega_k, T))
     write_eq(diff(q_sym[i], T), diff(q, T))
+    write_eq(diff(omega_sym[k], T), diff(omega_k, T), sympy=True)
 
-    write_eq(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]))
     write_eq(diff(q_sym[i], Ck[k]), diff(q, Ck[j]))
+    write_eq(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]), sympy=True)
 
     write_section('Rate of Progress Derivatives')
 
@@ -789,8 +797,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
 
     dRopfdCj = assert_subs(expand(dRopfdCj, power_base=False, power_exp=False),
-        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
-            __inner_func(Ns, True)),
+        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
+            -__inner_func(Ns, True)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, True), (k, 1, Ns)),
             __inner_func(j, True))
         )
@@ -800,21 +808,20 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     #define the S terms
     Sfwd = IndexedBase(r'S^{\prime}')
-    write_eq(Sfwd[l], __inner_func(l, True))
+    write_eq(Sfwd[l], __inner_func(l, True), sympy=True)
     register_equal(Sfwd[j], __inner_func(j, True))
     register_equal(Sfwd[Ns], __inner_func(Ns, True))
     #and sub in
     dRopfdCj = assert_subs(dRopfdCj, (__inner_func(j, True),
         Sfwd[j]), (__inner_func(Ns, True), Sfwd[Ns]))
-    write_eq(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
-    register_equal(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
+    write_eq(diff(Ropf_sym[i], Ck[j]), dRopfdCj, register=True)
 
     dRoprdCj = __create_dRopdCj(False)
     write_eq(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
     dRoprdCj = assert_subs(expand(dRoprdCj, power_base=False, power_exp=False),
-        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
-            __inner_func(Ns, False)),
+        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
+            -__inner_func(Ns, False)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, False), (k, 1, Ns)),
             __inner_func(j, False))
         )
@@ -824,34 +831,30 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     #define the S terms
     Srev = IndexedBase(r'S^{\prime\prime}')
-    write_eq(Srev[l], __inner_func(l, False))
+    write_eq(Srev[l], __inner_func(l, False), sympy=True)
     register_equal(Srev[j], __inner_func(j, False))
     register_equal(Srev[Ns], __inner_func(Ns, False))
     #and sub in
     dRoprdCj = assert_subs(dRoprdCj, (__inner_func(j, False),
         Srev[j]), (__inner_func(Ns, False), Srev[Ns]))
-    write_eq(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
-
-    register_equal(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
-
+    write_eq(diff(Ropr_sym[i], Ck[j]), dRoprdCj, register=True)
     file.write('For all reversible reactions\n')
     #now do dRop/dCj
     dRopdCj = assert_subs(diff(Rop, Ck[j]),
         (diff(Ropf_sym[i], Ck[j]), dRopfdCj),
         (diff(Ropr_sym[i], Ck[j]), dRoprdCj))
-    register_equal(diff(Rop_sym[i], Ck[j]), dRopdCj)
-    write_eq(diff(Rop_sym[i], Ck[j]), dRopdCj)
+    write_eq(diff(Rop_sym[i], Ck[j]), dRopdCj, sympy=True, register=True)
 
     write_section('Temperature Derivative', sub=True)
 
     write_eq(Ropf_sym, Ropf)
     dkfdT = assert_subs(factor_terms(diff(kf, T)), (kf, kf_sym[i]))
-    write_eq(diff(kf_sym[i], T), dkfdT)
-    register_equal(diff(kf_sym[i], T), dkfdT)
+    write_eq(diff(kf_sym[i], T), dkfdT, register=True)
 
 
     def get_dr_dt(fwd=True, explicit=True, writetofile=True,
-                    plog=False, cheb=False):
+                    plog=False, cheb=False, register=False,
+                    sympy=False):
         Ropt_sym = Ropf_sym if fwd else Ropr_sym
         Rop_temp = Ropf if fwd else Ropr
         nuv = nu_f if fwd else nu_r
@@ -919,22 +922,14 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
             (Ropf if fwd else Ropr, Ropt_sym[i]),
             assumptions=[(diff(ksym[i], T), dkdT)])
 
-        write_eq(diff(Ropt_sym[i], T), dRoptdT)
-        register_equal(diff(Ropt_sym[i], T), dRoptdT)
+        write_eq(diff(Ropt_sym[i], T), dRoptdT,
+            register=register, sympy=sympy)
 
         return dRoptdT
 
-    dRopfdT = get_dr_dt()
+    dRopfdT = get_dr_dt(register=True)
 
     file.write('For reactions with explicit reverse Arrhenius coefficients\n')
-
-    #set up the correct variables
-    A_rexp = IndexedBase(r'{A_{r}}')
-    Beta_rexp = IndexedBase(r'{\beta_r}')
-    Ea_rexp = IndexedBase(r'{E_{a,r}}')
-    kr_rexp = A_rexp[i] * T**Beta_rexp[i] * exp(-Ea_rexp[i] / (R * T))
-    Ropr_rexp = kr_rexp * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    register_equal(Ropr_rexp, Ropr_sym[i])
 
     #find the reverse derivative
     dkr_rexpdT = assert_subs(factor_terms(diff(kr_rexp, T)), (kr_rexp, kr_sym[i]),
@@ -946,6 +941,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_expdT = dRopfdT - dRopr_rexpdT
     dRop_expdT = assert_subs(dRop_expdT, (Ropf, Ropf_sym[i]))
 
+    efile.write_conditional(diff(Rop_sym[i], T), (dRop_expdT, reversible_type.explicit))
     write_eq(diff(Rop_sym[i], T), dRop_expdT)
 
     file.write('For non-explicit reversible reactions\n')
@@ -975,17 +971,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         return dkrdT
 
     dkrdT = get_dkr_dT(dkfdT)
-    register_equal(diff(kr_sym[i], T), dkrdT)
 
     #now the full dRdT
     dRoprdT = get_dr_dt(fwd=False, explicit=False, writetofile=False)
 
     write_eq(diff(Ropr_sym[i], T), dRoprdT)
-    register_equal(diff(Ropr_sym[i], T), dRoprdT)
 
     dRop_nonexpdT = assert_subs(diff(Rop, T), (diff(Ropf_sym[i], T), dRopfdT),
-        (diff(Ropr_sym[i], T), dRoprdT))
+        (diff(Ropr_sym[i], T), dRoprdT),
+        assumptions=[(diff(Ropr_sym[i], T), dRoprdT)])
     write_eq(diff(Rop_sym[i], T), dRop_nonexpdT)
+    efile.write_conditional(diff(Rop_sym[i], T), (dRop_nonexpdT, reversible_type.non_explicit))
 
     write_section(r'Third-Body\slash Falloff Derivatives')
     write_section('Elementary reactions\n', sub=True)
