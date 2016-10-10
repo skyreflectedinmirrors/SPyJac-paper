@@ -105,9 +105,26 @@ def write_eq(*args, **kw_args):
     if 'sympy' in kw_args and kw_args['sympy']:
         assert len(args) == 2
         efile.write(args[0], args[1])
+    if 'register' in kw_args and kw_args['register']:
+        if len(args) != 2:
+            assert "I don't know how to register this!"
+        register_equal(args[0], args[1])
 
 def write_dummy_eq(text, **kw_args):
     file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
+
+def write_conditional(arg1, arg2, text=None, enum_conds=None, register=False):
+    if text is not None:
+        outtext = r'\begin{equation}' + latex(arg1) + '=' + latex(arg2) +\
+            r'\text{{{}}}'.format(text) + r'\end{equation}'
+    else:
+        outtext = latex(Eq(arg1, arg2), mode='equation')
+    file.write(outtext + '\n')
+    if enum_conds is not None:
+        efile.write_conditional(arg1, (arg2, enum_conds))
+    if register:
+        assert enum_conds is None
+        register_equal(arg1, arg2)
 
 def write_section(title, **kw_args):
     sec_type = ''
@@ -353,13 +370,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Cns = Ctot_sym - Sum(Ck[k], (k, 1 , Ns - 1))
     write_eq(Ck[Ns], Cns, sympy=True)
     Cns = assert_subs(Cns, (Ctot_sym, Ctot))
-    write_eq(Ck[Ns], Cns)
-    register_equal(Ck[Ns], Cns)
+    write_eq(Ck[Ns], Cns, register=True)
     register_equal(Ck[Ns], assert_subs(Cns, (Ctot, Ctot_sym)))
 
     #mole fractions
     Xk = IndexedBase('X')
-    register_equal([(Xk[k], Ck[k] / Ctot_sym)])
+    register_equal(Xk[k], Ck[k] / Ctot_sym)
 
     #molecular weight
     W_sym = MyImplicitSymbol('W', t)
@@ -386,8 +402,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Yi_sym = IndexedBase('Y')
     Yi = Ck[k] * Wk[k]/ density_sym
 
-    write_eq(Yi_sym[k], Yi)
-    register_equal(Yi_sym[k], Yi)
+    write_eq(Yi_sym[k], Yi, register=True)
 
     write_section('Thermo Definitions')
 
@@ -425,12 +440,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 3) + T * (a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))))) + a[k, 5])
     h = MyIndexedFunc(r'H', T)
-    register_equal(h[k], hfunc)
     h_mass = MyIndexedFunc(r'h', T)
 
     #check that the dH/dT = cp identity holds
     write_eq(Symbol(r'H_k^{\circ}'), h[k])
-    write_eq(h[k], hfunc, sympy=True)
+    write_eq(h[k], hfunc, sympy=True, register=True)
     write_eq(h[k], expand(hfunc))
     dhdT = simplify(diff(hfunc, T), measure=count_ops_div)
     write_eq(diff(h[k], T), dhdT, sympy=True)
@@ -452,8 +466,6 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     s = MyIndexedFunc(r'S', T)
     write_eq(Eq(Eq(Symbol(r'S_k^{\circ}'), s[k]), Sfunc),
         expand(Sfunc))
-
-    Bk = simplify(Sfunc / R - hfunc / (R * T), measure=count_ops_div)
 
     Jac = IndexedBase(r'\mathcal{J}', (Ns - 1, Ns - 1))
 
@@ -487,15 +499,13 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(m_sym, T), dmdT)
 
         dndT = solve(Eq(dmdT, 0), diff(n_sym, T))[0]
-        register_equal(diff(n_sym, T), dndT)
-        write_eq(diff(n_sym, T), dndT)
+        write_eq(diff(n_sym, T), dndT, register=True)
 
         dPdT = assert_subs(dPdT, (diff(n_sym, T), dndT))
         write_eq(diff(P, T), dPdT)
         assert dPdT == P_real / T
         dPdT = P / T
-        write_eq(diff(P, T), dPdT)
-        register_equal(diff(P, T), dPdT)
+        write_eq(diff(P, T), dPdT, register=True)
 
         #get values for dP/dCj
         dPdCj = diff(P_real, Ck[j])
@@ -507,16 +517,14 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         dndCj = simplify(assert_subs(dndCj, (
             Sum(-KroneckerDelta(j, k) * (Wk[Ns] - Wk[k]), (k, 1, Ns - 1)),
             -(Wk[Ns] - Wk[j]))))
-        write_eq(diff(n_sym, Ck[j]), dndCj)
+        write_eq(diff(n_sym, Ck[j]), dndCj, register=True)
 
-        register_equal(diff(n_sym, Ck[j]), dndCj)
         dPdCj = assert_subs(dPdCj, (diff(n_sym, Ck[j]), dndCj))
         write_eq(diff(P, Ck[j]), dPdCj)
 
         dPdCj = assert_subs(dPdCj, (Sum((1 - Wk[k] / Wk[Ns]) * KroneckerDelta(k, j), (k, 1, Ns - 1)),
             1 - Wk[j] / Wk[Ns]))
-        register_equal(diff(P, Ck[j]), dPdCj)
-        write_eq(diff(P, Ck[j]), dPdCj)
+        write_eq(diff(P, Ck[j]), dPdCj, register=True)
 
     #define for later use
     #Ctot = P / (R * T)
@@ -534,10 +542,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Rop_sym = MyIndexedFunc('R', args=(Ck, T))
     ci = MyIndexedFunc('c', args=(Ck, T))
     q = Rop_sym[i] * ci[i]
-    register_equal(q_sym[k], q)
 
-    write_eq(q_sym[i], q)
-    register_equal(q_sym[i], q)
+    write_eq(q_sym[i], q, register=True)
     omega_k = assert_subs(omega_k, (q_sym[i], q))
     write_eq(omega_sym[k], omega_k, sympy=True)
 
@@ -551,44 +557,37 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Ropr_sym = MyIndexedFunc(r'{R_r}', args=(Ck, T))
 
     Rop = Ropf_sym[i] - Ropr_sym[i]
-    write_eq(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i], sympy=True)
-    register_equal(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i])
+    write_eq(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i], sympy=True, register=True)
 
     kf_sym = MyIndexedFunc(r'{k_f}', T)
     Ropf = kf_sym[i] * Product(Ck[k]**nu_f[k, i], (k, 1, Ns))
-    write_eq(Ropf_sym[i], Ropf, sympy=True)
-    register_equal(Ropf_sym[i], Ropf)
+    write_eq(Ropf_sym[i], Ropf, sympy=True, register=True)
 
     kr_sym = MyIndexedFunc(r'{k_r}', T)
     Ropr = kr_sym[i] * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    write_eq(Ropr_sym[i], Ropr, sympy=True)
-    register_equal(Ropr_sym[i], Ropr)
+    write_eq(Ropr_sym[i], Ropr, sympy=True, register=True)
 
     write_section('Third-body effect')
     #write the various ci forms
     ci_elem = Integer(1)
-    write_dummy_eq('c_{{i}} = {}'.format(ci_elem) + r'\text{\quad for elementary reactions}')
-    efile.write_conditional(ci[i], (ci_elem, reaction_type.elementary))
+    write_conditional(ci[i], ci_elem, r'\quad for elementary reactions', enum_conds=reaction_type.elementary)
 
     ci_thd_sym = MyImplicitSymbol('[X]_i', args=(Ck, T, P_sym))
-    write_dummy_eq('c_{{i}} = {}'.format(latex(ci_thd_sym)) + r'\text{\quad for third-body enhanced reactions}')
-    efile.write_conditional(ci[i], (ci_thd_sym, reaction_type.thd))
+    write_conditional(ci[i], ci_thd_sym, r'\quad for third-body enhanced reactions', enum_conds=reaction_type.thd)
 
     Pri_sym = MyImplicitSymbol('P_{r, i}', args=(T, Ck, P_sym))
     Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P_sym))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
-    write_dummy_eq(latex(Eq(ci[i], ci_fall)) + r'\text{\quad for unimolecular/recombination falloff reactions}')
-    efile.write_conditional(ci[i], (ci_fall, reaction_type.pdep, falloff_type.fall))
+    write_conditional(ci[i], ci_fall, r'\quad for unimolecular/recombination falloff reactions', 
+        enum_conds=[reaction_type.pdep, pdep_form.fall])
 
     ci_chem = (1 / (1 + Pri_sym)) * Fi_sym
-    write_dummy_eq(latex(Eq(ci[i], ci_chem)) + r'\text{\quad for chemically-activated bimolecular reactions}')
-    efile.write_conditional(ci[i], (ci_chem, reaction_type.pdep, falloff_type.chem))
+    write_conditional(ci[i], ci_chem, r'\quad for chemically-activated bimolecular reactions',
+        enum_conds=[reaction_type.pdep, pdep_form.chem])
 
     write_section('Forward Reaction Rate')
     kf = A[i] * (T**Beta[i]) * exp(-Ea[i] / (R * T))
-    write_eq(kf_sym[i], kf, sympy=True)
-    register_equal(kf_sym[i], kf)
-
+    write_eq(kf_sym[i], kf, sympy=True, register=True)
 
     write_section('Equilibrium Constants')
     Kp_sym = MyIndexedFunc(r'{K_p}', args=(T, a))
@@ -602,25 +601,24 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     B_sym = MyIndexedFunc('B', T)
     Kc = ((Patm / R)**Sum(nu_sym[k, i], (k, 1, Ns))) * exp(Sum(nu_sym[k, i] * B_sym[k], (k, 1, Ns)))
-    write_eq(Kc_sym[i], Kc, sympy=True)
-    register_equal(Kc_sym[i], Kc)
+    write_eq(Kc_sym[i], Kc, sympy=True, register=True)
 
     write_dummy_eq(latex(B_sym[k]) + r'= \frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T} - ln(T)')
 
-    Bk = simplify(Bk - log(T), measure=count_ops_div)
-    #Bk_rep = a[k, 6] - a[k, 0] + (a[k, 0] - 1)*log(T) +\
-    #    T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) + T * \
-    #        (a[k, 3] * Rational(1, 12) + a[k, 4] * T * Rational(1, 20)))) - \
-    #    a[k, 5] / T
+    Bk = simplify(Sfunc / R - hfunc / (R * T) - log(T))
+    Bk_rep = a[k, 6] - a[k, 0] + (a[k, 0] - Integer(1))*log(T) +\
+        T * (a[k, 1] * Rational(1, 2) + T * (a[k, 2] * Rational(1, 6) + T * \
+            (a[k, 3] * Rational(1, 12) + a[k, 4] * T * Rational(1, 20)))) - \
+        a[k, 5] / T
 
-    #Bk = assert_subs(Bk, (Bk, Bk_rep))
-    write_eq(B_sym[k], Bk, sympy=True)
+    Bk = assert_subs(Bk, (Bk, Bk_rep))
+    write_eq(B_sym[k], Bk, register=True, sympy=True)
 
     write_section('Reverse Reaction Rate')
     kr = kf / Kc
     kr_sym = MyIndexedFunc(r'{k_r}', args=(T))
-    write_eq(kr_sym[i], kf_sym[i] / Kc_sym[i])
-    efile.write_conditional(kr_sym[i], (kf_sym[i] / Kc_sym[i], reversible_type.non_explicit))
+    write_conditional(kr_sym[i], kf_sym[i] / Kc_sym[i], r'\quad if non-explicit',
+        enum_conds=reversible_type.non_explicit)
     register_equal(kr_sym[i], kf_sym[i] / Kc_sym[i])
 
     write_section('Third-Body Efficiencies')
@@ -628,8 +626,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
     write_eq(ci_thd_sym, ci_thd)
     ci_thd = Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns))
-    write_eq(ci_thd_sym, ci_thd)
-    efile.write_conditional(ci_thd_sym, (ci_thd, thd_body_type.mix))
+    write_conditional(ci_thd_sym, ci_thd, enum_conds=thd_body_type.mix)
 
     ci_thd = assert_subs(ci_thd, (Ctot_sym, Ctot))
     ci_thd = assert_subs(ci_thd, (Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)),
@@ -638,25 +635,34 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(ci_thd_sym, ci_thd)
 
     ci_thd = assert_subs(factor_terms(simplify(ci_thd)), (Ctot, Ctot_sym))
-    write_eq(ci_thd_sym, ci_thd)
-    register_equal(ci_thd_sym, ci_thd)
+    write_eq(ci_thd_sym, ci_thd, register=True)
 
-    write_dummy_eq(latex(Eq(ci_thd_sym, Ck[m])) + r'\text{\quad for a single species third-body}')
-    efile.write_conditional(ci_thd_sym, (Ck[m], thd_body_type.single))
+    write_conditional(ci_thd_sym, Ck[m], text=r'\quad for a single species third-body', 
+        enum_conds=thd_body_type.single)
 
     write_section('Falloff Reactions')
     k0 = Symbol('A_0') * T**Symbol(r'\beta_0') * exp(-Symbol('E_{a, 0}') / (R * T))
     kinf = Symbol(r'A_{\infty}') * T**Symbol(r'\beta_{\infty}') * exp(-Symbol(r'E_{a, \infty}') / (R * T))
     k0_sym = MyImplicitSymbol(r'k_{0, i}', T)
+    write_eq(k0_sym, k0, sympy=True, register=True)
     kinf_sym = MyImplicitSymbol(r'k_{\infty, i}', T)
-    Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
-    write_dummy_eq(latex(Eq(Pri_sym, Pri_mix)) + r'\text{\quad for the mixture as the third-body}')
-    efile.write_conditional(Pri_sym, (Pri_mix, 'mix'))
-    Pri_spec = Ck[m] * k0_sym / kinf_sym
-    write_dummy_eq(latex(Eq(Pri_sym, Pri_spec)) + r'\text{\quad for species $m$ as the third-body}')
+    write_eq(kinf_sym, kinf, sympy=True, register=True)
 
-    Fi_lind = 1
-    write_dummy_eq(latex(Eq(Fi_sym, Fi_lind)) + r'\text{\quad for Lindemann}')
+    Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
+    write_conditional(Pri_sym, Pri_mix, text=r'\quad for the mixture as the third-body',
+        enum_conds=[thd_body_type.mix])
+    
+    Pri_spec = Ck[m] * k0_sym / kinf_sym
+    write_conditional(Pri_sym, Pri_spec, text=r'\quad for species $m$ as the third-body',
+        enum_conds=[thd_body_type.single])
+
+    Pri_unity = Ctot_sym * k0_sym / kinf_sym
+    write_conditional(Pri_sym, Pri_spec, text=r'\quad for for all $\alpha_{i, j} = 1$',
+        enum_conds=[thd_body_type.unity])
+
+    Fi_lind = Integer(1)
+    write_conditional(Fi_sym, Fi_lind, text=r'\quad for Lindemann', 
+        enum_conds=[reaction_type.pdep, falloff_form.lind])
 
     Fcent_sym = MyImplicitSymbol('F_{cent}', T)
     Atroe_sym = MyImplicitSymbol('A_{Troe}', args=(Pri_sym, Fcent_sym))
@@ -664,30 +670,30 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Fcent_power = (1 + (Atroe_sym / Btroe_sym)**2)**-1
     Fi_troe = Fcent_sym**Fcent_power
     Fi_troe_sym = ImplicitSymbol('F_{i}', args=(Fcent_sym, Pri_sym))
-    write_dummy_eq(latex(Eq(Fi_sym, Fi_troe)) + r'\text{\quad for Troe}')
     register_equal(Fi_troe_sym, Fi_troe)
+    write_conditional(Fi_sym, Fi_troe, text=r'\quad for Troe',
+        enum_conds=[reaction_type.pdep, falloff_form.troe])
 
     X_sym = MyImplicitSymbol('X', Pri_sym)
     a_fall, b_fall, c_fall, d_fall, e_fall, \
         Tstar, Tstarstar, Tstarstarstar = symbols('a b c d e T^{*} T^{**} T^{***}')
     Fi_sri = d_fall * T ** e_fall * (
         a_fall * exp(-b_fall / T) + exp(-T / c_fall))**X_sym
-    write_dummy_eq(latex(Eq(Fi_sym, Fi_sri)) + r'\text{\quad for SRI}')
-    register_equal(Fi_sym, Fi_sri)
+    write_conditional(Fi_sym, Fi_sri, text=r'\quad for SRI',
+        enum_conds=[reaction_type.pdep, falloff_form.sri])
 
     Fcent = (S.One - a_fall) * exp(-T / Tstarstarstar) + a_fall * exp(-T / Tstar) + \
         exp(-Tstarstar / T)
-    write_eq(Fcent_sym, Fcent)
+    write_eq(Fcent_sym, Fcent, register_equal=True, sympy=True)
 
     Atroe = log(Pri_sym, 10) - Float(0.67) * log(Fcent_sym, 10) - Float(0.4)
-    write_eq(Atroe_sym, Atroe)
+    write_eq(Atroe_sym, Atroe, register_equal=True, sympy=True)
 
     Btroe = Float(0.806) - Float(1.1762) * log(Fcent_sym, 10) - Float(0.14) * log(Pri_sym, 10)
-    write_eq(Btroe_sym, Btroe)
+    write_eq(Btroe_sym, Btroe, register_equal=True, sympy=True)
 
     X = (1 + (log(Pri_sym, 10))**2)**-1
-    write_eq(X_sym, X)
-    register_equal(X_sym, X)
+    write_eq(X_sym, X, register_equal=True, sympy=True)
 
     write_section('Pressure-Dependent Reactions')
 
@@ -699,13 +705,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     k2 = A_2 * T**beta_2 * exp(Ea_2 / (R * T))
     k1_sym = MyImplicitSymbol('k_1', T)
     k2_sym = MyImplicitSymbol('k_2', T)
-    write_dummy_eq(latex(Eq(k1_sym, k1)) + r'\text{\quad at } P_1')
-    write_dummy_eq(latex(Eq(k2_sym, k2)) + r'\text{\quad at } P_2')
+    write_conditional(k1_sym, k1, text=r'\quad at $P_1$')
+    write_conditional(k2_sym, k2, text=r'\quad at $P_2$')
 
     kf_pdep = log(k1_sym) + (log(k2_sym) - log(k1_sym)) * (log(P) - log(Symbol('P_1'))) / (log(Symbol('P_2')) - log(Symbol('P_1')))
     kf_pdep_sym = Function('k_f')(T, P_sym)
-    write_eq(log(kf_pdep_sym), kf_pdep)
-    register_equal(log(kf_pdep_sym), kf_pdep)
+    write_eq(log(kf_pdep_sym), kf_pdep, register=True, sympy=True)
 
     #cheb
     file.write('For Chebyshev reactions\n')
@@ -723,9 +728,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     kf_cheb = Sum(eta[l, j] * chebyshevt(j - 1, Tred_sym) * chebyshevt(l - 1, Pred_sym),
         (l, 1, Np), (j, 1, Nt))
     kf_cheb_sym = Function('k_f')(T, P_sym)
-    write_eq(log(kf_cheb_sym, 10), kf_cheb)
-    write_eq(Tred_sym, Tred)
-    write_eq(Pred_sym, Pred)
+    write_eq(log(kf_cheb_sym, 10), kf_cheb, register_equal=True, sympy=True)
+    write_eq(Tred_sym, Tred, register_equal=True, sympy=True)
+    write_eq(Pred_sym, Pred, register_equal=True, sympy=True)
 
     write_section('Derivatives')
     write_eq(diff(omega_sym[k], T), diff(omega_k, T))
@@ -1224,20 +1229,21 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     dFi_linddT = diff(Fi_lind, T)
     dFi_linddCj = diff(Fi_lind, Ck[j])
-    write_eq(diff(Fi_sym, T), dFi_linddT)
-    write_eq(diff(Fi_sym, Ck[j]), dFi_linddCj)
+    write_conditional(diff(Fi_sym, T), dFi_linddT, enum_conds=falloff_form.lind)
+    write_conditional(diff(Fi_sym, Ck[j]), dFi_linddCj, enum_conds=falloff_form.lind)
 
     file.write('For Troe reactions\n')
     dFi_troedT = diff(Fi_troe_sym, T)
     dFi_troedCj = diff(Fi_troe_sym, Ck[j])
-    write_eq(diff(Fi_sym, T), dFi_troedT)
-    write_eq(diff(Fi_sym, Ck[j]), dFi_troedCj)
+    write_conditional(diff(Fi_sym, T), dFi_troedT, enum_conds=falloff_form.troe)
+    write_conditional(diff(Fi_sym, Ck[j]), dFi_troedCj, enum_conds=falloff_form.troe)
 
     file.write('where\n')
     troe_collect_poly = 2 * Atroe_sym / (Btroe_sym**3)
     dFi_troedFcent = assert_subs(factor_terms(
         diff(Fi_troe, Fcent_sym)), (Fi_troe, Fi_troe_sym))
-    write_eq(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+    write_eq(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent,
+        register_equal=True, sympy=True)
 
     dFcentdT = diff(Fcent, T)
     write_eq(diff(Fcent_sym, T), dFcentdT)

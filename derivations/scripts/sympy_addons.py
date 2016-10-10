@@ -11,49 +11,6 @@ from sympy.simplify.simplify import simplify
 base_str_total = r'\frac{{\text{{d}} {} }}{{\text{{d}} {} }}'
 base_str_partial = r'\frac{{\partial {} }}{{\partial {} }}'
 
-class SmartProduct(Product):
-    def _eval_diff(self, x, **kw_args):
-            return self._eval_derivative(x)
-    def _eval_derivative(self, x, **kw_args):
-        """
-        Differentiate wrt x as long as x is not in the free symbols of any of
-        the upper or lower limits.
-        Prod(a*b*x, (x, 1, a)) can be differentiated wrt x or b but not `a`
-        since the value of the sum is discontinuous in `a`. In a case
-        involving a limit variable, the unevaluated derivative is returned.
-        """
-
-        # diff already confirmed that x is in the free symbols of self, but we
-        # don't want to differentiate wrt any free symbol in the upper or lower
-        # limits
-        # XXX remove this test for free_symbols when the default _eval_derivative is in
-        if x.is_Indexed:
-            from sympy import IndexedBase
-            if x.base not in self.atoms(IndexedBase):
-                return S.Zero
-        elif x not in self.free_symbols:
-            return S.Zero
-
-        # get limits and the function
-        f, limits = self.function, list(self.limits)
-
-        limit = limits.pop(-1)
-
-        if limits:  # f is the argument to a Sum
-            f = self.func(f, *limits)
-
-        if len(limit) == 3:
-            _, a, b = limit
-            if x in a.free_symbols or x in b.free_symbols:
-                return None
-            df = Derivative(f, x, evaluate=True)
-            rv = self.func(df, limit)
-            if limit[0] not in df.free_symbols:
-                rv = rv.doit()
-            return rv
-        else:
-            return NotImplementedError('Lower and upper bound expected.')
-
 class ImplicitSymbol(Symbol):
     def __new__(cls, name, args, **assumptions):
         obj = Symbol.__new__(cls, name, **assumptions)
