@@ -466,8 +466,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     ufunc = h[k] - P * V / n
     ufunc = collect(assert_subs(ufunc, (h[k], hfunc)), R)
     write_eq(u[k], ufunc, sympy=True)
-    dudT = simplify(diff(ufunc, T), measure=count_ops_div)
-    write_eq(diff(u[k], T), dudT, sympy=True)
+    #dudT = simplify(diff(ufunc, T), measure=count_ops_div)
+    #write_eq(diff(u[k], T), dudT, sympy=True)
 
     #finally do the entropy and B terms
     Sfunc = R * (a[k, 0] * log(T) + T * (a[k, 1] + T * (a[k, 2] * Rational(1, 2) + T * (a[k, 3] * Rational(1, 3) + a[k, 4] * T * Rational(1, 4)))) + a[k, 6])
@@ -2064,7 +2064,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     file.write('For SRI\n')
     dFi_sridCj_spec = __get_fi_dcj(dFi_sridCj, dPri_specdCj_fac, dFi_sridCj_fac,
-        enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sir, thd_body_type.species])
+        enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.species])
 
     file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
     file.write('For Lindemann\n')
@@ -2132,22 +2132,27 @@ if __name__ == '__main__':
             for var, eqn in self.equations.items():
                 if isinstance(eqn, list):
                     variables = variables.union(set([var]))
-                    for e, *conditions in eqn:
+                    for e, dummy in eqn:
                         variables = variables.union(e.free_symbols)
                 else:
                     variables = variables.union(set([var]).union(eqn.free_symbols))
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
                 for var in variables:
-                    file.write(srepr(var) + '\n')
+                    file.write(str(var) + '\n')
                 file.write('\n')
                 for var, eqn in self.equations.items():
-                    file.write(srepr(var) + '\n')
+                    file.write(str(var) + '\n')
                     if isinstance(eqn, list):
-                        for e, *conditions in eqn:
-                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), srepr(eqn)))
+                        for e, conditions in eqn:
+                            try:
+                                conditions = iter(conditions)
+                            except:
+                                conditions = iter([conditions])
+                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), str(e)))
+                        file.write('\n')
                     else:
-                        file.write(srepr(eqn) + '\n')
+                        file.write(str(eqn) + '\n\n')
 
 
 

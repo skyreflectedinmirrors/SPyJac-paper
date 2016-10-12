@@ -19,6 +19,6 @@ class falloff_form(IntEnum):
     sri = 3
 
 class reversible_type(IntEnum):
-    none = 1
+    non_reversible = 1
     explicit = 2
     non_explicit = 3
