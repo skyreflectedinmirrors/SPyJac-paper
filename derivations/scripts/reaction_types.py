@@ -9,11 +9,13 @@ class reaction_type(IntEnum):
     cheb = 6
 
 class thd_body_type(IntEnum):
+    none = 0
     mix = 1
     species = 2
     unity = 3
 
 class falloff_form(IntEnum):
+    none = 0
     lind = 1
     troe = 2
     sri = 3
