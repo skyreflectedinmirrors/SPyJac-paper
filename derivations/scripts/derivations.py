@@ -590,7 +590,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Pri_sym = MyImplicitSymbol('P_{r, i}', args=(T, Ck, P_sym))
     Fi_sym = MyImplicitSymbol('F_{i}', args=(T, Ck, P_sym))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
-    write_conditional(ci[i], ci_fall, r'\quad for unimolecular/recombination falloff reactions', 
+    write_conditional(ci[i], ci_fall, r'\quad for unimolecular/recombination falloff reactions',
         enum_conds=[reaction_type.fall])
 
     ci_chem = (1 / (1 + Pri_sym)) * Fi_sym
@@ -638,26 +638,37 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Ea_rexp = IndexedBase(r'{E_{a,r}}')
     kr_rexp = A_rexp[i] * T**Beta_rexp[i] * exp(-Ea_rexp[i] / (R * T))
     Ropr_rexp = kr_rexp * Product(Ck[k]**nu_r[k, i], (k, 1, Ns))
-    write_conditional(Ropr_sym[i], Ropr_rexp, r'\quad if explicit', 
+    write_conditional(Ropr_sym[i], Ropr_rexp, r'\quad if explicit',
         enum_conds=reversible_type.explicit)
 
     write_section('Third-Body Efficiencies')
     thd_bdy_eff = IndexedBase(r'\alpha')
     ci_thd = Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns))
     write_eq(ci_thd_sym, ci_thd)
-    ci_thd = Ctot_sym - Sum((S.One - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns))
-    write_conditional(ci_thd_sym, ci_thd, enum_conds=thd_body_type.mix)
 
-    ci_thd = assert_subs(ci_thd, (Ctot_sym, Ctot))
-    ci_thd = assert_subs(ci_thd, (Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns)),
-        Sum((1 - thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns - 1)) +
-        (1 - thd_bdy_eff[Ns, i]) * Cns))
+    ci_thd = assert_subs(ci_thd,
+        (Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns)),
+        Sum(thd_bdy_eff[k, i] * Ck[k], (k, 1, Ns - 1)) + thd_bdy_eff[Ns, i] * Ck[Ns]),
+        (Ck[Ns], Cns))
     write_eq(ci_thd_sym, ci_thd)
+    ci_thd = assert_subs(ci_thd, (Ctot, Ctot_sym))
+    ci_thd = simplify(ci_thd)
+    write_conditional(ci_thd_sym, ci_thd, text=r'\quad for mixture as third-body',
+        enum_conds=thd_body_type.mix)
 
-    ci_thd = assert_subs(factor_terms(simplify(ci_thd)), (Ctot, Ctot_sym))
-    write_eq(ci_thd_sym, ci_thd, register=True)
+    ci_thd_unity = assert_subs(ci_thd, (thd_bdy_eff[k, i], S.One),
+        (thd_bdy_eff[Ns, i], S.One), assumptions=[(thd_bdy_eff[k, i], S.One),
+        (thd_bdy_eff[Ns, i], S.One)])
+    ci_thd_unity = simplify(ci_thd_unity)
+    write_conditional(ci_thd_sym, ci_thd_unity, text=r'\quad for all $\alpha_{ki} = 1$',
+        enum_conds=thd_body_type.unity)
 
-    write_conditional(ci_thd_sym, Ck[m], text=r'\quad for a single species third-body', 
+    assert_subs(ci_thd, (thd_bdy_eff[k, i], KroneckerDelta(k, m)),
+        (thd_bdy_eff[Ns, i], S.Zero),
+        (Sum(KroneckerDelta(k, m) * Ck[k], (k, 1, Ns - 1)), Ck[m]),
+        assumptions=[(thd_bdy_eff[k, i], KroneckerDelta(k, m)),
+        (thd_bdy_eff[Ns, i], S.Zero)])
+    write_conditional(ci_thd_sym, Ck[m], text=r'\quad for a single species third-body',
         enum_conds=thd_body_type.species)
 
     write_section('Falloff Reactions')
@@ -671,17 +682,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     Pri_mix = ci_thd_sym  * k0_sym / kinf_sym
     write_conditional(Pri_sym, Pri_mix, text=r'\quad for the mixture as the third-body',
         enum_conds=[thd_body_type.mix])
-    
-    Pri_spec = Ck[m] * k0_sym / kinf_sym
+
+    Pri_spec = ci_thd_species * k0_sym / kinf_sym
     write_conditional(Pri_sym, Pri_spec, text=r'\quad for species $m$ as the third-body',
         enum_conds=[thd_body_type.species])
 
-    Pri_unity = Ctot_sym * k0_sym / kinf_sym
+    Pri_unity = ci_thd_unity * k0_sym / kinf_sym
     write_conditional(Pri_sym, Pri_spec, text=r'\quad for for all $\alpha_{i, j} = 1$',
         enum_conds=[thd_body_type.unity])
 
     Fi_lind = Integer(1)
-    write_conditional(Fi_sym, Fi_lind, text=r'\quad for Lindemann', 
+    write_conditional(Fi_sym, Fi_lind, text=r'\quad for Lindemann',
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind])
 
     Fcent_sym = MyImplicitSymbol('F_{cent}', T)
@@ -1017,11 +1028,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(ci_thd_sym, Ck[j]), dci_thddCj,
             enum_conds=[reaction_type.thd, thd_body_type.mix])
     else:
-        write_eq(diff(ci_thd_sym, Ck[j]), dci_thddCj, 
+        write_eq(diff(ci_thd_sym, Ck[j]), dci_thddCj,
             enum_conds=[reaction_type.thd, thd_body_type.mix])
 
     file.write(r'For species $m$ as the third-body' + '\n')
-    dci_spec_dT = diff(Ck[m], T) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
+    dci_spec_dT = diff(ci_thd_species, T) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
                         assert_subs(diff(Cns, T), (Ctot, Ctot_sym))
     if not conp:
         dci_spec_dT = assert_subs(dci_spec_dT, (diff(P, Ck[j]), dPdCj))
@@ -1029,7 +1040,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(ci[i], T), dci_spec_dT,
         enum_conds=[reaction_type.thd, thd_body_type.species])
 
-    dci_spec_dCj = diff(Ck[m], Ck[j]) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
+    dci_spec_dCj = diff(ci_thd_species, Ck[j]) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
                         dCnsdCj
 
     write_eq(diff(ci[i], Ck[j]), dci_spec_dCj,
@@ -1179,9 +1190,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         assumptions=[(Pri_spec, Pri_sym)])
     write_eq(diff(Pri_sym, T), dPri_specdT)
 
-    dCmdCj = (1 - KroneckerDelta(m, Ns)) * diff(Ck[m], Ck[j]) + KroneckerDelta(m, Ns) * dCnsdCj
-    register_equal(diff(Ck[m], Ck[j]), dCmdCj)
-    dPri_specdCj = assert_subs(diff(Pri_spec, Ck[j]), (diff(Ck[m], Ck[j]), dCmdCj))
+    dCmdCj = (1 - KroneckerDelta(m, Ns)) * diff(ci_thd_species, Ck[j]) + KroneckerDelta(m, Ns) * dCnsdCj
+    register_equal(diff(ci_thd_species, Ck[j]), dCmdCj)
+    dPri_specdCj = assert_subs(diff(Pri_spec, Ck[j]), (diff(ci_thd_species, Ck[j]), dCmdCj))
     write_eq(diff(Pri_sym, Ck[j]), dPri_specdCj)
 
     file.write('Simplifying:\n')
@@ -1189,7 +1200,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
             dPri_specdCj, dPri_specdCj_fac, dPri_specdCj_fac_sym = __get_pri_fac_terms(dPri_specdT, dPri_specdCj, "spec")
 
     file.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
-    Pri_unity = assert_subs(Pri_mix, (ci_thd_sym, ci_thd))
+    Pri_unity = assert_subs(Pri_mix, (ci_thd_sym, ci_thd),
+        assumptions=[])
     Pri_unity = assert_subs(Pri_unity, (ci_thd, Ctot),
             assumptions=[(thd_bdy_eff[k, i], 1), (thd_bdy_eff[Ns, i], 1)])
     Pri_unity_sym = assert_subs(Pri_unity, (Ctot, Ctot_sym))
@@ -1770,9 +1782,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     file.write('For species $m$ as third-body:\n')
     dqdT_spec_thd = assert_subs(dqdT,
-        (ci[i], Ck[m]),
+        (ci[i], ci_thd_species),
         (diff(ci[i], T), dci_spec_dCj),
-        assumptions=[(ci[i], Ck[m]),
+        assumptions=[(ci[i], ci_thd_species),
         (diff(ci[i], T), dci_spec_dCj)])
     write_eq(diff(q_sym[i], T), dqdT_spec_thd, enum_conds=[reaction_type.thd, thd_body_type.species])
 
@@ -1948,9 +1960,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dqdCj_thd_spec = assert_subs(dqdCj,
-        (ci[i], Ck[m]),
+        (ci[i], ci_thd_species),
         (diff(ci[i], Ck[j]), dci_spec_dCj),
-        assumptions=[(ci[i], Ck[m]),
+        assumptions=[(ci[i], ci_thd_species),
         (diff(ci[i], Ck[j]), dci_spec_dCj)]
         )
 
