@@ -1202,9 +1202,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     file.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     Pri_unity_sym = assert_subs(Pri_unity, (Ctot, Ctot_sym))
     register_equal(Pri_unity_sym, Pri_unity)
-    dPri_unitydT = assert_subs(diff(Pri_unity, T), (Ctot, Ctot_sym))
+    dPri_unitydT = diff(assert_subs(Pri_unity, (Ctot_sym, Ctot)), T)
     dPri_unitydT = assert_subs(dPri_unitydT, (diff(k0_sym, T), dk0dT),
-        (diff(kinf_sym, T), dkinfdT))
+        (diff(kinf_sym, T), dkinfdT), (Ctot, Ctot_sym))
 
     dPri_unitydT = assert_subs(collect(dPri_unitydT, Pri_unity_sym / T),
                         (Pri_unity_sym, Pri_sym),
