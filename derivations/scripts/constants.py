@@ -2,6 +2,8 @@ from sympy.core.compatibility import with_metaclass
 from sympy.core.singleton import Singleton, S
 from sympy.core.numbers import NumberSymbol, mpf_norm, Integer
 from mpmath.libmp.libmpf import from_float
+from sympy.core.symbol import Symbol
+from sympy.printing.repr import srepr
 
 """
 Static symbols -- constants in the code, associated with a symbol
@@ -20,7 +22,7 @@ class mass(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -53,8 +55,7 @@ class volume(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
-
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -87,7 +88,7 @@ class pressure(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -120,7 +121,7 @@ class atm_pressure(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -153,7 +154,7 @@ class gas_constant(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -187,7 +188,7 @@ class Ns(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():
@@ -221,7 +222,7 @@ class Nr(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return self.name
     def __repr__(self):
-        return self.name
+        return srepr(Symbol(self.name))
 
     @staticmethod
     def abs():

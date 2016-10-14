@@ -64,6 +64,15 @@ def latex(expr, **settings):
 class CustomReprPrinter(ReprPrinter):
     def _print_NumberSymbol(self, expr):
         return repr(expr)
+    def _print_IndexedFunc(self, expr):
+        r = expr.__class__.__name__
+        try:
+            func = iter(expr.functional_form)
+        except:
+            func = [expr.functional_form]
+        r += '(%s,%s)' % (srepr(expr.label), ', '.join([self._print(a) for a in func]))
+        return r
+
     def _print_ImplicitSymbol(self, expr):
         d = expr._assumptions.generator
         if d == {}:
@@ -2133,11 +2142,8 @@ if __name__ == '__main__':
 
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
-                for var in variables:
-                    file.write(srepr(var) + '\n')
-                file.write('\n')
                 for var, eqn in self.equations.items():
-                    file.write(str(var) + '\n')
+                    file.write(srepr(var) + '\n')
                     if isinstance(eqn, list):
                         for e, conditions in eqn:
                             try:
