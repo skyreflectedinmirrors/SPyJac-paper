@@ -2154,7 +2154,7 @@ if __name__ == '__main__':
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
                 for var in variables:
-                    file.write(str(var) + '\n')
+                    file.write(srepr(var) + '\n')
                 file.write('\n')
                 for var, eqn in self.equations.items():
                     file.write(str(var) + '\n')
@@ -2164,10 +2164,10 @@ if __name__ == '__main__':
                                 conditions = iter(conditions)
                             except:
                                 conditions = iter([conditions])
-                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), str(e)))
+                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), srepr(e)))
                         file.write('\n')
                     else:
-                        file.write(str(eqn) + '\n\n')
+                        file.write(srepr(eqn) + '\n\n')
 
 
 
