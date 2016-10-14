@@ -305,11 +305,14 @@ def assert_subs(obj, *subs_args, **kw_args):
 ConP / ConV independent symbols
 """
 
-assumptions = {'float' : True,
+assumptions = {}
+
+"""{'float' : True,
                'finite' : True,
                'negative' : False,
                'postive' : True,
                'real' : True}
+"""
 
 #time
 t = symbols('t', **assumptions)
