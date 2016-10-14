@@ -663,12 +663,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_conditional(ci_thd_sym, ci_thd_unity, text=r'\quad for all $\alpha_{ki} = 1$',
         enum_conds=thd_body_type.unity)
 
-    assert_subs(ci_thd, (thd_bdy_eff[k, i], KroneckerDelta(k, m)),
+    ci_thd_species = assert_subs(ci_thd, (thd_bdy_eff[k, i], KroneckerDelta(k, m)),
         (thd_bdy_eff[Ns, i], S.Zero),
         (Sum(KroneckerDelta(k, m) * Ck[k], (k, 1, Ns - 1)), Ck[m]),
         assumptions=[(thd_bdy_eff[k, i], KroneckerDelta(k, m)),
         (thd_bdy_eff[Ns, i], S.Zero)])
-    write_conditional(ci_thd_sym, Ck[m], text=r'\quad for a single species third-body',
+    write_conditional(ci_thd_sym, ci_thd_species, text=r'\quad for a single species third-body',
         enum_conds=thd_body_type.species)
 
     write_section('Falloff Reactions')
