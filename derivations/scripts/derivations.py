@@ -1200,10 +1200,6 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
             dPri_specdCj, dPri_specdCj_fac, dPri_specdCj_fac_sym = __get_pri_fac_terms(dPri_specdT, dPri_specdCj, "spec")
 
     file.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
-    Pri_unity = assert_subs(Pri_mix, (ci_thd_sym, ci_thd),
-        assumptions=[])
-    Pri_unity = assert_subs(Pri_unity, (ci_thd, Ctot),
-            assumptions=[(thd_bdy_eff[k, i], 1), (thd_bdy_eff[Ns, i], 1)])
     Pri_unity_sym = assert_subs(Pri_unity, (Ctot, Ctot_sym))
     register_equal(Pri_unity_sym, Pri_unity)
     dPri_unitydT = assert_subs(diff(Pri_unity, T), (Ctot, Ctot_sym))
