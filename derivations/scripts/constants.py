@@ -15,9 +15,12 @@ class mass(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     m_val = 1
+    name = 'm'
 
     def _latex(self, printer):
-        return r"m"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():
@@ -45,9 +48,13 @@ class volume(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     v_val = 1
+    name = 'V'
 
     def _latex(self, printer):
-        return r"V"
+        return self.name
+    def __repr__(self):
+        return self.name
+
 
     @staticmethod
     def abs():
@@ -75,9 +82,12 @@ class pressure(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     p_val = 101325
+    name = 'P'
 
     def _latex(self, printer):
-        return r"P"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():
@@ -105,9 +115,12 @@ class atm_pressure(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     p_val = 101325
+    name = 'P_{atm}'
 
     def _latex(self, printer):
-        return r"P_{atm}"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():
@@ -135,9 +148,12 @@ class gas_constant(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = False
     is_transcendental = True
     r_val = 8.3144621
+    name = 'R_u'
 
     def _latex(self, printer):
-        return r"{R_u}"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():
@@ -166,9 +182,12 @@ class Ns(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     r_val = 10
+    name = 'N_s'
 
     def _latex(self, printer):
-        return r"N_s"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():
@@ -197,9 +216,12 @@ class Nr(with_metaclass(Singleton, NumberSymbol)):
     is_algebraic = True
     is_transcendental = False
     r_val = 100
+    name = 'N_r'
 
     def _latex(self, printer):
-        return r"N_r"
+        return self.name
+    def __repr__(self):
+        return self.name
 
     @staticmethod
     def abs():

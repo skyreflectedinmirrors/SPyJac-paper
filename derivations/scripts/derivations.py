@@ -12,6 +12,7 @@ from sympy.core.power import Pow
 from sympy.tensor.indexed import Idx, IndexedBase
 from sympy.concrete import Sum, Product
 from sympy.printing.latex import LatexPrinter
+from sympy.printing.repr import ReprPrinter
 from sympy.core.function import UndefinedFunction, Function, diff, Derivative, expand, expand_mul, count_ops
 from sympy.functions.elementary.exponential import exp, log, sqrt
 from sympy.functions.special.tensor_functions import KroneckerDelta
@@ -25,6 +26,7 @@ from sympy.printing.repr import srepr
 
 from constants import *
 from sympy_addons import *
+from custom_sympy_classes import *
 from reaction_types import *
 import os
 
@@ -59,43 +61,24 @@ class CustomLatexPrinter(LatexPrinter):
 def latex(expr, **settings):
     return CustomLatexPrinter(settings).doprint(expr)
 
-class MyImplicitSymbol(ImplicitSymbol):
-    def _get_df(self, arg, wrt):
-        if isinstance(arg, IndexedConc) and \
-                    isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
-                    isinstance(wrt.base, IndexedConc):
-            return self.__class__(self.base_str.format(
-                    str(self.name), str(wrt)), args=self.functional_form)
-        return self.__class__(self.base_str.format(
-                str(self.name), str(arg)), args=self.functional_form)
+class CustomReprPrinter(ReprPrinter):
+    def _print_NumberSymbol(self, expr):
+        return repr(expr)
+    def _print_ImplicitSymbol(self, expr):
+        d = expr._assumptions.generator
+        if d == {}:
+            return "%s(%s, %s)" % (expr.__class__.__name__, self._print(expr.name),
+                self._print(expr.functional_form))
+        else:
+            attr = ['%s=%s' % (k, v) for k, v in d.items()]
+            return "%s(%s, %s, %s)" % (expr.__class__.__name__,
+                                   self._print(expr.functional_form),
+                                   self._print(expr.name), ', '.join(attr))
 
-class MyIndexedFunc(IndexedFunc):
-    def _get_subclass(self, *args):
-        return MyIndexedFunc.MyIndexedFuncValue(*args)
-
-    class MyIndexedFuncValue(IndexedFunc.IndexedFuncValue):
-        def _get_df(self, arg, wrt):
-            if isinstance(arg, IndexedConc) and \
-                    isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
-                    isinstance(wrt.base, IndexedConc):
-                return self.base.__class__(self.base_str.format(
-                        str(self.base), str(wrt)), self.functional_form)[self.indices]
-            return super(MyIndexedFunc.MyIndexedFuncValue, self)._get_df(arg, wrt)
-
-
-
-#some custom behaviour for concentrations
-class IndexedConc(MyIndexedFunc):
-    is_Real = True
-    is_Positive = True
-    is_Negative = False
-    is_Number = True
-    _diff_wrt = True
-    def _eval_derivative(self, wrt):
-        if isinstance(wrt, MyIndexedFunc.MyIndexedFuncValue) and \
-            isinstance(wrt.base, IndexedConc):
-            return S.One
-        return S.Zero
+def filter(s):
+    return s.replace('\\\\', '\\')
+def srepr(expr, **settings):
+    return filter(CustomReprPrinter(settings).doprint(expr))
 
 def write_eq(*args, **kw_args):
     if len(args) == 2:
@@ -326,8 +309,8 @@ Ns = S.Ns
 Nr = S.Nr
 
 #index variables
-k = Idx('k', (1, Ns + 1))
-i = Idx('i', (1, Nr + 1))
+k = Idx('k')
+i = Idx('i')
 j = Idx('j')
 l = Idx('l')
 m = Idx('m')
@@ -2147,6 +2130,7 @@ if __name__ == '__main__':
                         variables = variables.union(e.free_symbols)
                 else:
                     variables = variables.union(set([var]).union(eqn.free_symbols))
+
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
                 for var in variables:
