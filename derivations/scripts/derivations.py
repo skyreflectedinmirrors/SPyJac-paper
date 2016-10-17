@@ -759,7 +759,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(omega_sym[k], T), diff(omega_k, T), sympy=True)
 
     write_eq(diff(q_sym[i], Ck[k]), diff(q, Ck[j]))
-    write_eq(diff(omega_sym[k], Ck[k]), diff(omega_k, Ck[j]), sympy=True)
+    write_eq(diff(omega_sym[k], Ck[j]), diff(omega_k, Ck[j]), sympy=True)
 
     write_section('Rate of Progress Derivatives')
 
