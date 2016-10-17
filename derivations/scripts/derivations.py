@@ -62,26 +62,32 @@ def latex(expr, **settings):
     return CustomLatexPrinter(settings).doprint(expr)
 
 class CustomReprPrinter(ReprPrinter):
-    def _print_NumberSymbol(self, expr):
-        return repr(expr)
-    def _print_IndexedFunc(self, expr):
-        r = expr.__class__.__name__
+    def __get_func_form(self, expr):
         try:
             func = iter(expr.functional_form)
         except:
             func = [expr.functional_form]
-        r += '(%s,%s)' % (srepr(expr.label), ', '.join([self._print(a) for a in func]))
+        func_str = ', '.join([self._print(a) for a in func])
+        if len(func) > 1:
+            func_str = '(' + func_str + ')'
+        return func_str
+
+    def _print_NumberSymbol(self, expr):
+        return repr(expr)
+    def _print_IndexedFunc(self, expr):
+        r = expr.__class__.__name__
+        r += '(%s,%s)' % (srepr(expr.label), self.__get_func_form(expr))
         return r
 
     def _print_ImplicitSymbol(self, expr):
         d = expr._assumptions.generator
         if d == {}:
             return "%s(%s, %s)" % (expr.__class__.__name__, self._print(expr.name),
-                self._print(expr.functional_form))
+                self.__get_func_form(expr))
         else:
             attr = ['%s=%s' % (k, v) for k, v in d.items()]
             return "%s(%s, %s, %s)" % (expr.__class__.__name__,
-                                   self._print(expr.functional_form),
+                                   self.__get_func_form(expr),
                                    self._print(expr.name), ', '.join(attr))
 
 def filter(s):
