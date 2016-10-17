@@ -535,7 +535,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     #write_eq(Ck[Ns], Cns)
     register_equal(Ck[Ns], Cns)
 
-    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, nu, P_sym))
+    omega_sym = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(Ck, T, P_sym))
     write_eq(diff(Ck[k], t), omega_sym[k])
 
     q_sym = MyIndexedFunc('q', args=(Ck, T))
