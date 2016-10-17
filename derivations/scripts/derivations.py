@@ -63,14 +63,7 @@ def latex(expr, **settings):
 
 class CustomReprPrinter(ReprPrinter):
     def __get_func_form(self, expr):
-        try:
-            func = iter(expr.functional_form)
-        except:
-            func = [expr.functional_form]
-        func_str = ', '.join([self._print(a) for a in func])
-        if len(func) > 1:
-            func_str = '(' + func_str + ')'
-        return func_str
+        return self._print(expr.functional_form)
 
     def _print_NumberSymbol(self, expr):
         return repr(expr)
