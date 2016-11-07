@@ -95,7 +95,13 @@ def write_eq(*args, **kw_args):
         file.write(latex(*args, mode='equation') + '\n')
     if 'sympy' in kw_args and kw_args.pop('sympy'):
         assert len(args) == 2
-        efile.write(args[0], args[1])
+        if 'enum_conds' in kw_args:
+            enums = kw_args.pop('enum_conds')
+            if len(args) != 2:
+                assert "I don't know how to register this!"
+            efile.write_conditional(args[0], (args[1], enums))
+        else:
+            efile.write(args[0], args[1])
     if 'register' in kw_args and kw_args.pop('register'):
         if len(args) != 2:
             assert "I don't know how to register this!"
