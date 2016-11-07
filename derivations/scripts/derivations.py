@@ -596,7 +596,8 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_section('Forward Reaction Rate')
     kf = A[i] * (T**Beta[i]) * exp(-Ea[i] / (R * T))
-    write_eq(kf_sym[i], kf, sympy=True, register=True)
+    write_eq(kf_sym[i], kf, register=True,
+        enum_conds=[reaction_type.elementary, reaction_type.thd, reaction_type.fall, reaction_type.chem])
 
     write_section('Equilibrium Constants')
     Kp_sym = MyIndexedFunc(r'{K_p}', args=(T, a))
@@ -739,7 +740,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     kf_pdep = log(k1_sym) + (log(k2_sym) - log(k1_sym)) * (log(P) - log(Symbol('P_1'))) / (log(Symbol('P_2')) - log(Symbol('P_1')))
     kf_pdep_sym = Function('k_f')(T, P_sym)
     register_equal(log(kf_pdep_sym), kf_pdep)
-    write_eq(log('{k_f}[i]'), kf_pdep, sympy=True, enum_conds=reaction_type.plog)
+    write_eq(log(kf_sym[i]), kf_pdep, sympy=True, enum_conds=reaction_type.plog)
 
     #cheb
     file.write('For Chebyshev reactions\n')
@@ -758,7 +759,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (l, 1, Np), (j, 1, Nt))
     kf_cheb_sym = Function('k_f')(T, P_sym)
     register_equal(log(kf_cheb_sym, 10), kf_cheb)
-    write_eq(log('{k_f}[i]', 10), kf_cheb, sympy=True, enum_conds=reaction_type.cheb)
+    write_eq(log(kf_sym[i], 10), kf_cheb, sympy=True, enum_conds=reaction_type.cheb)
     write_eq(Tred_sym, Tred, register=True, sympy=True)
     write_eq(Pred_sym, Pred, register=True, sympy=True)
 
