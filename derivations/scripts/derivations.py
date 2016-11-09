@@ -84,7 +84,7 @@ class CustomReprPrinter(ReprPrinter):
                                    self._print(expr.name), ', '.join(attr))
 
 def filter(s):
-    return s.replace('\\\\', '\\')
+    return s.replace('\\\\', '\\').replace('\\', '')
 def srepr(expr, **settings):
     return filter(CustomReprPrinter(settings).doprint(expr))
 
@@ -2150,6 +2150,12 @@ if __name__ == '__main__':
 
             #write equations
             with open(os.path.join(home_dir, self.name), self.mode) as file:
+                #write variables (for easier searching)
+                for var in variables:
+                    file.write(srepr(var) + '\n')
+
+                file.write('\n')
+
                 for var, eqn in self.equations.items():
                     file.write(srepr(var) + '\n')
                     if isinstance(eqn, list):
@@ -2162,7 +2168,6 @@ if __name__ == '__main__':
                         file.write('\n')
                     else:
                         file.write(srepr(eqn) + '\n\n')
-
 
 
     from argparse import ArgumentParser
