@@ -34,6 +34,9 @@ home_dir = os.path.dirname(os.path.realpath(__file__))
 out_dir = os.path.realpath(os.path.join(
     home_dir, '..', 'tex'))
 
+sympyfile = None
+latexfile = None
+
 init_printing()
 
 #weights taken from http://arxiv.org/pdf/1506.03997.pdf
@@ -90,18 +93,18 @@ def srepr(expr, **settings):
 
 def write_eq(*args, **kw_args):
     if len(args) == 2:
-        file.write(latex(Eq(args[0], args[1]), mode='equation') + '\n')
+        latexfile.write(latex(Eq(args[0], args[1]), mode='equation') + '\n')
     else:
-        file.write(latex(*args, mode='equation') + '\n')
+        latexfile.write(latex(*args, mode='equation') + '\n')
     if 'sympy' in kw_args and kw_args.pop('sympy'):
         assert len(args) == 2
         if 'enum_conds' in kw_args:
             enums = kw_args.pop('enum_conds')
             if len(args) != 2:
                 assert "I don't know how to register this!"
-            efile.write_conditional(args[0], (args[1], enums))
+            sympyfile.write_conditional(args[0], (args[1], enums))
         else:
-            efile.write(args[0], args[1])
+            sympyfile.write(args[0], args[1])
     if 'register' in kw_args and kw_args.pop('register'):
         if len(args) != 2:
             assert "I don't know how to register this!"
@@ -110,13 +113,13 @@ def write_eq(*args, **kw_args):
         enums = kw_args.pop('enum_conds')
         if len(args) != 2:
             assert "I don't know how to register this!"
-        efile.write_conditional(args[0], (args[1], enums))
+        sympyfile.write_conditional(args[0], (args[1], enums))
     if len(kw_args):
         raise Exception('Unknown kw_args: {}'.format(str(kw_args)))
 
 
 def write_dummy_eq(text, **kw_args):
-    file.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
+    latexfile.write(r'\begin{equation}' + text + r'\end{equation}' + '\n')
 
 def write_conditional(arg1, arg2, text=None, enum_conds=None, register=False):
     if text is not None:
@@ -124,9 +127,9 @@ def write_conditional(arg1, arg2, text=None, enum_conds=None, register=False):
             r'\text{{{}}}'.format(text) + r'\end{equation}'
     else:
         outtext = latex(Eq(arg1, arg2), mode='equation')
-    file.write(outtext + '\n')
+    latexfile.write(outtext + '\n')
     if enum_conds is not None:
-        efile.write_conditional(arg1, (arg2, enum_conds))
+        sympyfile.write_conditional(arg1, (arg2, enum_conds))
     if register:
         assert enum_conds is None
         register_equal(arg1, arg2)
@@ -137,15 +140,15 @@ def write_section(title, **kw_args):
         sec_type = 'sub'
     elif 'subsub' in kw_args and kw_args['subsub']:
         sec_type = 'subsub'
-    file.write(r'\{0}section{{{1}}}'.format(sec_type, title) + '\n')
+    latexfile.write(r'\{0}section{{{1}}}'.format(sec_type, title) + '\n')
 
 def write_cases(variable, case_list, **kw_args):
-    file.write(r'\begin{dgroup}' + '\n')
+    latexfile.write(r'\begin{dgroup}' + '\n')
 
     for case_var, case_text in case_list:
-        file.write(r'\begin{{dmath}} {} = {}\text{{\quad if {}}}\end{{dmath}}'.format(
+        latexfile.write(r'\begin{{dmath}} {} = {}\text{{\quad if {}}}\end{{dmath}}'.format(
             latex(variable), latex(case_var), case_text) + '\n')
-    file.write(r'\end{dgroup}' + '\n')
+    latexfile.write(r'\end{dgroup}' + '\n')
 
 equivalences = {}
 def register_equal(v1, v2=None):
@@ -340,6 +343,12 @@ m_sym = S.mass
 a = IndexedBase('a')
 
 def derivation(file, efile, conp=True, thermo_deriv=False):
+    #set files
+    global latexfile
+    latexfile = file
+    global sympyfile
+    sympyfile = efile
+
     write_section('State Variables and Definitions')
     #thermo vars
     Ck = IndexedConc('[C]', t)
@@ -490,7 +499,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dPdCj = None
     if not conp:
         #let's get some Pressure definitions out of the way
-        file.write('Pressure derivatives')
+        latexfile.write('Pressure derivatives')
         P_real = R * T * n_sym / V
         write_eq(P_sym, P_real, sympy=True)
 
@@ -727,7 +736,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_section('Pressure-Dependent Reactions')
 
     #pdep
-    file.write('For PLog reactions\n')
+    latexfile.write('For PLog reactions\n')
     A_1, A_2, beta_1, beta_2, Ea_1, Ea_2 = symbols(r'A_1 A_2 \beta_1' +
         r' \beta_2 E_{a_1} E_{a_2}')
     k1 = A_1 * T**beta_1 * exp(Ea_1 / (R * T))
@@ -743,7 +752,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(log(kf_sym[i]), kf_pdep, sympy=True, enum_conds=reaction_type.plog)
 
     #cheb
-    file.write('For Chebyshev reactions\n')
+    latexfile.write('For Chebyshev reactions\n')
     Tmin, Tmax, Pmin, Pmax = symbols('T_{min} T_{max} P_{min} P_{max}')
     Tred = (2 * T**-1 - Tmin**-1 - Tmax**-1) / (Tmax**-1 - Tmin**-1)
     Pred = simplify((2 * log(P, 10) - log(Pmin, 10) - log(Pmax, 10)) / (log(Pmax, 10) - log(Pmin, 10)))
@@ -861,7 +870,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dRoprdCj = assert_subs(dRoprdCj, (__inner_func(j, False),
         Srev[j]), (__inner_func(Ns, False), Srev[Ns]))
     write_eq(diff(Ropr_sym[i], Ck[j]), dRoprdCj, register=True)
-    file.write('For all reversible reactions\n')
+    latexfile.write('For all reversible reactions\n')
     #now do dRop/dCj
     dRopdCj = assert_subs(diff(Rop, Ck[j]),
         (diff(Ropf_sym[i], Ck[j]), dRopfdCj),
@@ -952,7 +961,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     dRopfdT = get_dr_dt(register=True)
 
-    file.write('For reactions with explicit reverse Arrhenius coefficients\n')
+    latexfile.write('For reactions with explicit reverse Arrhenius coefficients\n')
 
     #find the reverse derivative
     dkr_rexpdT = assert_subs(factor_terms(diff(kr_rexp, T)), (kr_rexp, kr_sym[i]),
@@ -966,7 +975,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_eq(diff(Rop_sym[i], T), dRop_expdT, enum_conds=reversible_type.explicit)
 
-    file.write('For non-explicit reversible reactions\n')
+    latexfile.write('For non-explicit reversible reactions\n')
 
     def get_dkr_dT(dkfdTval, writetofile=True):
         #find dkr/dT
@@ -1031,7 +1040,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(ci_thd_sym, Ck[j]), dci_thddCj,
             enum_conds=[reaction_type.thd, thd_body_type.mix])
 
-    file.write(r'For species $m$ as the third-body' + '\n')
+    latexfile.write(r'For species $m$ as the third-body' + '\n')
     dci_spec_dT = diff(ci_thd_species, T) * (1 - KroneckerDelta(m, Ns)) + KroneckerDelta(m, Ns) *\
                         assert_subs(diff(Cns, T), (Ctot, Ctot_sym))
     if not conp:
@@ -1047,7 +1056,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         enum_conds=[reaction_type.thd, thd_body_type.species])
 
 
-    file.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
+    latexfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     dci_unity_dT = assert_subs(diff(Ctot, T),
                                 (Ctot, Ctot_sym))
     if not conp:
@@ -1163,7 +1172,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         return dPri_dT, dPri_dT_prifac, dPri_dT_prifac_sym, dPri_dT_noprifac, dPri_dT_noprifac_sym,\
             dPri_dCj, dPri_dCj_fac, dPri_dCj_fac_sym
 
-    file.write('\nFor the mixture as the third body\n')
+    latexfile.write('\nFor the mixture as the third body\n')
     dPri_mixdT = assert_subs(dPri_mixdT, (diff(k0_sym, T), dk0dT),
         (diff(kinf_sym, T), dkinfdT))
     dPri_mixdT = assert_subs(collect(dPri_mixdT, Pri_mix / T), (Pri_mix, Pri_sym),
@@ -1177,11 +1186,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
     write_eq(diff(Pri_sym, Ck[j]), dPri_mixdCj)
 
-    file.write('Simplifying:\n')
+    latexfile.write('Simplifying:\n')
     dPri_mixdT, dPri_mixdT_prifac, dPri_mixdT_prifac_sym, dPri_mixdT_noprifac, dPri_mixdT_noprifac_sym,\
             dPri_mixdCj, dPri_mixdCj_fac, dPri_mixdCj_fac_sym = __get_pri_fac_terms(dPri_mixdT, dPri_mixdCj, "mix")
 
-    file.write('For species $m$ as the third-body\n')
+    latexfile.write('For species $m$ as the third-body\n')
 
     dPri_specdT = diff(Pri_spec, T)
     dPri_specdT = assert_subs(dPri_specdT, (diff(k0_sym, T), dk0dT),
@@ -1195,11 +1204,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dPri_specdCj = assert_subs(diff(Pri_spec, Ck[j]), (diff(ci_thd_species, Ck[j]), dCmdCj))
     write_eq(diff(Pri_sym, Ck[j]), dPri_specdCj)
 
-    file.write('Simplifying:\n')
+    latexfile.write('Simplifying:\n')
     dPri_specdT, dPri_specdT_prifac, dPri_specdT_prifac_sym, dPri_specdT_noprifac, dPri_specdT_noprifac_sym,\
             dPri_specdCj, dPri_specdCj_fac, dPri_specdCj_fac_sym = __get_pri_fac_terms(dPri_specdT, dPri_specdCj, "spec")
 
-    file.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
+    latexfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     Pri_unity_sym = assert_subs(Pri_unity, (Ctot, Ctot_sym))
     register_equal(Pri_unity_sym, Pri_unity)
     dPri_unitydT = diff(assert_subs(Pri_unity, (Ctot_sym, Ctot)), T)
@@ -1225,12 +1234,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         dPri_unitydCj = assert_subs(dPri_unitydCj, (diff(P, Ck[j]), dPdCj))
         write_eq(diff(Pri_sym, Ck[j]), dPri_unitydCj)
 
-    file.write('Simplifying:\n')
+    latexfile.write('Simplifying:\n')
     dPri_unitydT, dPri_unitydT_prifac, dPri_unitydT_prifac_sym, dPri_unitydT_noprifac, dPri_unitydT_noprifac_sym,\
             dPri_unitydCj, dPri_unitydCj_fac, dPri_unitydCj_fac_sym = __get_pri_fac_terms(dPri_unitydT, dPri_unitydCj, "unity")
 
     #finally we make a generic version for simplification
-    file.write('Thus we write:\n')
+    latexfile.write('Thus we write:\n')
     dPri_dT_prifac_sym = Symbol(r'\Theta_{P_{r,i}, \partial T}')
     dPri_dT_noprifac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial T}')
     dPri_dCj_fac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial [C][j]}')
@@ -1246,7 +1255,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     register_equal(diff(Pri_sym, T), dPri_dT)
     register_equal(diff(Pri_sym, Ck[j]), dPri_dCj)
 
-    file.write('For\n')
+    latexfile.write('For\n')
     write_cases(dPri_dT_prifac_sym, [(dPri_mixdT_prifac, "mix"),
         (dPri_specdT_prifac, "species"),
         (dPri_unitydT_prifac, "unity")])
@@ -1258,20 +1267,20 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (dPri_unitydCj_fac, "unity")])
 
     write_section('Falloff Blending Factor derivatives', sub=True)
-    file.write('\n For Lindemann reactions\n')
+    latexfile.write('\n For Lindemann reactions\n')
 
     dFi_linddT = diff(Fi_lind, T)
     dFi_linddCj = diff(Fi_lind, Ck[j])
     write_conditional(diff(Fi_sym, T), dFi_linddT, enum_conds=falloff_form.lind)
     write_conditional(diff(Fi_sym, Ck[j]), dFi_linddCj, enum_conds=falloff_form.lind)
 
-    file.write('For Troe reactions\n')
+    latexfile.write('For Troe reactions\n')
     dFi_troedT = diff(Fi_troe_sym, T)
     dFi_troedCj = diff(Fi_troe_sym, Ck[j])
     write_conditional(diff(Fi_sym, T), dFi_troedT, enum_conds=falloff_form.troe)
     write_conditional(diff(Fi_sym, Ck[j]), dFi_troedCj, enum_conds=falloff_form.troe)
 
-    file.write('where\n')
+    latexfile.write('where\n')
     troe_collect_poly = 2 * Atroe_sym / (Btroe_sym**3)
     dFi_troedFcent = assert_subs(factor_terms(
         diff(Fi_troe, Fcent_sym)), (Fi_troe, Fi_troe_sym))
@@ -1286,7 +1295,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
             (Fi_troe, Fi_troe_sym)))
     write_eq(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
 
-    file.write('And\n')
+    latexfile.write('And\n')
     dAtroedFcent = diff(Atroe, Fcent_sym)
     dBtroedFcent = diff(Btroe, Fcent_sym)
     dAtroedPri = diff(Atroe, Pri_sym)
@@ -1303,7 +1312,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Btroe_sym, Pri_sym), dBtroedPri)
     register_equal(diff(Btroe_sym, Pri_sym), dBtroedPri)
 
-    file.write('Thus\n')
+    latexfile.write('Thus\n')
     dFi_troedFcent = factor_terms(simplify(
             assert_subs(dFi_troedFcent,
             (diff(Atroe_sym, Fcent_sym), dAtroedFcent),
@@ -1320,7 +1329,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
     register_equal(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
 
-    file.write('And\n')
+    latexfile.write('And\n')
     dFi_troedT = assert_subs(dFi_troedT, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
         (diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent),
         (diff(Pri_sym, T), dPri_dT))
@@ -1345,11 +1354,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         assumptions=[(dFi_troedCj_fac, dFi_dCj_fac_sym)])
     write_eq(diff(Fi_sym, Ck[j]), dFi_troedCj)
 
-    file.write('Where\n')
+    latexfile.write('Where\n')
     write_eq(dFi_dT_fac_sym, dFi_troedT_fac)
     write_eq(dFi_dCj_fac_sym, dFi_troedCj_fac)
 
-    file.write('For SRI reactions\n')
+    latexfile.write('For SRI reactions\n')
     dFi_sridT = factor_terms(
         assert_subs(diff(Fi_sri, T), (Fi_sri, Fi_sym),
             assumptions=[(Fi_sri, Fi_sym)]))
@@ -1359,14 +1368,14 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Fi_sym, T), dFi_sridT)
     write_eq(diff(Fi_sym, Ck[j]), dFi_sridCj)
 
-    file.write('Where\n')
+    latexfile.write('Where\n')
     dXdPri = assert_subs(diff(X, Pri_sym), (X, X_sym))
     write_eq(diff(X_sym, Pri_sym), dXdPri, register=True)
     register_equal(diff(X_sym, Pri_sym), dXdPri)
 
     write_eq(r'\frac{\partial X}{\partial [C]_j} = ' + latex(diff(X_sym, Ck[j])))
 
-    file.write('And\n')
+    latexfile.write('And\n')
     dFi_sridT = simplify(
         assert_subs(dFi_sridT, (diff(X_sym, Pri_sym), dXdPri),
         (diff(Pri_sym, T), dPri_dT)))
@@ -1385,11 +1394,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         assumptions=[(dFi_sridCj_fac, dFi_dCj_fac_sym)])
     write_eq(diff(Fi_sym, Ck[j]), dFi_sridCj)
 
-    file.write('Where\n')
+    latexfile.write('Where\n')
     write_eq(dFi_dT_fac_sym, dFi_sridT_fac)
     write_eq(dFi_dCj_fac_sym, dFi_sridCj_fac)
 
-    file.write('Simplifying:\n')
+    latexfile.write('Simplifying:\n')
     dFi_dT = assert_subs(dFi_troedT,
         (Fi_troe_sym, Fi_sym),
         assumptions=[(Fi_troe_sym, Fi_sym)])
@@ -1400,7 +1409,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         assumptions=[(Fi_troe_sym, Fi_sym)])
     write_eq(diff(Fi_sym, Ck[j]), dFi_dCj, register=True)
 
-    file.write('Where:\n')
+    latexfile.write('Where:\n')
 
     dFi_linddT_fac = dFi_linddT / Fi_sym
     write_cases(dFi_dT_fac_sym, [(dFi_linddT_fac, 'Lindemann'),
@@ -1441,7 +1450,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dci_chemdT, dci_chemdCj = __subs_ci_terms(dci_chemdT, dci_chemdCj, ci_chem)
 
     write_section('Pressure-dependent reaction derivatives')
-    file.write('For PLog reactions\n')
+    latexfile.write('For PLog reactions\n')
     dkf_pdepdT = diff(kf_pdep, T)
     #since the kf_pdep is expressed as a log
     #we need to solve for this in terms of dkf/dT
@@ -1494,7 +1503,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_pdepdT = collect(dRop_pdepdT, Ctot_sym / T)
     write_eq(diff(Rop_sym[i], T), dRop_pdepdT)
 
-    file.write('For Chebyshev reactions\n')
+    latexfile.write('For Chebyshev reactions\n')
     dkf_chebdT = diff(kf_cheb, T) * mul_term
     write_eq(diff(kf_sym[i], T), dkf_chebdT)
     dkf_chebdT = assert_subs(dkf_chebdT, (diff(Tred_sym, T), diff(Tred, T)))
@@ -1587,7 +1596,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     #Temperature jacobian entries
 
     write_section(r'\texorpdfstring{$\dot{T}$}{dTdt} Derivatives', subsub=True)
-    file.write('Concentration derivative\n')
+    latexfile.write('Concentration derivative\n')
     #first we do the concentration derivative
     dTdotdC_sym = symbols(r'\frac{\partial\dot{T}}{\partial{C_j}}')
     dTdotdC = simplify(diff(dTdt, Ck[j]))
@@ -1640,7 +1649,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (dTdt_simple, dTdt_sym))
     write_eq(dTdotdC_sym, dTdotdC)
 
-    file.write('Temperature derivative\n')
+    latexfile.write('Temperature derivative\n')
 
     write_eq(dTdt_sym, dTdt)
     #up next the temperature derivative
@@ -1722,7 +1731,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Jac[k + 1, j + 1], diff(omega_sym[k], Ck[j]))
     write_eq(Jac[k + 1, j + 1], diff(omega_sym_q_k, Ck[j]), sympy=True)
 
-    file.write('Converting to update form:\n')
+    latexfile.write('Converting to update form:\n')
     domegadT = domegadT.function
     domegadCj = domegadCj.function
 
@@ -1753,9 +1762,9 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (diff(ci[i], T), diff(ci_elem, T))])
     write_eq(diff(q_sym[i], T), dqdT_pdep)
 
-    file.write('For PLog reactions:\n')
+    latexfile.write('For PLog reactions:\n')
     write_eq(dRopdT_temp, dRop_pdepdT, enum_conds=[reaction_type.plog])
-    file.write('For Chebyshev reactions:\n')
+    latexfile.write('For Chebyshev reactions:\n')
     write_eq(dRopdT_temp, dRop_chebdT, enum_conds=[reaction_type.cheb])
 
     write_section('Pressure independent reactions', subsub=True)
@@ -1768,7 +1777,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(q_sym[i], T), dqdT_ind, enum_conds=[reaction_type.elementary])
 
     write_section('Third-body enhanced reactions', subsub=True)
-    file.write('For mixture as third-body:\n')
+    latexfile.write('For mixture as third-body:\n')
     dqdT_thd = assert_subs(dqdT,
         (ci[i], ci_thd_sym),
         (diff(ci[i], T), dci_thddT),
@@ -1776,7 +1785,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (diff(ci[i], T), dci_thddT)])
     write_eq(diff(q_sym[i], T), dqdT_thd, enum_conds=[reaction_type.thd, thd_body_type.mix])
 
-    file.write('For species $m$ as third-body:\n')
+    latexfile.write('For species $m$ as third-body:\n')
     dqdT_spec_thd = assert_subs(dqdT,
         (ci[i], ci_thd_species),
         (diff(ci[i], T), dci_spec_dCj),
@@ -1784,7 +1793,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         (diff(ci[i], T), dci_spec_dCj)])
     write_eq(diff(q_sym[i], T), dqdT_spec_thd, enum_conds=[reaction_type.thd, thd_body_type.species])
 
-    file.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$ for all species j:\n')
+    latexfile.write('If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$ for all species j:\n')
     dqdT_unity_thd = assert_subs(dqdT,
         (ci[i], Ctot_sym),
         (diff(ci[i], T), dci_unity_dT),
@@ -1821,17 +1830,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(q_sym[i], T), dq, enum_conds=enum_conds)
         return dci, dq
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dci_fallmix_dT, dqdT_fall_mix_thd = __get_ci_dT(dci_falldT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
         dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]], expand=True,
         enum_conds=[reaction_type.fall, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dci_fallspec_dT, dqdT_fall_spec_thd = __get_ci_dT(dci_falldT, dPri_specdT_prifac, dPri_specdT_noprifac,
         dummy_collector, [ci[i]],
         enum_conds=[reaction_type.fall, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dci_fallunity_dT, dqdT_fall_unity_thd = __get_ci_dT(dci_falldT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
         collect(dummy_collector - 1/T, 1/T), [ci[i]],
         enum_conds=[reaction_type.fall, thd_body_type.unity])
@@ -1843,17 +1852,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dqdT_chem_thd = collect(dqdT_chem_thd, ci[i])
     write_eq(diff(q_sym[i], T), dqdT_chem_thd)
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dci_chemmix_dT, dqdT_chem_mix_thd = __get_ci_dT(dci_chemdT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
         dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dci_chemspec_dT, dqdT_chem_spec_thd = __get_ci_dT(dci_chemdT, dPri_specdT_prifac, dPri_specdT_noprifac,
         dummy_collector, [ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dci_chemunity_dT, dqdT_chem_unity_thd = __get_ci_dT(dci_chemdT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
         collect(dummy_collector - 1/T, 1/T), [ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.unity])
@@ -1870,42 +1879,42 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(dFi_dT_fac_sym, dfi, enum_conds=enum_conds)
         return dfi
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddT_mix = __get_fi_dT(dFi_linddT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_linddT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.mix])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedT_mix = __get_fi_dT(dFi_troedT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_troedT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.mix])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridT_mix = __get_fi_dT(dFi_sridT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_sridT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddT_spec = __get_fi_dT(dFi_linddT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_linddT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.species])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedT_spec = __get_fi_dT(dFi_troedT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_troedT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.species])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridT_spec = __get_fi_dT(dFi_sridT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_sridT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddT_unity = __get_fi_dT(dFi_linddT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_linddT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.unity])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedT_unity = __get_fi_dT(dFi_troedT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_troedT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.unity])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridT_unity = __get_fi_dT(dFi_sridT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_sridT_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.unity])
 
@@ -1914,7 +1923,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Eq(Jac[k + 1, j + 1], diff(omega_sym[k], Ck[j])), domegadCj,
         sympy=True)
 
-    file.write('Converting to Jacobian Update form:\n')
+    latexfile.write('Converting to Jacobian Update form:\n')
     domegadCj = domegadCj.function
     write_dummy_eq(latex(Jac[k + 1, j + 1]) + r'\pluseq' + latex(domegadCj))
 
@@ -1943,7 +1952,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_section('Third-body enhanced reactions', subsub=True)
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
     dqdCj_thd = assert_subs(dqdCj,
         (ci[i], ci_thd_sym),
         (diff(ci[i], Ck[j]), dci_thddCj),
@@ -1954,7 +1963,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(q_sym[k], Ck[j]), dqdCj_thd,
         enum_conds=[reaction_type.thd, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
     dqdCj_thd_spec = assert_subs(dqdCj,
         (ci[i], ci_thd_species),
         (diff(ci[i], Ck[j]), dci_spec_dCj),
@@ -1965,7 +1974,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(q_sym[k], Ck[j]), dqdCj_thd_spec,
         enum_conds=[reaction_type.thd, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
     dqdCj_thd_unity = assert_subs(dqdCj,
         (ci[i], Ctot_sym),
         (diff(ci[i], Ck[j]), dci_unity_dCj),
@@ -1977,7 +1986,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         enum_conds=[reaction_type.thd, thd_body_type.unity])
 
     write_section('Falloff Reactions', subsub=True)
-    file.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
+    latexfile.write(r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
     def __get_ci_dcj(starting_form, pri_fac, other_collects, complex_collector=None,
         enum_conds=None):
         dci = assert_subs(starting_form,
@@ -2002,17 +2011,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dqdCj_fall_thd = collect(dqdCj_fall_thd, ci[i])
     write_eq(diff(q_sym[i], Ck[j]), dqdCj_fall_thd)
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
 
     dci_fallmix_dCj, dqdCj_fall_mix_thd = __get_ci_dcj(dci_falldCj, dPri_mixdCj_fac, [ci[i]],
         enum_conds=[reaction_type.fall, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
 
     dci_fallspec_dCj, dqdCj_fall_spec_thd = __get_ci_dcj(dci_falldCj, dPri_specdCj_fac, [ci[i]],
         enum_conds=[reaction_type.fall, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
 
     dci_fallunity_dCj, dqdCj_fall_unity_thd = __get_ci_dcj(dci_falldCj, dPri_unitydCj_fac, [ci[i]],
         enum_conds=[reaction_type.fall, thd_body_type.unity])
@@ -2026,17 +2035,17 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dqdCj_chem_thd = collect(dqdCj_chem_thd, ci[i])
     write_eq(diff(q_sym[i], Ck[j]), dqdCj_chem_thd)
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
 
     dci_chemmix_dCj, dqdCj_chem_mix_thd = __get_ci_dcj(dci_chemdCj, dPri_mixdCj_fac, [ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
 
     dci_chemspec_dCj, dqdCj_chem_spec_thd = __get_ci_dcj(dci_chemdCj, dPri_specdCj_fac, [ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
 
     dci_chemunity_dCj, dqdCj_chem_unity_thd = __get_ci_dcj(dci_chemdCj, dPri_unitydCj_fac, [ci[i]],
         enum_conds=[reaction_type.chem, thd_body_type.unity])
@@ -2051,134 +2060,119 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(dFi_dCj_fac_sym, dfi, enum_conds=enum_conds)
         return dfi
 
-    file.write(r'\textbf{For mixture as third-body}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddCj_mix = __get_fi_dcj(dFi_linddCj, dPri_mixdCj_fac, dFi_linddCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.mix])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedCj_mix = __get_fi_dcj(dFi_troedCj, dPri_mixdCj_fac, dFi_troedCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.mix])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridCj_mix = __get_fi_dcj(dFi_sridCj, dPri_mixdCj_fac, dFi_sridCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.mix])
 
-    file.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddCj_spec = __get_fi_dcj(dFi_linddCj, dPri_specdCj_fac, dFi_linddCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.species])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedCj_spec = __get_fi_dcj(dFi_troedCj, dPri_specdCj_fac, dFi_troedCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.species])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridCj_spec = __get_fi_dcj(dFi_sridCj, dPri_specdCj_fac, dFi_sridCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.species])
 
-    file.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
-    file.write('For Lindemann\n')
+    latexfile.write(r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
+    latexfile.write('For Lindemann\n')
     dFi_linddCj_unity = __get_fi_dcj(dFi_linddCj, dPri_unitydCj_fac, dFi_linddCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.unity])
 
-    file.write('For Troe\n')
+    latexfile.write('For Troe\n')
     dFi_troedCj_unity = __get_fi_dcj(dFi_troedCj, dPri_unitydCj_fac, dFi_troedCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.unity])
 
-    file.write('For SRI\n')
+    latexfile.write('For SRI\n')
     dFi_sridCj_unity = __get_fi_dcj(dFi_sridCj, dPri_unitydCj_fac, dFi_sridCj_fac,
         enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.unity])
 
 
-if __name__ == '__main__':
-    class filer(object):
-        def __init__(self, name, mode):
-            import re
-            self.name = os.path.join(out_dir, name)
-            self.mode = mode
-            self.lines = [r'\documentclass[a4paper,10pt]{article}' + '\n' +
-                           r'\usepackage[utf8]{inputenc}' + '\n'
-                           r'\usepackage{amsmath}' + '\n' +
-                           r'\usepackage{breqn}' + '\n' +
-                           r'\usepackage[colorlinks=false]{hyperref}' + '\n'
-                           r'\newcommand{\pluseq}{\mathrel{{+}{=}}}' + '\n' +
-                           r'\newcommand{\minuseq}{\mathrel{{-}{=}}}' + '\n' +
-                           r'\begin{document}' + '\n']
-            self.regex = re.compile('{equation}')
+class filer(object):
+    def __init__(self, name, mode):
+        import re
+        self.name = os.path.join(out_dir, name)
+        self.mode = mode
+        self.lines = [r'\documentclass[a4paper,10pt]{article}' + '\n' +
+                       r'\usepackage[utf8]{inputenc}' + '\n'
+                       r'\usepackage{amsmath}' + '\n' +
+                       r'\usepackage{breqn}' + '\n' +
+                       r'\usepackage[colorlinks=false]{hyperref}' + '\n'
+                       r'\newcommand{\pluseq}{\mathrel{{+}{=}}}' + '\n' +
+                       r'\newcommand{\minuseq}{\mathrel{{-}{=}}}' + '\n' +
+                       r'\begin{document}' + '\n']
+        self.regex = re.compile('{equation}')
 
-        def __enter__(self):
-            return self
+    def __enter__(self):
+        return self
 
-        def write(self, thestr):
-            self.lines.append(thestr)
-        def __exit__(self, type, value, traceback):
-            self.write(r'\end{document}' + '\n')
-            self.lines = [self.regex.sub(r'{dmath} ', line) for line in self.lines]
-            with open(self.name, self.mode) as file:
-                file.writelines(self.lines)
+    def write(self, thestr):
+        self.lines.append(thestr)
+    def __exit__(self, type, value, traceback):
+        self.write(r'\end{document}' + '\n')
+        self.lines = [self.regex.sub(r'{dmath} ', line) for line in self.lines]
+        with open(self.name, self.mode) as file:
+            file.writelines(self.lines)
 
-    class equation_file(object):
-        def __init__(self, name, mode):
-            import re
-            self.name = os.path.join(out_dir, name)
-            self.mode = mode
-            self.equations = {}
+class equation_file(object):
+    def __init__(self, name, mode):
+        import re
+        self.name = os.path.join(out_dir, name)
+        self.mode = mode
+        self.equations = {}
 
-        def __enter__(self):
-            return self
+    def __enter__(self):
+        return self
 
-        def write(self, variable, equation):
-            assert variable not in self.equations
-            self.equations[variable] = equation
+    def write(self, variable, equation):
+        assert variable not in self.equations
+        self.equations[variable] = equation
 
-        def write_conditional(self, variable, equation):
-            if variable not in self.equations:
-                self.equations[variable] = [equation]
+    def write_conditional(self, variable, equation):
+        if variable not in self.equations:
+            self.equations[variable] = [equation]
+        else:
+            self.equations[variable].append(equation)
+
+    def __exit__(self, type, value, traceback):
+        variables = set()
+        for var, eqn in self.equations.items():
+            if isinstance(eqn, list):
+                variables = variables.union(set([var]))
+                for e, dummy in eqn:
+                    variables = variables.union(e.free_symbols)
             else:
-                self.equations[variable].append(equation)
+                variables = variables.union(set([var]).union(eqn.free_symbols))
 
-        def __exit__(self, type, value, traceback):
-            variables = set()
+        #write equations
+        with open(os.path.join(home_dir, self.name), self.mode) as file:
+            #write variables (for easier searching)
+            for var in variables:
+                file.write(srepr(var) + '\n')
+
+            file.write('\n')
+
             for var, eqn in self.equations.items():
+                file.write(srepr(var) + '\n')
                 if isinstance(eqn, list):
-                    variables = variables.union(set([var]))
-                    for e, dummy in eqn:
-                        variables = variables.union(e.free_symbols)
+                    for e, conditions in eqn:
+                        try:
+                            conditions = iter(conditions)
+                        except:
+                            conditions = iter([conditions])
+                        file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), srepr(e)))
+                    file.write('\n')
                 else:
-                    variables = variables.union(set([var]).union(eqn.free_symbols))
-
-            #write equations
-            with open(os.path.join(home_dir, self.name), self.mode) as file:
-                #write variables (for easier searching)
-                for var in variables:
-                    file.write(srepr(var) + '\n')
-
-                file.write('\n')
-
-                for var, eqn in self.equations.items():
-                    file.write(srepr(var) + '\n')
-                    if isinstance(eqn, list):
-                        for e, conditions in eqn:
-                            try:
-                                conditions = iter(conditions)
-                            except:
-                                conditions = iter([conditions])
-                            file.write('if {}\n{}\n'.format(','.join([srepr(c) for c in conditions]), srepr(e)))
-                        file.write('\n')
-                    else:
-                        file.write(srepr(eqn) + '\n\n')
-
-
-    from argparse import ArgumentParser
-    parser = ArgumentParser(description='generates derivations for SPyJac')
-    parser.add_argument('-conv', '--constant_volume',
-                         action='store_true',
-                         default=False)
-
-    args = parser.parse_args()
-    conv = args.constant_volume
-
-    with filer('con{}_derivation.tex'.format('v' if conv else 'p'), 'w') as file:
-        with equation_file('con{}_derivation.sympy'.format('v' if conv else 'p'), 'w') as efile:
-            derivation(file, efile, not conv, True)
+                    file.write(srepr(eqn) + '\n\n')
