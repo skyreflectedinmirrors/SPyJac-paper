@@ -695,7 +695,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
         enum_conds=[thd_body_type.species])
 
     Pri_unity = ci_thd_unity * k0_sym / kinf_sym
-    write_conditional(Pri_sym, Pri_spec, text=r'\quad for for all $\alpha_{i, j} = 1$',
+    write_conditional(Pri_sym, Pri_unity, text=r'\quad for for all $\alpha_{i, j} = 1$',
         enum_conds=[thd_body_type.unity])
 
     Fi_lind = Integer(1)
