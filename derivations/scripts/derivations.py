@@ -828,9 +828,12 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dRopfdCj = __create_dRopdCj()
     write_eq(diff(Ropf_sym[i], Ck[j]), dRopfdCj)
 
-    dRopfdCj = assert_subs(expand(dRopfdCj, power_base=False, power_exp=False),
-        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
-            -__inner_func(Ns, True)),
+    #if conv, we need to simplify each term
+    expanded = expand(dRopfdCj, power_base=False, power_exp=False)
+    expanded = Add(*[simplify(x) for x in Add.make_args(expanded)])
+    dRopfdCj = assert_subs(expanded,
+        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, True), (k, 1, Ns)),
+            __inner_func(Ns, True)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, True), (k, 1, Ns)),
             __inner_func(j, True))
         )
@@ -851,9 +854,11 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
     dRoprdCj = __create_dRopdCj(False)
     write_eq(diff(Ropr_sym[i], Ck[j]), dRoprdCj)
 
-    dRoprdCj = assert_subs(expand(dRoprdCj, power_base=False, power_exp=False),
-        (Sum(-KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
-            -__inner_func(Ns, False)),
+    expanded = expand(dRoprdCj, power_base=False, power_exp=False)
+    expanded = Add(*[simplify(x) for x in Add.make_args(expanded)])
+    dRoprdCj = assert_subs(expanded,
+        (Sum(KroneckerDelta(Ns, k) * __inner_func(k, False), (k, 1, Ns)),
+            __inner_func(Ns, False)),
         (Sum(KroneckerDelta(k, j) * __inner_func(k, False), (k, 1, Ns)),
             __inner_func(j, False))
         )

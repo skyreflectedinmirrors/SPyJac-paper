@@ -17,6 +17,8 @@ class thd_body_type(Enum):
     unity = 3
     def __int__(self):
         return self.value
+    def __long__(self):
+        return self.value
 
 class falloff_form(Enum):
     none = 0
