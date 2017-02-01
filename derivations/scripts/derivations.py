@@ -1583,8 +1583,7 @@ def derivation(file, efile, conp=True, thermo_deriv=False):
 
     #save a copy of this form as it's very compact
     dTdt_simple = dTdt
-    write_eq(dTdt_sym, dTdt)
-    register_equal(dTdt_sym, dTdt_simple)
+    write_eq(dTdt_sym, dTdt, sympy=True, register=True)
 
     #and simplify the full sum more
     dTdt = assert_subs(dTdt, (CkCpSum, Sum(Ck[k] * spec_heat[k], (k, 1, Ns - 1)) + Cns * spec_heat[Ns]))
