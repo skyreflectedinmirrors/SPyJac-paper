@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from .derivations import filer, equation_file, derivation
+from .derivations import filer, equation_file, _derivation
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -13,4 +13,4 @@ if __name__ == '__main__':
 
     with filer('con{}_derivation.tex'.format('v' if conv else 'p'), 'w') as file:
         with equation_file('con{}_derivation.sympy'.format('v' if conv else 'p'), 'w') as efile:
-            derivation(file, efile, not conv, True)
+            _derivation(file, efile, not conv, True)
