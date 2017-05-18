@@ -167,6 +167,7 @@ def write_cases(variable, case_list, **kw_args):
             latex(variable), latex(case_var), case_text) + '\n')
     latexfile.write(r'\end{dgroup}' + '\n')
 
+
 equivalences = {}
 
 
@@ -229,31 +230,42 @@ def assert_subs(obj, *subs_args, **kw_args):
 
         # special cases
         # kronecker delta collapses
-        if v1.has(KroneckerDelta) and (isinstance(v1, Sum)
-                                       or (isinstance(v1, Mul) and v1.has(Sum))):
+        if v1.has(KroneckerDelta) and (
+                isinstance(v1, Sum) or (isinstance(v1, Mul) and v1.has(Sum))):
             if isinstance(v1, Mul) and v1.has(Sum):
                 # refactor to get the Sum form
-                sumv = next(x for x in Mul.make_args(v1) if isinstance(x, Sum))
-                sumv = Sum(Mul(
-                    *([sumv.function] + [x for x in Mul.make_args(v1) if x != sumv])), sumv.limits)
+                sumv = next(
+                    (x for x in Mul.make_args(v1) if isinstance(x, Sum)),
+                    None)
+                if sumv is not None:
+                    sumv = Sum(Mul(
+                        *([sumv.function] +
+                          [x for x in Mul.make_args(v1) if x != sumv])),
+                        sumv.limits)
             else:
                 sumv = v1
-            # get the KD term
-            func = sumv.function
-            args = Mul.make_args(factor_terms(func))
-            KD = next((x for x in args if isinstance(x, KroneckerDelta)), None)
-            # check that the substitution is formatted as we thought
-            assert KD is not None
-            # and that the KD includes the summation variable
-            sum_var = next(v for v in KD.args if v == sumv.limits[0][0])
-            other_var = next(v for v in KD.args if v != sum_var)
-            # and finally, return test equal
-            # on the collapsed sum
-            return test_equal(Mul(*[x.subs(sum_var, other_var) for x in args if x != KD]),
-                              v2)
+            if sumv is not None:
+                # get the KD term
+                func = sumv.function
+                args = Mul.make_args(factor_terms(func))
+                KD = next(
+                    (x for x in args if isinstance(x, KroneckerDelta)), None)
+                # check that the substitution is formatted as we thought
+                assert KD is not None
+                # and that the KD includes the summation variable
+                sum_var = next(v for v in KD.args if v == sumv.limits[0][0])
+                other_var = next(v for v in KD.args if v != sum_var)
+                # and finally, return test equal
+                # on the collapsed sum
+                return test_equal(Mul(*[
+                    x.subs(sum_var, other_var) for x in args if x != KD]), v2)
         # sum of vals to Ns -> sum vals to Ns - 1 + val_ns
         # OR
+        # sum vals to Ns -> val_k * sum of vals 1 to k - 1, k + 1 to Ns
+        # OR
         # product of vals to Ns -> product vals to Ns - 1 * val_ns
+        # OR
+        # product vals to Ns -> val_k * product of vals 1 to k - 1, k + 1 to Ns
         # OR
         # the reverse
 
@@ -263,16 +275,54 @@ def assert_subs(obj, *subs_args, **kw_args):
             v2Ns = next((x for x in v2.args if
                          test_equal(v1.function.subs(lim[0], lim[2]), x)),
                         None)
-            retv = True
-            retv = retv and v2Ns is not None
 
-            # get the sum term in v2
-            v2sum = next((arg for arg in v2.args if arg != v2Ns), None)
-            retv = retv and v2sum is not None
-            retv = retv and v2sum.function == v1.function
-            retv = retv and v2sum.limits[0][0] == lim[0]
-            retv = retv and v2sum.limits[0][1] == lim[1]
-            retv = retv and v2sum.limits[0][2] + 1 == lim[2]
+            if v2Ns is None:
+                # try to find a mid term
+                v2sum = next((
+                    x for x in v2.args if
+                    (isinstance(x, Sum) or isinstance(x, Product)) and
+                    test_equal(
+                        v1.function, x.function)
+                ), None)
+
+                # test that the limits look right
+                retv = v2sum is not None
+
+                # test that it has right number of limits
+                retv = retv and len(v2sum.limits) == 2
+
+                # check that the same variable
+                retv = retv and v2sum.limits[0][0] == v2sum.limits[1][0]
+
+                # check that the limits are next to each other
+                retv = retv and v2sum.limits[1][1] - v2sum.limits[0][2] == 2
+
+                # check start and end of limits
+                retv = retv and v2sum.limits[0][1] == v1.limits[0][1]
+                retv = retv and v2sum.limits[1][2] == v1.limits[0][2]
+
+                if retv:
+                    # and find the mid value
+                    middy = (v2sum.limits[1][1] + v2sum.limits[0][2]) / 2
+
+                    # and check that the other value is correct
+                    # find the non sum term in v2
+                    v2k = next((arg for arg in v2.args if arg != v2sum),
+                               None)
+                    retv = retv and test_equal(v1.function.subs(
+                        v1.limits[0][0],
+                        middy), v2k)
+            else:
+                retv = v2Ns is not None
+
+                # get the sum term in v2
+                v2sum = next((arg for arg in v2.args if arg != v2Ns), None)
+                retv = retv and v2sum is not None
+                retv = retv and v2sum.function == v1.function
+                retv = retv and v2sum.limits[0][0] == lim[0]
+                retv = retv and v2sum.limits[0][1] == lim[1]
+                retv = retv and v2sum.limits[0][2] + 1 == lim[2]
+
             return retv
 
         if (isinstance(v1, Sum) and v2.has(Sum) and isinstance(v2, Add))\
@@ -282,6 +332,66 @@ def assert_subs(obj, *subs_args, **kw_args):
         if (isinstance(v2, Sum) and v1.has(Sum) and isinstance(v1, Add))\
                 or (isinstance(v2, Product) and v1.has(Product) and isinstance(v1, Mul)):
             if __sum_test(v2, v1):
+                return True
+
+        def __test_product_rule(v1, v2):
+            # tests product rule for derivative of sympy Product's
+            # v1 -> derivative(Product)
+            # v2 -> sum of product derivatives
+
+            # test that v1 is derivative of product
+            retv = isinstance(v1, Derivative) and v1.args[0].has(Product)
+            # and that v2 is of form Sum(Aval * product(...))
+            retv = retv and isinstance(v2, Sum)
+            retv = retv and len([x for x in Mul.make_args(v2.function)
+                                 if isinstance(x, Product)]) == 1
+            if not retv:
+                return False
+
+            try:
+                Aval_given = Mul(*[x for x in Mul.make_args(v2.function)
+                                   if not isinstance(x, Product)])
+
+                mod_prod = next((x for x in Mul.make_args(v2.function)
+                                 if isinstance(x, Product)), None)
+            except:
+                return False
+
+            retv = retv and Aval_given is not None and mod_prod is not None
+            if not retv:
+                return False
+
+            # find product
+            prod, diff_by = v1.args
+            # next make sure the v2 sum has same limits
+            retv = retv and prod.limits[0][1] == v2.limits[0][1] and \
+                prod.limits[0][2] == v2.limits[0][2]
+
+            # v2 should then have be the sum of Aval * mod_prod with
+            # Aval == derivative of prod.function, and mod_prod the product
+            # with Aval removed
+
+            # test Aval
+            Aval = prod.function.subs(prod.limits[0][0], v2.limits[0][0])
+            retv = retv and test_equal(diff(Aval, diff_by), Aval_given)
+
+            # test mod_prod value
+            retv = retv and prod.function.subs(
+                prod.limits[0][0], mod_prod.limits[0][0]) == mod_prod.function
+
+            # and mod_prod limits
+            retv = retv and mod_prod.limits[0][2] == v2.limits[0][0] - 1
+            retv = retv and mod_prod.limits[1][1] == v2.limits[0][0] + 1
+
+            return retv
+
+        if isinstance(v1, Derivative) and v1.has(Product) \
+                and isinstance(v2, Sum) and v2.has(Product):
+            if __test_product_rule(v1, v2):
+                return True
+        if isinstance(v2, Derivative) and v2.has(Product) \
+                and isinstance(v1, Sum) and v1.has(Product):
+            if __test_product_rule(v2, v1):
                 return True
 
         # test switch of sum variable
@@ -343,6 +453,28 @@ assumptions = {}
 """
 
 
+def __simplify_per_term(term, separator=Add):
+    return separator(*[simplify(x) for x in separator.make_args(term)])
+
+
+def __separate_on(term, separate_on, separator_class=Add):
+    withterms = []
+    withoutterms = []
+    try:
+        for x in separator_class.make_args(term):
+            if any(x.has(sep) for sep in separate_on):
+                withterms.append(x)
+            else:
+                withoutterms.append(x)
+    except:
+        for x in separator_class.make_args(term):
+            if x.has(separate_on):
+                withterms.append(x)
+            else:
+                withoutterms.append(x)
+    return separator_class(*withterms), separator_class(*withoutterms)
+
+
 def _derivation(file, efile, conp=True, thermo_deriv=False):
     # set files
     global latexfile
@@ -352,7 +484,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     # time
     t = symbols('t', **assumptions)
-
 
     # thermo vars
     T = MyImplicitSymbol('T', t, **assumptions)
@@ -392,14 +523,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # define concentration
     if conp:
         P = S.pressure
-        P_sym = S.pressure
         V = MyImplicitSymbol('V', t, **assumptions)
         state_vec = [T, V, nk[1], nk[2], nk[Ns - 1]]
+        extra_var_name = 'Volume'
     else:
         P = MyImplicitSymbol('P', t, **assumptions)
-        P_sym = S.pressure
         V = S.volume
         state_vec = [T, P, nk[1], nk[2], nk[Ns - 1]]
+        extra_var_name = 'Pressure'
     extra_var = state_vec[1]
 
     Ck = MyIndexedFunc('[C]', (nk, V))
@@ -407,7 +538,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Ck[k], nk[k] / V, register=True),
 
     # rates
-    wdot = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(nk, T, P_sym))
+    wdot = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(nk, T, P))
 
     # define state vector
     state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
@@ -428,9 +559,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dTdt_sym = diff(T, t)
     if conp:
-        dTdt = -Sum(h[k] * wdot[k], (k, 1, Ns)) / Sum(Ck[k] * cp[k], (k, 1, Ns))
+        dTdt = -Sum(h[k] * wdot[k], (k, 1, Ns)) / \
+            Sum(Ck[k] * cp[k], (k, 1, Ns))
     else:
-        dTdt = -Sum(u[k] * wdot[k], (k, 1, Ns)) / Sum(Ck[k] * cv[k], (k, 1, Ns))
+        dTdt = -Sum(u[k] * wdot[k], (k, 1, Ns)) / \
+            Sum(Ck[k] * cv[k], (k, 1, Ns))
     write_eq(dTdt_sym, dTdt, register=True)
 
     latexfile.write('From conservation of mass:\n')
@@ -440,10 +573,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(m_sym, t), dmdt)
 
     dnNsdt = assert_subs(
-            dmdt,
-            (Sum(Wk[k] * diff(nk[k], t), (k, 1, Ns)),
-             Sum(Wk[k] * diff(nk[k], t), (k, 1, Ns - 1))
-             + Wk[Ns] * diff(nk[Ns], t)))
+        dmdt,
+        (Sum(Wk[k] * diff(nk[k], t), (k, 1, Ns)),
+         Sum(Wk[k] * diff(nk[k], t), (k, 1, Ns - 1))
+         + Wk[Ns] * diff(nk[Ns], t)))
 
     dnNsdt = solve(
         Eq(diff(m_sym, t), dnNsdt), diff(nk[Ns], t))[0]
@@ -467,7 +600,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dndt = simplify(assert_subs(dndt, (
         Sum(diff(nk[k], t), (k, 1, Ns)),
         Sum(diff(nk[k], t), (k, 1, Ns - 1)) + diff(nk[Ns], t),
-        ), (
+    ), (
         diff(nk[Ns], t), dnNsdt)))
 
     write_eq(dndt_sym, dndt, register=True)
@@ -486,11 +619,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dExdt = simplify(assert_subs(dExdt, (
         diff(n_sym, t), dndt
-        ), (
+    ), (
         diff(T, t), dTdt
-        ), (
+    ), (
         diff(nk[k], t), dnkdt
-        )))
+    )))
 
     write_eq(dExdt_sym, dExdt)
 
@@ -541,7 +674,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         (a[k, 1] + T * (2 * a[k, 2] + T * (3 * a[k, 3] + 4 * a[k, 4] * T)))
     dcpdT = assert_subs(diff(cpfunc, T), (
         diff(cpfunc, T), dcpdT
-        ))
+    ))
     write_eq(diff(cp[k], T), dcpdT, sympy=True)
     write_eq(cp_tot_sym, cp_tot)
 
@@ -556,14 +689,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dcvdT = assert_subs(diff(cvfunc, T), (
         diff(cvfunc, T), R * (a[k, 1] + T * (
             2 * a[k, 2] + T * (3 * a[k, 3] + T * 4 * a[k, 4])))
-        ))
+    ))
     write_eq(diff(cv[k], T), dcvdT, sympy=True)
     write_eq(cv_tot_sym, cv_tot)
 
     hfunc = R * (T * (a[k, 0] + T * (a[k, 1] * Rational(1, 2) + T * (
         a[k, 2] * Rational(1, 3) + T * (
             a[k, 3] * Rational(1, 4) + a[k, 4] * T * Rational(1, 5))
-        ))) + a[k, 5])
+    ))) + a[k, 5])
 
     # check that the dH/dT = cp identity holds
     write_eq(Symbol(r'H_k^{\circ}'), h[k])
@@ -603,13 +736,13 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     nu_sym = MyIndexedBase(r'\nu')
     write_eq(nu_sym[k, i], nu)
 
-    q_sym = MyIndexedFunc('q', args=(nk, T, V))
+    q_sym = MyIndexedFunc('q', args=(nk, T, V, P))
     omega_k = Sum(nu_sym[k, i] * q_sym[i], (i, 1, Nr))
     omega_sym_q_k = omega_k
     write_eq(wdot[k], omega_k, register=True)
 
-    Rop_sym = MyIndexedFunc('R', args=(nk, T, V))
-    ci = MyIndexedFunc('c', args=(nk, T, V))
+    Rop_sym = MyIndexedFunc('R', args=(nk, T, V, P))
+    ci = MyIndexedFunc('c', args=(nk, T, V, P))
     q = Rop_sym[i] * ci[i]
 
     write_eq(q_sym[i], q, register=True)
@@ -622,8 +755,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     Ea = MyIndexedBase(r'{E_{a}}')
 
     write_section('Rate of Progress')
-    Ropf_sym = MyIndexedFunc(r'{R_f}', args=(nk, T, V))
-    Ropr_sym = MyIndexedFunc(r'{R_r}', args=(nk, T, V))
+    Ropf_sym = MyIndexedFunc(r'{R_f}', args=(nk, T, V, P))
+    Ropr_sym = MyIndexedFunc(r'{R_r}', args=(nk, T, V, P))
 
     Rop = Ropf_sym[i] - Ropr_sym[i]
     write_eq(Rop_sym[i], Ropf_sym[i] - Ropr_sym[i], sympy=True, register=True)
@@ -642,12 +775,12 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_conditional(
         ci[i], ci_elem, r'\quad for elementary reactions', enum_conds=reaction_type.elementary)
 
-    ci_thd_sym = MyImplicitSymbol('[X]_i', args=(nk, T, V))
+    ci_thd_sym = MyImplicitSymbol('[X]_i', args=(nk, T, V, P))
     write_conditional(
         ci[i], ci_thd_sym, r'\quad for third-body enhanced reactions', enum_conds=reaction_type.thd)
 
-    Pri_sym = MyImplicitSymbol('P_{r, i}', args=(nk, T, V))
-    Fi_sym = MyImplicitSymbol('F_{i}', args=(nk, T, V))
+    Pri_sym = MyImplicitSymbol('P_{r, i}', args=(nk, T, V, P))
+    Fi_sym = MyImplicitSymbol('F_{i}', args=(nk, T, V, P))
     ci_fall = (Pri_sym / (1 + Pri_sym)) * Fi_sym
     write_conditional(ci[i], ci_fall, r'\quad for unimolecular/recombination falloff reactions',
                       enum_conds=[reaction_type.fall])
@@ -716,7 +849,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
             Sum(Ck[k], (k, 1, Ns))),
         (Sum(Ck[k], (k, 1, Ns)),
          Ctot_sym),
-        )
+    )
 
     write_eq(ci_thd_sym, ci_thd)
 
@@ -820,8 +953,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     kf_pdep = log(k1_sym) + (log(k2_sym) - log(k1_sym)) * (log(P) -
                                                            log(Symbol('P_1'))) / (log(Symbol('P_2')) - log(Symbol('P_1')))
-    kf_pdep_sym = Function('k_f')(T, P_sym)
-    register_equal(log(kf_pdep_sym), kf_pdep)
+    kf_pdep_sym = MyIndexedFunc('{k_f}', (T, P))
+    kr_pdep_sym = MyIndexedFunc('{k_r}', (T, P))
+    register_equal(log(kf_pdep_sym[i]), kf_pdep)
     write_eq(log(kf_sym[i]), kf_pdep, sympy=True,
              enum_conds=reaction_type.plog)
 
@@ -836,13 +970,15 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     Pred_sym = MyImplicitSymbol(r'\tilde{P}', P)
     if not conp:
         register_equal(diff(Pred_sym, T), diff(Pred, T))
+        register_equal(diff(Pred_sym, extra_var), diff(Pred, extra_var))
 
     Nt, Np = symbols('N_T N_P')
     eta = MyIndexedBase(r'\eta')
     kf_cheb = Sum(eta[l, j] * chebyshevt(j - 1, Tred_sym) * chebyshevt(l - 1, Pred_sym),
                   (l, 1, Np), (j, 1, Nt))
-    kf_cheb_sym = Function('k_f')(T, P_sym)
-    register_equal(log(kf_cheb_sym, 10), kf_cheb)
+    kf_cheb_sym = MyIndexedFunc('{k_f}', (T, P))
+    kr_cheb_sym = MyIndexedFunc('{k_r}', (T, P))
+    register_equal(log(kf_cheb_sym[i], 10), kf_cheb)
     write_eq(log(kf_sym[i], 10), kf_cheb, sympy=True,
              enum_conds=reaction_type.cheb)
     write_eq(Tred_sym, Tred, register=True, sympy=True)
@@ -857,7 +993,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_section('Rate of Progress Derivatives')
 
-    write_section('Concentration Derivatives', sub=True)
+    write_section('Molar Derivatives', sub=True)
     write_eq(diff(Ropf_sym, nk[k]), diff(Ropf, nk[j]))
 
     Cns_working = assert_subs(Cns, (Ck[k], nk[k] / V))
@@ -872,7 +1008,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dCnsdnj = assert_subs(
         dCnsnj_orig, (Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), S.One))
 
-    write_dummy_eq(r'\frac{\partial [C_{Ns}]}{\partial n_j} =' + latex(dCnsdnj))
+    write_dummy_eq(
+        r'\frac{\partial [C_{Ns}]}{\partial n_j} =' + latex(dCnsdnj))
 
     dCnsdnj_pow = diff(Cns_working**nu_f[Ns, i], nk[j])
     write_dummy_eq(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial [n_j]} =' + latex(
@@ -884,12 +1021,16 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_dummy_eq(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial n_j} =' + latex(
         dCnsdnj_pow))
 
-    def __mod_prod_sum(kval, fwd=True):
+    def __mod_prod_sum(kval, fwd=True, end=None):
         nuv = nu_f if fwd else nu_r
         if kval == Ns:
-            return Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1))
+            if end is None:
+                end = Ns - 1
+            return Product(Ck[l]**nuv[l, i], (l, 1, end))
         else:
-            return Product(Ck[l]**nuv[l, i], (l, 1, kval - 1), (l, kval + 1, Ns))
+            if end is None:
+                end = Ns
+            return Product(Ck[l]**nuv[l, i], (l, 1, kval - 1), (l, kval + 1, end))
 
     def __inner_func(kval, fwd=True):
         nuv = nu_f if fwd else nu_r
@@ -972,8 +1113,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         Sval = Sfwd if fwd else Srev
 
         # sub in Cns for proper temperature derivative
-        Rop_temp = assert_subs(Rop_temp, (Product(Ck[k]**nuv[k, i], (k, 1, Ns)),
-                                          Cns**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))))
+        Rop_temp = assert_subs(
+            Rop_temp,
+            (Product(Ck[k]**nuv[k, i], (k, 1, Ns)),
+             Cns**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))))
 
         if writetofile:
             write_eq(Ropt_sym, Rop_temp)
@@ -1065,7 +1208,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     latexfile.write('For non-explicit reversible reactions\n')
 
-    def get_dkr_dT(dkfdTval, writetofile=True):
+    def get_dkr_dT(dkfdTval, writetofile=True, plog=True):
         # find dkr/dT
         dkrdT = diff(kf_sym[i] / Kc_sym[i], T)
         if writetofile:
@@ -1102,12 +1245,252 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Rop_sym[i], T), dRop_nonexpdT,
              enum_conds=reversible_type.non_explicit)
 
+    # Derivatives of the extra dependent variable
+    write_section(r'{} derivatives'.format(extra_var_name), sub=True)
+
+    def __var_creator(deriv_of, wrt):
+        return Symbol(r'\frac{{\partial {dof} }}{{\partial {wrt} }}'.format(
+            dof=latex(deriv_of), wrt=latex(wrt)))
+
+    if not conp:
+        dCkde_sym = __var_creator(Ck[k], extra_var)
+    else:
+        dCkde_sym = diff(Ck[k], extra_var)
+
+    dCkde = assert_subs(
+        diff(assert_subs(Ck[k], (Ck[k], nk[k] / V)), extra_var),
+        (nk[k] / V, Ck[k]))
+
+    write_eq(dCkde_sym, dCkde, register=True)
+
+    if not conp:
+        dCnsde_sym = __var_creator(Ck[Ns], extra_var)
+    else:
+        dCnsde_sym = diff(Ck[Ns], extra_var)
+
+    dCnsde = simplify(
+        assert_subs(diff(Cns, extra_var),
+                    (dCkde_sym, dCkde)))
+
+    register_equal(diff(Cns, extra_var), dCnsde)
+    write_eq(dCnsde_sym, dCnsde)
+
+    def __simplify_product_of_powers(arg):
+        num, den = fraction(arg)
+        numv = next((x for x in Mul.make_args(num) if isinstance(x, Pow)),
+                    None)
+        if numv is None:
+            return arg
+        numfunc, numpow = numv.args
+        denv = next((x for x in Mul.make_args(den) if x == numfunc or (
+            isinstance(x, Pow) and x.args[0] == numfunc)), None)
+
+        if not denv:
+            return arg
+
+        if isinstance(denv, Pow):
+            retv = numfunc**(numpow - denv.args[1])
+        else:
+            retv = numfunc**(numpow - 1)
+        retv *= Mul(*[x for x in Mul.make_args(num) if x != numv])
+        retv /= Mul(*[x for x in Mul.make_args(den) if x != denv])
+
+        assert simplify(retv - arg) == 0
+        return retv
+
+    # finally power of Cns
+    # come up with equivalence for Ctot - Cns
+    shortsum = Sum(Ck[k], (k, 1, Ns - 1))
+    val = Ctot - Sum(Ck[k], (k, 1, Ns - 1))
+    # ensure iequal to Cns
+    assert_subs(val, (val, Cns))
+    # turn into form we want
+    val = assert_subs(val, (Ctot, Ctot_sym))
+    val = solve(Eq(Ck[Ns], val), shortsum)[0]
+    register_equal(shortsum, val)
+
+    # take derivative of Cns**nu and sub in above
+    dCnsde_pow = assert_subs(
+        diff(Cns**nu_f[k, i], extra_var),
+        (dCkde_sym, dCkde),
+        (Cns, Ck[Ns]))
+
+    dCnsde_pow = assert_subs(
+        __simplify_product_of_powers(simplify(dCnsde_pow)),
+        (Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns]))
+
+    write_dummy_eq(r'\frac{\partial [C_{Ns}]^{\nu^{\prime}_{Ns, i}}}{\partial '
+                   + latex(extra_var) + ' } = ' + latex(dCnsde_pow))
+
+    dCtotde = diff(Ctot, extra_var)
+    write_eq(diff(Ctot_sym, extra_var), dCtotde, register=True)
+
+    # store equalities
+    register_equal(diff(Cns**nu_f[Ns, i], extra_var), dCnsde_pow)
+    dCnsde_pow_rev = assert_subs(dCnsde_pow, (nu_f[Ns, i], nu_r[Ns, i]),
+                                 assumptions=[(nu_f[Ns, i], nu_r[Ns, i])])
+    register_equal(diff(Cns**nu_r[Ns, i], extra_var), dCnsde_pow_rev)
+
+    def __get_dr_de(fwd=True, writetofile=True):
+        Ropv = Ropf if fwd else Ropr
+        Ropv_working = Ropf if fwd else Ropr
+        Ropv_sym = Ropf_sym[i] if fwd else Ropr_sym[i]
+        dRopvdE_sym = diff(Ropv_sym, extra_var)
+        nuv = nu_f if fwd else nu_r
+        Sval = Sfwd if fwd else Srev
+
+        Ropv_working = assert_subs(Ropv_working, (
+            Product(Ck[k]**nuv[k, i], (k, 1, Ns)),
+            Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)) * Cns ** nuv[Ns, i]))
+
+        if writetofile:
+            write_eq(Ropv_sym, Ropv_working)
+
+        # take diff, sub in derivatives
+        dRopvdE = diff(Ropv_working, extra_var)
+
+        # sub in Ck[Ns] and derivatives
+        dRopvdE = assert_subs(dRopvdE, (
+            Cns, Ck[Ns]))
+
+        # if constant pressure, sub in product rule
+        if conp:
+            dRopvdE = assert_subs(dRopvdE, (
+                diff(Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)), V),
+                Sum(diff(Ck[k]**nuv[k, i], V) *
+                    __mod_prod_sum(k, fwd=fwd, end=Ns-1), (k, 1, Ns - 1))))
+
+        if writetofile:
+            write_eq(dRopvdE_sym, dRopvdE)
+
+        # fix conc derivatives
+        dRopvdE = assert_subs(
+            dRopvdE,
+            (dCkde_sym, dCkde),
+            (diff(Cns, extra_var), dCnsde),
+            (diff(Cns**nuv[Ns, i], extra_var),
+                dCnsde_pow if fwd else dCnsde_pow_rev))
+
+        write_eq(dRopvdE_sym, dRopvdE)
+
+        if conp:
+            # put the full product back in
+            term = next(term for term in Add.make_args(dRopvdE) if
+                        term.has(__mod_prod_sum(k, fwd=fwd, end=Ns-1)))
+
+            # get the specific multplication term
+            mterm = next(term for term in Mul.make_args(term)
+                         if isinstance(term, Sum))
+
+            # sub in simplified form
+            new_mterm = mterm.func(assert_subs(
+                mterm.function,
+                (Ck[k]**nuv[k, i] * __mod_prod_sum(k, fwd=fwd, end=Ns-1),
+                 Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1))),
+            ),
+                mterm.limits)
+
+            # and go back
+            new_term = Mul(*[x if x != mterm else new_mterm
+                             for x in Mul.make_args(term)])
+
+            dRopvdE = Add(*[x if x != term else simplify(new_term)
+                            for x in Add.make_args(dRopvdE)])
+
+            # shortsum -> previously derived Ctot symbols
+            dRopvdE = expand(assert_subs(
+                dRopvdE,
+                (Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns])))
+
+        if writetofile:
+            write_eq(dRopvdE_sym, dRopvdE)
+
+        # next, put in sum simplification
+        dRopvdE = Add(*[simplify(__simplify_product_of_powers(x))
+                        for x in Add.make_args(dRopvdE)])
+        dRopvdE = assert_subs(dRopvdE, (
+            Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns]))
+
+        # put the SNs term in
+        dRopvdE = Add(*[__simplify_product_of_powers(x)
+                        for x in Add.make_args(expand(dRopvdE))])
+
+        # and put in Sns
+        dRopvdE = assert_subs(
+            dRopvdE,
+            (Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)),
+             Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1))),
+            (__inner_func(Ns, fwd), Sval[Ns]))
+
+        if writetofile:
+            write_eq(dRopvdE_sym, dRopvdE)
+
+        if conp:
+            # put in ROP
+            dRopvdE = assert_subs(
+                dRopvdE,
+                (Product(Ck[l]**nuv[l, i], (l, 1, Ns - 1)),
+                 Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))),
+                (Ck[Ns]**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)),
+                 Product(Ck[k]**nuv[k, i], (k, 1, Ns))),
+                (Ropv, Ropv_sym),
+                assumptions=[(Ropv_working, Ropv_sym)])
+
+            # and stick nu[ns, i] back into nu sum
+            staticterm = Add(*[x for x in Add.make_args(dRopvdE) if x.has(
+                Sval[Ns])])
+            Ropsum = simplify(Add(*[x for x in Add.make_args(dRopvdE)
+                                    if not x.has(Sval[Ns])]))
+            Ropsum = assert_subs(
+                Ropsum,
+                (nuv[Ns, i] + Sum(nuv[k, i], (k, 1, Ns - 1)),
+                 Sum(nuv[k, i], (k, 1, Ns))
+                 ))
+            dRopvdE = Add(*[staticterm, Ropsum])
+
+        return dRopvdE
+
+    dRopfdE = __get_dr_de(True)
+    write_eq(diff(Ropf_sym[i], extra_var), dRopfdE, register=True, sympy=True)
+    dRoprdE = __get_dr_de(False)
+    write_eq(diff(Ropr_sym[i], extra_var), dRoprdE, register=True, sympy=True)
     write_section(r'Third-Body\slash Falloff Derivatives')
     write_section('Elementary reactions\n', sub=True)
     write_eq(diff(ci[i], T), diff(ci_elem, T),
              enum_conds=reaction_type.elementary)
     write_eq(diff(ci[i], nk[j]), diff(
         ci_elem, nk[j], enum_conds=reaction_type.elementary))
+
+    write_eq(diff(ci[i], extra_var), diff(
+        ci_elem, extra_var, enum_conds=reaction_type.elementary))
+
+    write_section('Third-body enhanced reactions', sub=True)
+    dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
+                            (Ctot, Ctot_sym))
+
+    write_eq(diff(ci_thd_sym, T), dci_thddT, enum_conds=reaction_type.thd)
+
+    dci_thddnj = diff(assert_subs(ci_thd,
+                                  (Ctot_sym, Ctot),
+                                  (Ck[k], nk[k] / V)),
+                      nk[j])
+    dci_thddnj = assert_subs(simplify(dci_thddnj),
+                             (Sum((-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i]) *
+                                  KroneckerDelta(j, k), (k, 1, Ns - 1)),
+                                 -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
+
+    write_eq(diff(ci_thd_sym, nk[j]), dci_thddnj,
+             enum_conds=[reaction_type.thd, thd_body_type.mix])
+    write_section(r'Third-Body\slash Falloff Derivatives')
+    write_section('Elementary reactions\n', sub=True)
+    write_eq(diff(ci[i], T), diff(ci_elem, T),
+             enum_conds=reaction_type.elementary)
+    write_eq(diff(ci[i], nk[j]), diff(
+        ci_elem, nk[j]), enum_conds=reaction_type.elementary)
+
+    dci_elemde_sym = diff(ci[i], extra_var)
+    write_eq(dci_elemde_sym, diff(
+        ci_elem, extra_var), enum_conds=reaction_type.elementary)
 
     write_section('Third-body enhanced reactions', sub=True)
     dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
@@ -1127,6 +1510,26 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(ci_thd_sym, nk[j]), dci_thddnj,
              enum_conds=[reaction_type.thd, thd_body_type.mix])
 
+    dci_thdde = diff(assert_subs(ci_thd,
+                                 (Ctot_sym, Ctot)),
+                     extra_var)
+    dci_thdde = assert_subs(dci_thdde,
+                            (Ctot, Ctot_sym))
+    if conp:
+        dci_thdde = assert_subs(dci_thdde,
+                                (diff(Ck[k], extra_var), dCkde))
+        # express in terms of Xi
+        sub_in = Sum(
+            (-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i]) * Ck[k], (k, 1, Ns - 1))
+        sub_in_eq = solve(Eq(ci_thd_sym, ci_thd), sub_in)[0]
+        dci_thdde = simplify(dci_thdde)
+        dci_thdde = assert_subs(dci_thdde,
+                                (simplify(-sub_in), -sub_in_eq),
+                                assumptions=[(simplify(-sub_in), -sub_in_eq)])
+
+    write_eq(diff(ci_thd_sym, extra_var), dci_thdde,
+             enum_conds=[reaction_type.thd, thd_body_type.mix])
+
     latexfile.write(r'For species $m$ as the third-body' + '\n')
     dci_spec_dT = assert_subs(diff(assert_subs(ci_thd_species, (
         Ctot_sym, Ctot)), T), (Ctot, Ctot_sym))
@@ -1135,9 +1538,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     register_equal(Ck[m], nk[m] / V)
     dci_spec_dnj = diff(assert_subs(ci_thd_species, (
-                            Ck[m], nk[m] / V), (
-                            Ck[k], nk[k] / V)),
-                        nk[j])
+        Ck[m], nk[m] / V), (
+        Ck[k], nk[k] / V)),
+        nk[j])
 
     # kill derivatives of m
     dci_spec_dnj = assert_subs(dci_spec_dnj, (
@@ -1158,15 +1561,44 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(ci[i], nk[j]), dci_spec_dnj,
              enum_conds=[reaction_type.thd, thd_body_type.species])
 
+    # and extra variable
+    dci_spec_de = diff(ci_thd_species, extra_var)
+    if not conp:
+        dci_spec_de = assert_subs(
+            dci_spec_de,
+            (diff(Ctot_sym, extra_var), dCtotde))
+    else:
+        dCkmde = assert_subs(dCkde, (k, m),
+                             assumptions=[(k, m)])
+        register_equal(diff(Ck[m], extra_var), dCkmde)
+        dci_spec_de = assert_subs(
+            dci_spec_de,
+            (diff(Ck[k], extra_var), dCkde),
+            (diff(Ck[m], extra_var), dCkmde)
+        )
+
+        write_eq(diff(ci[i], extra_var), dci_spec_de)
+        dci_spec_de = assert_subs(
+            Add(*[simplify(x) for x in Add.make_args(dci_spec_de)]),
+            (Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns])
+        )
+
+    write_eq(diff(ci[i], extra_var), dci_spec_de,
+             enum_conds=[reaction_type.thd, thd_body_type.species])
+
     latexfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     dci_unity_dT = assert_subs(diff(Ctot, T),
                                (Ctot, Ctot_sym))
 
-    write_eq(diff(ci_thd_sym, T), dci_unity_dT,
+    write_eq(diff(ci[i], T), dci_unity_dT,
              enum_conds=[reaction_type.thd, thd_body_type.unity])
 
     dci_unity_dnj = diff(Ctot, nk[j])
-    write_eq(diff(ci_thd_sym, nk[j]), dci_unity_dnj,
+    write_eq(diff(ci[i], nk[j]), dci_unity_dnj,
+             enum_conds=[reaction_type.thd, thd_body_type.unity])
+
+    dci_unity_de = diff(Ctot, extra_var)
+    write_eq(diff(ci[i], extra_var), dci_unity_de,
              enum_conds=[reaction_type.thd, thd_body_type.unity])
 
     write_section('Unimolecular/recombination fall-off reactions', sub=True)
@@ -1183,8 +1615,18 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         collect(
             assert_subs(diff(ci_fall, nk[j]),
                         (ci_fall, ci[i]),
-                        assumptions=[(ci_fall, ci[i])]), diff(Pri_sym, nk[j]) / (Pri_sym + 1)))
+                        assumptions=[(ci_fall, ci[i])]),
+            diff(Pri_sym, nk[j]) / (Pri_sym + 1)))
     write_eq(diff(ci[i], nk[j]), dci_falldnj,
+             enum_conds=reaction_type.fall)
+
+    dci_fallde = factor_terms(
+        collect(
+            assert_subs(diff(ci_fall, extra_var),
+                        (ci_fall, ci[i]),
+                        assumptions=[(ci_fall, ci[i])]),
+            diff(Pri_sym, extra_var) / (Pri_sym + 1)))
+    write_eq(diff(ci[i], extra_var), dci_fallde,
              enum_conds=reaction_type.fall)
 
     write_section('Chemically-activated bimolecular reactions', sub=True)
@@ -1204,7 +1646,78 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(ci[i], nk[j]), dci_chemdnj,
              enum_conds=reaction_type.chem)
 
+    dci_chemde = factor_terms(
+        collect(
+            assert_subs(diff(ci_chem, extra_var), (ci_chem, ci[i]),
+                        assumptions=[(ci_chem, ci[i])]),
+            diff(Pri_sym, extra_var) / (Pri_sym + 1)))
+    write_eq(diff(ci[i], extra_var), dci_chemde,
+             enum_conds=reaction_type.chem)
+
     write_section(r'Reduced Pressure derivatives', sub=True)
+
+    def __get_pri_fac_terms(dPri_dT, dPri_dnj, dPri_de, descriptor):
+        # simplify the dPri/dT term
+        # find terms with Pr in them
+        dPri_dT_prifac = Add(
+            *[x for x in Add.make_args(dPri_dT) if x.has(Pri_sym)])
+        dPri_dT_prifac = dPri_dT_prifac / Pri_sym
+        dPri_dT_prifac_sym = Symbol(
+            r'\Theta_{{P_{{r,i}}, \partial T, {}}}'.format(descriptor))
+        register_equal(dPri_dT_prifac_sym, dPri_dT_prifac)
+
+        # and the non Pr terms
+        dPri_dT_noprifac = Add(
+            *[x for x in Add.make_args(dPri_dT) if not x.has(Pri_sym)])
+        dPri_dT_noprifac_sym = Symbol(
+            r'\bar{{\theta}}_{{P_{{r, i}}, \partial T, {}}}'.format(descriptor))
+        register_equal(dPri_dT_noprifac_sym, dPri_dT_noprifac)
+
+        # now do the dPri/dnj term
+        dPri_dnj_fac = dPri_dnj / (k0_sym / kinf_sym)
+        dPri_dnj_fac_sym = Symbol(
+            r'\bar{{\theta}}_{{P_{{r, i}}, \partial n_j, {}}}'.format(descriptor))
+        register_equal(dPri_dnj_fac_sym, dPri_dnj_fac)
+
+        # simplify dPri/dExtra term
+
+        dPri_de_prifac = Add(
+            *[x for x in Add.make_args(dPri_de) if x.has(Pri_sym)])
+        dPri_de_prifac = dPri_de_prifac / Pri_sym
+        dPri_de_prifac_sym = Symbol(
+            r'\Theta_{{P_{{r,i}}, \partial {}, {}}}'.format(extra_var, descriptor))
+        register_equal(dPri_de_prifac_sym, dPri_de_prifac)
+
+        dPri_de_noprifac = Add(
+            *[x for x in Add.make_args(dPri_de) if not x.has(Pri_sym)])
+        dPri_de_noprifac_sym = Symbol(
+            r'\bar{{\theta}}_{{P_{{r, i}}, \partial {}, {}}}'.format(extra_var, descriptor))
+        register_equal(dPri_de_noprifac_sym, dPri_de_noprifac)
+
+        # and sub in
+        dPri_dT = assert_subs(dPri_dT, (dPri_dT_prifac, dPri_dT_prifac_sym),
+                              (dPri_dT_noprifac, dPri_dT_noprifac_sym))
+        dPri_dnj = assert_subs(dPri_dnj, (dPri_dnj_fac, dPri_dnj_fac_sym))
+        dPri_de = assert_subs(dPri_de, (dPri_de_noprifac, dPri_de_noprifac_sym),
+                              (dPri_de_prifac, dPri_de_prifac_sym))
+
+        # write the substituted forms
+        write_eq(diff(Pri_sym, T), dPri_dT)
+        write_eq(diff(Pri_sym, nk[j]), dPri_dnj)
+        write_eq(diff(Pri_sym, extra_var), dPri_de)
+
+        write_eq(dPri_dT_prifac_sym, dPri_dT_prifac)
+        write_eq(dPri_dT_noprifac_sym, dPri_dT_noprifac)
+        write_eq(dPri_dnj_fac_sym, dPri_dnj_fac)
+        write_eq(dPri_de_prifac_sym, dPri_de_prifac)
+        write_eq(dPri_de_noprifac_sym, dPri_de_noprifac)
+
+        return dPri_dT, dPri_dT_prifac, dPri_dT_prifac_sym, dPri_dT_noprifac,\
+            dPri_dT_noprifac_sym, dPri_dnj, dPri_dnj_fac, dPri_dnj_fac_sym,\
+            dPri_de, dPri_de_prifac, dPri_de_prifac_sym, dPri_de_noprifac,\
+            dPri_de_noprifac_sym
+
+    latexfile.write('\nFor the mixture as the third body\n')
     dPri_mixdT = assert_subs(diff(Pri_mix, T), (diff(ci_thd_sym, T), dci_thddT),
                              assumptions=[(diff(ci_thd_sym, T), dci_thddT)])
     A_inf, Beta_inf = symbols(r'A_{\infty} \beta_{\infty}')
@@ -1231,47 +1744,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                      (kf_sym[i], k0_sym)
                                      ])
     register_equal(diff(k0_sym, T), dk0dT)
-
-    def __get_pri_fac_terms(dPri_dT, dPri_dnj, descriptor):
-        # simplify the dPri/dT term
-        # find terms with Pr in them
-        dPri_dT_prifac = Add(
-            *[x for x in Add.make_args(dPri_dT) if x.has(Pri_sym)])
-        dPri_dT_prifac = dPri_dT_prifac / Pri_sym
-        dPri_dT_prifac_sym = Symbol(
-            r'\Theta_{{P_{{r,i}}, \partial T, {}}}'.format(descriptor))
-        register_equal(dPri_dT_prifac_sym, dPri_dT_prifac)
-
-        # and the non Pr terms
-        dPri_dT_noprifac = Add(
-            *[x for x in Add.make_args(dPri_dT) if not x.has(Pri_sym)])
-        dPri_dT_noprifac_sym = Symbol(
-            r'\bar{{\theta}}_{{P_{{r, i}}, \partial T, {}}}'.format(descriptor))
-        register_equal(dPri_dT_noprifac_sym, dPri_dT_noprifac)
-
-        # now do the dPri/dnj term
-        dPri_dnj_fac = dPri_dnj / (k0_sym / kinf_sym)
-        dPri_dnj_fac_sym = Symbol(
-            r'\bar{{\theta}}_{{P_{{r, i}}, \partial n_j, {}}}'.format(descriptor))
-        register_equal(dPri_dnj_fac_sym, dPri_dnj_fac)
-
-        # and sub in
-        dPri_dT = assert_subs(dPri_dT, (dPri_dT_prifac, dPri_dT_prifac_sym),
-                              (dPri_dT_noprifac, dPri_dT_noprifac_sym))
-        dPri_dnj = assert_subs(dPri_dnj, (dPri_dnj_fac, dPri_dnj_fac_sym))
-
-        # write the substituted forms
-        write_eq(diff(Pri_sym, T), dPri_dT)
-        write_eq(diff(Pri_sym, nk[j]), dPri_dnj)
-
-        write_eq(dPri_dT_prifac_sym, dPri_dT_prifac)
-        write_eq(dPri_dT_noprifac_sym, dPri_dT_noprifac)
-        write_eq(dPri_dnj_fac_sym, dPri_dnj_fac)
-
-        return dPri_dT, dPri_dT_prifac, dPri_dT_prifac_sym, dPri_dT_noprifac, dPri_dT_noprifac_sym,\
-            dPri_dnj, dPri_dnj_fac, dPri_dnj_fac_sym
-
-    latexfile.write('\nFor the mixture as the third body\n')
     dPri_mixdT = assert_subs(dPri_mixdT, (diff(k0_sym, T), dk0dT),
                              (diff(kinf_sym, T), dkinfdT))
     dPri_mixdT = assert_subs(collect(dPri_mixdT, Pri_mix / T), (Pri_mix, Pri_sym),
@@ -1285,10 +1757,22 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                             -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
     write_eq(diff(Pri_sym, nk[j]), dPri_mixdnj)
 
+    dPri_mixde = assert_subs(diff(Pri_mix, extra_var),
+                             (diff(ci_thd_sym, extra_var), dci_thdde),
+                             assumptions=[(diff(ci_thd_sym, extra_var), dci_thdde)])
+    dPri_mixde = assert_subs(expand(dPri_mixde),
+                             (Pri_mix, Pri_sym),
+                             assumptions=[(Pri_mix, Pri_sym)])
+
+    write_eq(diff(Pri_sym, extra_var), dPri_mixde)
+
     latexfile.write('Simplifying:\n')
-    dPri_mixdT, dPri_mixdT_prifac, dPri_mixdT_prifac_sym, dPri_mixdT_noprifac, dPri_mixdT_noprifac_sym,\
-        dPri_mixdnj, dPri_mixdnj_fac, dPri_mixdnj_fac_sym = __get_pri_fac_terms(
-            dPri_mixdT, dPri_mixdnj, "mix")
+    dPri_mixdT, dPri_mixdT_prifac, dPri_mixdT_prifac_sym, dPri_mixdT_noprifac,\
+        dPri_mixdT_noprifac_sym, dPri_mixdnj, dPri_mixdnj_fac, \
+        dPri_mixdnj_fac_sym, dPri_mixde, dPri_mixde_prifac, \
+        dPri_mixde_prifac_sym, dPri_mixde_noprifac, \
+        dPri_mixde_noprifac_sym = __get_pri_fac_terms(
+            dPri_mixdT, dPri_mixdnj, dPri_mixde, "mix")
 
     latexfile.write('For species $m$ as the third-body\n')
 
@@ -1316,16 +1800,63 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dPri_specdnj = assert_subs(simplify(dPri_specdnj), (
         Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), S.One), (
         KroneckerDelta(j, m) * KroneckerDelta(Ns, m), S.Zero
-        ),
+    ),
         assumptions=[(KroneckerDelta(j, m) * KroneckerDelta(Ns, m), S.Zero)]
     )
     write_eq(diff(Pri_sym, nk[j]), dPri_specdnj)
 
-    latexfile.write('Simplifying:\n')
-    dPri_specdT, dPri_specdT_prifac, dPri_specdT_prifac_sym, dPri_specdT_noprifac, dPri_specdT_noprifac_sym,\
-        dPri_specdnj, dPri_specdnj_fac, dPri_specdnj_fac_sym = __get_pri_fac_terms(
-            dPri_specdT, dPri_specdnj, "spec")
+    dPri_specde = diff(
+        assert_subs(
+            Pri_spec,
+            (ci_thd_species, ci[i]),
+            assumptions=[(ci_thd_species, ci[i])]), extra_var)
+    dPri_specde = assert_subs(
+        dPri_specde,
+        (diff(ci[i], extra_var),
+         dci_spec_de),
+        assumptions=[(diff(ci[i], extra_var),
+                      dci_spec_de)]
+    )
 
+    # recover Pri
+
+    # collect Cns and Cm terms
+    dPri_specde = collect(expand(dPri_specde),
+                          (Ck[m], Ck[Ns]))
+
+    # and simplify each term
+    dPri_specde = __simplify_per_term(dPri_specde)
+
+    # sub in Cns, and Pri
+    dPri_specde = assert_subs(
+        dPri_specde,
+        (Ck[Ns], Cns),
+        (Ctot, Ctot_sym)
+    )
+
+    # collect k0 / kinf / V for terms with Ck or Cm
+    if conp:
+        pr_term, nopr_term = __separate_on(dPri_specde, (Ck[m], Ck[k]))
+        pr_term = collect(pr_term, k0_sym / (kinf_sym * V))
+        pr_term = assert_subs(
+            pr_term,
+            (pr_term * V, -Pri_spec))
+        pr_term = assert_subs(
+            pr_term,
+            (Pri_spec, Pri_sym),
+            assumptions=[(Pri_spec, Pri_sym)]
+        )
+        dPri_specde = Add(*[pr_term, nopr_term])
+
+    write_eq(diff(Pri_sym, extra_var), dPri_specde)
+
+    latexfile.write('Simplifying:\n')
+    dPri_specdT, dPri_specdT_prifac, dPri_specdT_prifac_sym,\
+        dPri_specdT_noprifac, dPri_specdT_noprifac_sym, dPri_specdnj,\
+        dPri_specdnj_fac, dPri_specdnj_fac_sym, dPri_specde,\
+        dPri_specde_prifac, dPri_specde_prifac_sym, dPri_specde_noprifac, \
+        dPri_specde_noprifac_sym = __get_pri_fac_terms(
+            dPri_specdT, dPri_specdnj, dPri_specde, "spec")
     latexfile.write(r'If all $\alpha_{j, i} = 1$ for all species j' + '\n')
     Pri_unity_sym = assert_subs(Pri_unity, (Ctot, Ctot_sym))
     register_equal(Pri_unity_sym, Pri_unity)
@@ -1342,27 +1873,40 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dPri_unitydnj = diff(Pri_unity, nk[j])
     write_eq(diff(Pri_sym, nk[j]), dPri_unitydnj)
 
+    dPri_unityde = diff(Pri_unity, extra_var)
+    write_eq(diff(Pri_sym, nk[j]), dPri_unityde)
+
     latexfile.write('Simplifying:\n')
-    dPri_unitydT, dPri_unitydT_prifac, dPri_unitydT_prifac_sym, dPri_unitydT_noprifac, dPri_unitydT_noprifac_sym,\
-        dPri_unitydnj, dPri_unitydnj_fac, dPri_unitydnj_fac_sym = __get_pri_fac_terms(
-            dPri_unitydT, dPri_unitydnj, "unity")
+    dPri_unitydT, dPri_unitydT_prifac, dPri_unitydT_prifac_sym,\
+        dPri_unitydT_noprifac, dPri_unitydT_noprifac_sym, dPri_unitydnj,\
+        dPri_unitydnj_fac, dPri_unitydnj_fac_sym, dPri_unityde,\
+        dPri_unityde_prifac, dPri_unityde_prifac_sym, dPri_unityde_noprifac, \
+        dPri_unityde_noprifac_sym = __get_pri_fac_terms(
+            dPri_unitydT, dPri_unitydnj, dPri_unityde, "unity")
 
     # finally we make a generic version for simplification
     latexfile.write('Thus we write:\n')
     dPri_dT_prifac_sym = Symbol(r'\Theta_{P_{r,i}, \partial T}')
     dPri_dT_noprifac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial T}')
     dPri_dnj_fac_sym = Symbol(r'\bar{\theta}_{P_{r, i}, \partial n_j}')
+    dPri_de_prifac_sym = Symbol(
+        r'\Theta_{{P_{{r,i}}, \partial {}}}'.format(extra_var))
+    dPri_de_noprifac_sym = Symbol(
+        r'\bar{{\theta}}_{{P_{{r, i}}, \partial {}}}'.format(extra_var))
     dPri_dT = assert_subs(dPri_mixdT, (dPri_mixdT_prifac_sym, dPri_dT_prifac_sym),
                           (dPri_mixdT_noprifac_sym, dPri_dT_noprifac_sym),
                           assumptions=[(dPri_mixdT_prifac_sym, dPri_dT_prifac_sym),
                                        (dPri_mixdT_noprifac_sym, dPri_dT_noprifac_sym)])
     dPri_dnj = assert_subs(dPri_mixdnj, (dPri_mixdnj_fac_sym, dPri_dnj_fac_sym),
                            assumptions=[(dPri_mixdnj_fac_sym, dPri_dnj_fac_sym)])
+    dPri_de = assert_subs(dPri_mixde, (dPri_mixde_prifac_sym, dPri_de_prifac_sym),
+                          (dPri_mixde_noprifac_sym, dPri_de_noprifac_sym),
+                          assumptions=[(dPri_mixde_prifac_sym, dPri_de_prifac_sym),
+                                       (dPri_mixde_noprifac_sym, dPri_de_noprifac_sym)])
 
-    write_eq(diff(Pri_sym, T), dPri_dT)
-    write_eq(diff(Pri_sym, nk[j]), dPri_dnj)
-    register_equal(diff(Pri_sym, T), dPri_dT)
-    register_equal(diff(Pri_sym, nk[j]), dPri_dnj)
+    write_eq(diff(Pri_sym, T), dPri_dT, register=True)
+    write_eq(diff(Pri_sym, nk[j]), dPri_dnj, register=True)
+    write_eq(diff(Pri_sym, extra_var), dPri_de, register=True)
 
     latexfile.write('For\n')
     write_cases(dPri_dT_prifac_sym, [(dPri_mixdT_prifac, "mix"),
@@ -1374,27 +1918,38 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_cases(dPri_dnj_fac_sym, [(dPri_mixdnj_fac, "mix"),
                                    (dPri_specdnj_fac, "species"),
                                    (dPri_unitydnj_fac, "unity")])
+    write_cases(dPri_de_prifac_sym, [(dPri_mixde_prifac, "mix"),
+                                     (dPri_specde_prifac, "species"),
+                                     (dPri_unityde_prifac, "unity")])
+    write_cases(dPri_de_noprifac_sym, [(dPri_mixde_noprifac, "mix"),
+                                       (dPri_specde_noprifac, "species"),
+                                       (dPri_unityde_noprifac, "unity")])
 
     write_section('Falloff Blending Factor derivatives', sub=True)
     latexfile.write('\n For Lindemann reactions\n')
 
     dFi_linddT = diff(Fi_lind, T)
     dFi_linddnj = diff(Fi_lind, nk[j])
+    dFi_lindde = diff(Fi_lind, extra_var)
     write_conditional(
         diff(Fi_sym, T), dFi_linddT, enum_conds=falloff_form.lind)
     write_conditional(
         diff(Fi_sym, nk[j]), dFi_linddnj, enum_conds=falloff_form.lind)
+    write_conditional(
+        diff(Fi_sym, extra_var), dFi_lindde, enum_conds=falloff_form.lind)
 
     latexfile.write('For Troe reactions\n')
     dFi_troedT = diff(Fi_troe_sym, T)
     dFi_troednj = diff(Fi_troe_sym, nk[j])
+    dFi_troede = diff(Fi_troe_sym, extra_var)
     write_conditional(
         diff(Fi_sym, T), dFi_troedT, enum_conds=falloff_form.troe)
     write_conditional(
         diff(Fi_sym, nk[j]), dFi_troednj, enum_conds=falloff_form.troe)
+    write_conditional(
+        diff(Fi_sym, extra_var), dFi_troede, enum_conds=falloff_form.troe)
 
     latexfile.write('where\n')
-    troe_collect_poly = 2 * Atroe_sym / (Btroe_sym**3)
     dFi_troedFcent = assert_subs(factor_terms(
         diff(Fi_troe, Fcent_sym)), (Fi_troe, Fi_troe_sym))
     write_eq(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent,
@@ -1413,17 +1968,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dBtroedFcent = diff(Btroe, Fcent_sym)
     dAtroedPri = diff(Atroe, Pri_sym)
     dBtroedPri = diff(Btroe, Pri_sym)
-    write_eq(diff(Atroe_sym, Fcent_sym), dAtroedFcent)
-    register_equal(diff(Atroe_sym, Fcent_sym), dAtroedFcent)
-
-    write_eq(diff(Btroe_sym, Fcent_sym), dBtroedFcent)
-    register_equal(diff(Btroe_sym, Fcent_sym), dBtroedFcent)
-
-    write_eq(diff(Atroe_sym, Pri_sym), dAtroedPri)
-    register_equal(diff(Atroe_sym, Pri_sym), dAtroedPri)
-
-    write_eq(diff(Btroe_sym, Pri_sym), dBtroedPri)
-    register_equal(diff(Btroe_sym, Pri_sym), dBtroedPri)
+    write_eq(diff(Atroe_sym, Fcent_sym), dAtroedFcent, register=True)
+    write_eq(diff(Btroe_sym, Fcent_sym), dBtroedFcent, register=True)
+    write_eq(diff(Atroe_sym, Pri_sym), dAtroedPri, register=True)
+    write_eq(diff(Btroe_sym, Pri_sym), dBtroedPri, register=True)
 
     latexfile.write('Thus\n')
     dFi_troedFcent = factor_terms(simplify(
@@ -1431,16 +1979,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                     (diff(Atroe_sym, Fcent_sym), dAtroedFcent),
                     (diff(Btroe_sym, Fcent_sym), dBtroedFcent)
                     )))
-    write_eq(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
-    register_equal(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent)
+    write_eq(diff(Fi_troe_sym, Fcent_sym), dFi_troedFcent, register=True)
 
     dFi_troedPri = factor_terms(
         assert_subs(dFi_troedPri,
                     (diff(Atroe_sym, Pri_sym), dAtroedPri),
                     (diff(Btroe_sym, Pri_sym), dBtroedPri))
     )
-    write_eq(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
-    register_equal(diff(Fi_troe_sym, Pri_sym), dFi_troedPri)
+    write_eq(diff(Fi_troe_sym, Pri_sym), dFi_troedPri, register=True)
 
     latexfile.write('And\n')
     dFi_troedT = assert_subs(dFi_troedT, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
@@ -1453,6 +1999,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # used many places
     dFi_dT_fac_sym = Symbol(r'\Theta_{F_i, \partial T}')
     dFi_dnj_fac_sym = Symbol(r'\Theta_{F_i, \partial n_j}')
+    dFi_de_fac_sym = Symbol(r'\Theta_{{F_i, \partial {}}}'.format(extra_var))
 
     dFi_troedT = assert_subs(dFi_troedT, (dFi_troedT_fac, dFi_dT_fac_sym),
                              assumptions=[(dFi_troedT_fac, dFi_dT_fac_sym)])
@@ -1467,9 +2014,20 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                               assumptions=[(dFi_troednj_fac, dFi_dnj_fac_sym)])
     write_eq(diff(Fi_sym, nk[j]), dFi_troednj)
 
+    dFi_troede = assert_subs(dFi_troede, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
+                             (diff(Pri_sym, extra_var), dPri_de))
+    dFi_troede = simplify(dFi_troede)
+    dFi_troede_fac = dFi_troede / Fi_troe_sym
+
+    dFi_troede = assert_subs(dFi_troede, (dFi_troede_fac, dFi_de_fac_sym),
+                             assumptions=[(dFi_troede_fac, dFi_de_fac_sym)])
+
+    write_eq(diff(Fi_sym, extra_var), dFi_troede)
+
     latexfile.write('Where\n')
     write_eq(dFi_dT_fac_sym, dFi_troedT_fac)
     write_eq(dFi_dnj_fac_sym, dFi_troednj_fac)
+    write_eq(dFi_de_fac_sym, dFi_troede_fac)
 
     latexfile.write('For SRI reactions\n')
     dFi_sridT = factor_terms(
@@ -1478,8 +2036,12 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dFi_sridnj = assert_subs(diff(Fi_sri, nk[j]),
                              (Fi_sri, Fi_sym),
                              assumptions=[(Fi_sri, Fi_sym)])
+    dFi_sride = assert_subs(diff(Fi_sri, extra_var),
+                            (Fi_sri, Fi_sym),
+                            assumptions=[(Fi_sri, Fi_sym)])
     write_eq(diff(Fi_sym, T), dFi_sridT)
     write_eq(diff(Fi_sym, nk[j]), dFi_sridnj)
+    write_eq(diff(Fi_sym, extra_var), dFi_sride)
 
     latexfile.write('Where\n')
     dXdPri = assert_subs(diff(X, Pri_sym), (X, X_sym))
@@ -1508,9 +2070,19 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                              assumptions=[(dFi_sridnj_fac, dFi_dnj_fac_sym)])
     write_eq(diff(Fi_sym, nk[j]), dFi_sridnj)
 
+    dFi_sride = simplify(
+        assert_subs(dFi_sride, (diff(X_sym, Pri_sym), dXdPri),
+                    (diff(Pri_sym, extra_var), dPri_de)))
+
+    dFi_sride_fac = dFi_sride / Fi_sym
+    dFi_sride = assert_subs(dFi_sride, (dFi_sride_fac, dFi_de_fac_sym),
+                            assumptions=[(dFi_sride_fac, dFi_de_fac_sym)])
+    write_eq(diff(Fi_sym, extra_var), dFi_sride)
+
     latexfile.write('Where\n')
     write_eq(dFi_dT_fac_sym, dFi_sridT_fac)
     write_eq(dFi_dnj_fac_sym, dFi_sridnj_fac)
+    write_eq(dFi_de_fac_sym, dFi_sride_fac)
 
     latexfile.write('Simplifying:\n')
     dFi_dT = assert_subs(dFi_troedT,
@@ -1522,6 +2094,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                           (Fi_troe_sym, Fi_sym),
                           assumptions=[(Fi_troe_sym, Fi_sym)])
     write_eq(diff(Fi_sym, nk[j]), dFi_dnj, register=True)
+
+    dFi_de = assert_subs(dFi_troede,
+                         (Fi_troe_sym, Fi_sym),
+                         assumptions=[(Fi_troe_sym, Fi_sym)])
+    write_eq(diff(Fi_sym, extra_var), dFi_de, register=True)
 
     latexfile.write('Where:\n')
 
@@ -1535,10 +2112,15 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                   (dFi_troednj_fac, 'Troe'),
                                   (dFi_sridnj_fac, 'SRI')])
 
+    dFi_lindde_fac = dFi_lindde / Fi_sym
+    write_cases(dFi_de_fac_sym, [(dFi_lindde_fac, 'Lindemann'),
+                                  (dFi_troede_fac, 'Troe'),
+                                  (dFi_sride_fac, 'SRI')])
+
     write_section(
         'Unimolecular/recombination fall-off reactions (complete)', sub=True)
 
-    def __subs_ci_terms(dci_dT, dci_dnj, ci_term):
+    def __subs_ci_terms(dci_dT, dci_dnj, dci_de, ci_term):
         dci_dT = assert_subs(expand(
             assert_subs(dci_dT,
                             (diff(Fi_sym, T), dFi_dT),
@@ -1548,24 +2130,34 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         dci_dT = factor_terms(collect(dci_dT,
                                       [ci[i], Pri_sym]))
 
-        dci_dnj = assert_subs(expand(assert_subs(dci_dnj,
-                                                 (diff(
-                                                     Fi_sym, nk[j]), dFi_dnj),
-                                                 (diff(Pri_sym, nk[j]), dPri_dnj))),
-                              (ci_term, ci[i]),
-                              assumptions=[(ci_term, ci[i])])
+        dci_dnj = assert_subs(
+            expand(assert_subs(dci_dnj, (diff(Fi_sym, nk[j]), dFi_dnj),
+                               (diff(Pri_sym, nk[j]), dPri_dnj))),
+            (ci_term, ci[i]),
+            assumptions=[(ci_term, ci[i])])
         dci_dnj = factor_terms(collect(dci_dnj,
                                        [ci[i], Pri_sym]))
+
+        dci_de = assert_subs(
+            expand(assert_subs(dci_de, (diff(Fi_sym, extra_var), dFi_de),
+                               (diff(Pri_sym, extra_var), dPri_de))),
+            (ci_term, ci[i]),
+            assumptions=[(ci_term, ci[i])])
+        dci_de = factor_terms(collect(dci_de,
+                                      [ci[i], Pri_sym]))
         write_eq(diff(ci[i], T), dci_dT)
         write_eq(diff(ci[i], nk[j]), dci_dnj)
-        return dci_dT, dci_dnj
+        write_eq(diff(ci[i], extra_var), dci_de)
+        return dci_dT, dci_dnj, dci_de
 
-    dci_falldT, dci_falldnj = __subs_ci_terms(dci_falldT, dci_falldnj, ci_fall)
+    dci_falldT, dci_falldnj, dcifall_de = __subs_ci_terms(
+        dci_falldT, dci_falldnj, dci_fallde, ci_fall)
 
     write_section(
         'Chemically-activated bimolecular reactions (complete)', sub=True)
 
-    dci_chemdT, dci_chemdnj = __subs_ci_terms(dci_chemdT, dci_chemdnj, ci_chem)
+    dci_chemdT, dci_chemdnj, dcichem_de = __subs_ci_terms(
+        dci_chemdT, dci_chemdnj, dci_chemde, ci_chem)
 
     write_section('Pressure-dependent reaction derivatives')
     latexfile.write('For PLog reactions\n')
@@ -1604,7 +2196,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         if not isinstance(term_list, list):
             term_list = [term_list]
         temp_syms = [Symbol('temp{}'.format(i)) for i in range(len(term_list))]
-        temp = Symbol('temp')
         cobj = assert_subs(obj,
                            *[(term_list[i], temp_syms[i]) for i in range(len(term_list))],
                            assumptions=[(term_list[i], temp_syms[i]) for i in range(len(term_list))])
@@ -1620,7 +2211,161 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_pdepdT = collect(dRop_pdepdT, Ctot_sym / T)
     write_eq(diff(Rop_sym[i], T), dRop_pdepdT)
 
+    dkf_pdepde = diff(kf_pdep, extra_var)
+    if not conp:
+        # since the kf_pdep is expressed as a log
+        # we need to solve for this in terms of dkf/de
+        mul_term = __var_creator(kf_sym[i], extra_var)
+        dkf_pdepde = dkf_pdepde * kf_sym[i]
+        write_eq(diff(kf_pdep_sym[i], extra_var), dkf_pdepde)
+        logkf = log(kf)
+        logkf1 = assert_subs(
+            logkf,
+            (logkf, log(A_1) + beta_1 * log(T) + -Ea_1 / (R * T)),
+            assumptions=[(logkf, log(A_1) + beta_1 * log(T) + -Ea_1 / (R * T))]
+        )
+
+        logkf2 = assert_subs(
+            logkf,
+            (logkf, log(A_2) + beta_2 * log(T) + -Ea_2 / (R * T)),
+            assumptions=[(logkf, log(A_2) + beta_2 * log(T) + -Ea_2 / (R * T))]
+        )
+
+        dkf_pdepde = assert_subs(
+            dkf_pdepde,
+            (log(k1_sym), logkf1),
+            (log(k2_sym), logkf2),
+            assumptions=[
+                (log(k1_sym), logkf1),
+                (log(k2_sym), logkf2)]
+        )
+        dkf_pdepde = collect(dkf_pdepde, (1 / (R * T), log(T)))
+
+        write_eq(diff(kf_pdep_sym[i], extra_var), dkf_pdepde)
+
+    def get_dr_de(plog=True, writetofile=False, fwd=True):
+        Ropt_sym = Ropf_sym if fwd else Ropr_sym
+        Rop_temp = Ropf if fwd else Ropr
+        nuv = nu_f if fwd else nu_r
+        Sval = Sfwd if fwd else Srev
+        if fwd:
+            kt_sym = kf_pdep_sym if plog else kf_cheb_sym
+        else:
+            kt_sym = kr_pdep_sym if plog else kr_cheb_sym
+        ksym = kf_sym if fwd else kr_sym
+
+        # sub in Cns for proper temperature derivative
+        Rop_temp = assert_subs(
+            Rop_temp,
+            (Product(Ck[k]**nuv[k, i], (k, 1, Ns)),
+             Cns**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))),
+            (ksym[i], kt_sym[i]),
+            assumptions=[(ksym[i], kt_sym[i])])
+
+        dRoptde = diff(Rop_temp, extra_var)
+        if writetofile:
+            write_eq(diff(Ropt_sym[i], extra_var), dRoptde)
+
+        # sub in Ck[Ns]
+        dRoptde = expand_mul(simplify(assert_subs(dRoptde, (Cns, Ck[Ns]))))
+
+        # and go back original product
+        dRoptde = assert_subs(
+            dRoptde, (Ck[Ns] * Ck[Ns]**(nuv[Ns, i] - 1), Ck[Ns]**nuv[Ns, i]))
+        dRoptde = assert_subs(dRoptde, (Ck[Ns]**nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)),
+                                        Product(Ck[k]**nuv[k, i], (k, 1, Ns))))
+        # and sub in C
+        dRoptde = assert_subs(dRoptde, (Ctot, Ctot_sym))
+
+        if writetofile:
+            write_eq(diff(Ropt_sym[i], extra_var), dRoptde)
+
+        # finally sub in the S term
+        # need to modify the inner function to use k as the sum variable
+        inner = __inner_func(Ns, fwd=fwd)
+
+        # make sure it's equivalent before we mess with it
+        assert_subs(dRoptde,
+                    (inner, Sval[Ns]))
+
+        # switch the sum variable
+        inner = assert_subs(inner,
+                            (__mod_prod_sum(Ns, fwd=fwd),
+                             Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1))))
+        # and force a subsitution
+        dRoptde = assert_subs(dRoptde,
+                              (inner, Sval[Ns]),
+                              assumptions=[(inner, Sval[Ns])])
+
+        if fwd:
+            if plog:
+                dkde = dkf_pdepde
+            else:
+                dkde = dkf_chebde
+        else:
+            if plog:
+                dkde = dkr_pdepde
+            else:
+                dkde = dkr_chebde
+
+        if not conp:
+            # put the ROP back in
+            dRoptde = assert_subs(dRoptde, (
+                Ck[Ns] ** (nuv[Ns, i] + 1) / Ck[Ns], Ck[Ns] ** nuv[Ns, i]),
+                (Ck[Ns] ** nuv[Ns, i] * Product(Ck[k]**nuv[k, i], (k, 1, Ns - 1)),
+                    Product(Ck[k]**nuv[k, i], (k, 1, Ns))))
+
+        dRoptde = assert_subs(dRoptde, (diff(kt_sym[i], extra_var), dkde),
+                              (Ropf if fwd else Ropr, Ropt_sym[i]),
+                              assumptions=[(diff(kt_sym[i], extra_var), dkde)])
+        write_eq(diff(Ropt_sym[i], extra_var), dRoptde,
+                 register=writetofile, sympy=writetofile)
+
+        return dRoptde
+
+    def get_dkr_de(dkfdeval, writetofile=True, plog=True):
+        # find dkr/dT
+        kft_sym = kf_pdep_sym if plog else kf_cheb_sym
+        krt_sym = kr_pdep_sym if plog else kr_cheb_sym
+        dkrde = diff(kft_sym[i] / Kc_sym[i], extra_var)
+        if writetofile:
+            write_eq(diff(krt_sym[i], extra_var), dkrde)
+        dkrde = assert_subs(dkrde, (diff(kft_sym[i], extra_var), dkfdeval),
+                            assumptions=[(diff(kft_sym[i], extra_var), dkfdeval)])
+        # find the kf in the dkfdeval
+        dkrde = assert_subs(dkrde,
+                            (kf_sym[i], kft_sym[i]),
+                            (kft_sym[i] / Kc_sym[i], krt_sym[i]),
+                            (krt_sym[i], kr_sym[i]),
+                            (Ropr_sym[i], Ropr),
+                            assumptions=[
+                (kf_sym[i], kft_sym[i]),
+                (kft_sym[i] / Kc_sym[i], krt_sym[i]),
+                (krt_sym[i], kr_sym[i])])
+        if plog:
+            dkrde = factor_terms(dkrde)
+
+        write_eq(diff(krt_sym[i], extra_var), dkrde)
+        return dkrde
+
+    # assemble the Rop derivatives
+    if not conp:
+        dRopf_pdepde = get_dr_de(plog=True, writetofile=False)
+        dkr_pdepde = get_dkr_de(dkf_pdepde)
+        dRopr_pdepde = get_dr_de(plog=True, writetofile=False, fwd=False)
+        dRop_pdepde = dRopf_pdepde - dRopr_pdepde
+        # do the same trick as for plog, where we sub out for a temporary variable
+        dRop_pdepde = __complex_collect(dRop_pdepde, dkf_pdepde / kf_sym[i])
+        dRop_pdepde = collect(dRop_pdepde, 1 / (R * T))
+        write_eq(diff(Rop_sym[i], extra_var), dRop_pdepde)
+
+    else:
+        dRopf_pdepde = dRopfdE
+        dRopr_pdepde = dRoprdE
+
     latexfile.write('For Chebyshev reactions\n')
+    mul_term = diff(kf_sym[i], T) / diff(log(kf_sym[i]), T)
+    assert mul_term == kf_sym[i]
     dkf_chebdT = diff(kf_cheb, T) * mul_term
     write_eq(diff(kf_sym[i], T), dkf_chebdT)
     dkf_chebdT = assert_subs(dkf_chebdT, (diff(Tred_sym, T), diff(Tred, T)))
@@ -1628,7 +2373,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     # assemble the Rop derivatives
     dRopf_chebdT = get_dr_dt(cheb=True, writetofile=False)
-    dkr_chebdT = get_dkr_dT(dkf_chebdT, writetofile=False)
+    dkr_chebdT = get_dkr_dT(dkf_chebdT, writetofile=False, plog=False)
     dRopr_chebdT = get_dr_dt(cheb=True, fwd=False, writetofile=False)
     dRop_chebdT = dRopf_chebdT - dRopr_chebdT
     # do the same trick as for plog, where we sub out for a temporary variable
@@ -1636,18 +2381,34 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_chebdT = collect(dRop_chebdT, Ctot_sym / T)
     write_eq(diff(Rop_sym[i], T), dRop_chebdT)
 
+    dkf_chebde = diff(kf_cheb, extra_var) * kf_sym[i]
+    if not conp:
+        write_eq(diff(kf_cheb_sym[i], extra_var), dkf_chebde)
+        register_equal(diff(Pred_sym, extra_var), diff(Pred, extra_var))
+        dkf_chebde = assert_subs(
+            dkf_chebde,
+            (diff(Pred_sym, extra_var), diff(Pred, extra_var)))
+        write_eq(diff(kf_cheb_sym[i], extra_var), dkf_chebde)
+        dRopf_chebde = get_dr_de(plog=False, writetofile=False)
+        dkr_chebde = get_dkr_de(dkf_chebde, plog=False, writetofile=False)
+        dRopr_chebde = get_dr_de(plog=False, writetofile=False, fwd=False)
+        dRop_chebde = dRopf_chebde - dRopr_chebde
+        dRop_chebde = __complex_collect(dRop_chebde, dkf_chebde / kf_sym[i])
+        dRop_chebde = collect(dRop_chebde, 1 / (R * T))
+        write_eq(diff(Rop_sym[i], extra_var), dRop_chebde)
+
+    else:
+        dRopf_chebde = dRopfdE
+        dRopr_chebde = dRoprdE
+
     write_section('Jacobian entries')
     write_section('Energy Equation', sub=True)
 
     if conp:
         spec_heat = cp
-        spec_heat_tot = cp_tot
-        total_spec_heat = cp_tot_sym
         energy = h
     else:
         spec_heat = cv
-        spec_heat_tot = cv_tot
-        total_spec_heat = cv_tot_sym
         energy = u
 
     register_equal(diff(energy[k], T), spec_heat[k])
@@ -1671,7 +2432,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdt = num / den
     CkCpSum_full = den
     register_equal(CkCpSum_full, CkCpSum)
-    write_eq(dTdt_sym, dTdt)
+    write_eq(dTdt_sym, dTdt, register=True)
+
+    dTdt_full_sum = dTdt
 
     # Temperature jacobian entries
 
@@ -1684,27 +2447,19 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdt = assert_subs(dTdt, (Ck[k], nk[k] / V))
     dTdotdnj = simplify(diff(dTdt, nk[j]))
 
-    # get rid of kronecker sums
-    dTdotdnj = assert_subs(dTdotdnj, (
-        Sum(-KroneckerDelta(k, j) * (spec_heat[Ns] - spec_heat[k]) / V,
-            (k, 1, Ns)), -(spec_heat[Ns] - spec_heat[j]) / V))
+    # put concentrations back in
+    dTdotdnj = assert_subs(dTdotdnj, (nk[k] / V, Ck[k]))
     write_eq(dTdotdnj_sym, dTdotdnj)
-
-    if not conp:
-        dTdotdC = assert_subs(dTdotdC, (diff(Ctot_sym, P), diff(Ctot, P)),
-                              (diff(P, nk[j]), dPdnj),
-                              assumptions=[(diff(Ctot_sym, P), diff(Ctot, P))])
-        write_eq(dTdotdC_sym, dTdotdC)
 
     # Compact the CkCpSum back to a more reasonble representation
     # for sanity
     def __powsimp(expr):
-        assert len(expr.args) == 2
+        assert len(expr.args) == 2 and isinstance(expr, Pow)
         expr, power = expr.args
         return simplify(expr)**power
 
-    dTdotdC_rep = 0
-    for term in Add.make_args(dTdotdC):
+    dTdotdnj_rep = 0
+    for term in Add.make_args(dTdotdnj):
         num, den = fraction(term)
         num = factor_terms(
             assert_subs(simplify(num), (CkCpSum_full, CkCpSum)))
@@ -1714,45 +2469,45 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         else:
             den = assert_subs(simplify(den),
                               (CkCpSum_full, CkCpSum))
-        dTdotdC_rep = dTdotdC_rep + num / den
-    dTdotdC = dTdotdC_rep
-    write_eq(dTdotdC_sym, dTdotdC)
+        dTdotdnj_rep = dTdotdnj_rep + num / den
+    dTdotdnj = dTdotdnj_rep
+    write_eq(dTdotdnj_sym, dTdotdnj)
 
     # another level of compactness, replaces the kronecker delta sum
-    dTdotdC = assert_subs(dTdotdC, (Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1),
-                          (Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)), spec_heat[j]))
-    write_eq(dTdotdC_sym, dTdotdC)
+    dTdotdnj = assert_subs(dTdotdnj, (
+        Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1), (
+        Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)),
+            spec_heat[j]))
+    write_eq(dTdotdnj_sym, dTdotdnj)
 
     # now expand to replace with the dT/dt term
     def __factor_denom(expr):
         num, den = fraction(ratsimp(expr))
-        arg, power = den.args
-        return Add(*[simplify(x) / arg for x in Add.make_args(num)]) / arg**(power - 1)
+        factor = next(x for x in den.args if isinstance(x, Pow))
+        arg, power = factor.args
+        new_den = Mul(*[x for x in den.args if x != factor] +
+                      [arg**(power - 1)])
+        return Add(*[simplify(x) / arg for x in Add.make_args(num)]) / new_den
 
-    dTdotdC = __factor_denom(dTdotdC)
-    write_eq(dTdotdC_sym, dTdotdC)
+    dTdotdnj = __factor_denom(dTdotdnj)
+    write_eq(dTdotdnj_sym, dTdotdnj)
 
-    dTdotdC = collect(dTdotdC, dTdt_simple)
-    dTdotdC = assert_subs(dTdotdC, (-dTdt_simple, -dTdt_sym),
-                          (dTdt_simple, dTdt_sym))
-    write_eq(dTdotdC_sym, dTdotdC)
+    dTdotdnj = collect(dTdotdnj, dTdt_simple)
+    dTdotdnj = assert_subs(dTdotdnj, (-dTdt_simple, -dTdt_sym),
+                           (dTdt_simple, dTdt_sym))
+    write_eq(dTdotdnj_sym, dTdotdnj)
 
     latexfile.write('Temperature derivative\n')
 
-    write_eq(dTdt_sym, dTdt)
     # up next the temperature derivative
     dTdotdT_sym = symbols(r'\frac{\partial\dot{T}}{\partial{T}}')
     # first we must sub in the actual form of C, as the temperature derivative
     # is non-zero
-    starting = assert_subs(dTdt, (Ctot_sym, Ctot))
+    starting = assert_subs(dTdt, (Ctot_sym, Ctot), (nk[k] / V, Ck[k]))
     write_eq(dTdt_sym, starting)
     dTdotdT = diff(starting, T)
 
     write_eq(dTdotdT_sym, dTdotdT)
-
-    #sub in dPdT
-    if not conp:
-        dTdotdT = assert_subs(dTdotdT, (diff(P, T), dPdT))
 
     # first up, go back to Ctot_sym
     dTdotdT = assert_subs(dTdotdT, (Ctot, Ctot_sym))
@@ -1788,12 +2543,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     num = assert_subs(num, (Sum(Ck[k], (k, 1, Ns)), Sum(
         Ck[k], (k, Ns, Ns)) + Sum(Ck[k], (k, 1, Ns - 1))))
     num = collect(simplify(num), dTdt_sym)
-    if conp:
-        num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)),
-                                Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
-    else:
-        num = assert_subs(num, (-diff(spec_heat[Ns], T) * Sum(Ck[k], (k, Ns, Ns)),
-                                Sum(-diff(spec_heat[k], T) * Ck[k], (k, Ns, Ns))))
+
+    num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)),
+                            Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
+
     num = collect(simplify(num), dTdt_sym)
 
     dTdotdT = num / den
@@ -1803,13 +2556,36 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdotdT = assert_subs(dTdotdT, (diff(energy[k], T), spec_heat[k]))
     write_eq(dTdotdT_sym, dTdotdT)
 
+    latexfile.write('Extra Variable Derivative\n')
+
+    starting = assert_subs(dTdt, (
+        nk[k] / V, Ck[k]), (
+        Ctot_sym, Ctot))
+    dTdotdE = diff(starting, extra_var)
+    dTdotdE = assert_subs(dTdotdE, (
+        Ctot, Ctot_sym))
+    num, den = fraction(dTdotdE)
+    # put in dTdt symbol
+    dTdotdE = assert_subs(dTdotdE, (-dTdt_full_sum, -dTdt_sym))
+    # and collapse Cv sum
+    dTdotdE = assert_subs(dTdotdE, (CkCpSum_full, CkCpSum))
+
+    dTdotdE_sym = symbols(
+        r'\frac{{\partial\dot{{T}}}}{{\partial{{{0}}}}}'.format(
+            str(extra_var)))
+    write_eq(dTdotdE_sym, dTdotdE, register=True, sympy=True)
+
     write_section(
-        r'\texorpdfstring{$\dot{C_k}$}{dCkdt} Derivatives', subsub=True)
+        r'\texorpdfstring{{$\dot{{{0}}}$}}{{d{0}dt}} Derivatives'.format(
+            extra_var), subsub=True)
+
+    write_section(
+        r'\texorpdfstring{$\dot{n_k}$}{dnkdt} Derivatives', subsub=True)
 
     # concentration Jacobian equations
-    dCdot = MyIndexedFunc(r'\dot{C}', (Ck, T))
-    write_eq(diff(dCdot[k], nk[j]), diff(wdot[k], nk[j]))
-    write_eq(diff(dCdot[k], T), diff(wdot[k], T))
+    dndot = MyIndexedFunc(r'\dot{n}', (nk, T, P))
+    write_eq(diff(dndot[k], nk[j]), diff(wdot[k], nk[j]))
+    write_eq(diff(dndot[k], T), diff(wdot[k], T))
 
     write_section('Jacobian Update Form')
     write_section('Temperature Derivatives', sub=True)
@@ -2303,7 +3079,6 @@ class equation_file(object):
                     file.write('\n')
                 else:
                     file.write(srepr(eqn) + '\n\n')
-
 
     def __exit__(self, type, value, traceback):
         self.close()
