@@ -538,7 +538,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Ck[k], nk[k] / V, register=True),
 
     # rates
-    wdot = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(nk, T, P))
+    wdot = MyIndexedFunc(Symbol(r'\dot{\omega}'), args=(nk, T, P, V))
 
     # define state vector
     state_vec_str = ' = ' + r'\left\{{{}\ldots {}\right\}}'
@@ -591,6 +591,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(nk[Ns], t), dnNsdt, register=True)
 
     n_sym = MyImplicitSymbol('n', args=(t,), **assumptions)
+    write_eq(n_sym, P * V / (R * T), register=True)
     dndt = assert_subs(Sum(diff(nk[k], t), (k, 1, Ns)), (
         diff(nk[k], t), dnkdt_sym))
     dndt_sym = diff(n_sym, t)
@@ -618,12 +619,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # sub in dT/dt and dn/dt
 
     dExdt = simplify(assert_subs(dExdt, (
-        diff(n_sym, t), dndt
-    ), (
-        diff(T, t), dTdt
-    ), (
-        diff(nk[k], t), dnkdt
-    )))
+        diff(n_sym, t), dndt), (
+        diff(T, t), dTdt), (
+        diff(nk[k], t), dnkdt), (
+        n_sym, P * V / (R * T))
+    ))
 
     write_eq(dExdt_sym, dExdt)
 
@@ -632,6 +632,13 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(Ctot_sym, Ctot, sympy=True)
     register_equal([(Ctot_sym, Ctot), (Ctot_sym, n_sym / V),
                     (Ctot_sym, Sum(Ck[k], (k, 1, Ns)))])
+
+    dExdt = simplify(assert_subs(dExdt, (
+        1 / Ctot, 1 / Ctot_sym),
+        assumptions=[(1 / Ctot, 1 / Ctot_sym)]
+    ))
+    write_eq(dExdt_sym, dExdt, register=True, sympy=True)
+
     Cns = Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1))
     write_eq(Ck[Ns], Cns, sympy=True)
     Cns = assert_subs(Cns, (Ctot_sym, Ctot))
@@ -990,6 +997,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_eq(diff(q_sym[i], nk[k]), diff(q, nk[j]))
     write_eq(diff(wdot[k], nk[j]), diff(omega_k, nk[j]), sympy=True)
+
+    write_eq(diff(q_sym[i], extra_var), diff(q, extra_var))
+    write_eq(diff(wdot[k], extra_var), diff(omega_k, extra_var), sympy=True)
 
     write_section('Rate of Progress Derivatives')
 
@@ -2114,8 +2124,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dFi_lindde_fac = dFi_lindde / Fi_sym
     write_cases(dFi_de_fac_sym, [(dFi_lindde_fac, 'Lindemann'),
-                                  (dFi_troede_fac, 'Troe'),
-                                  (dFi_sride_fac, 'SRI')])
+                                 (dFi_troede_fac, 'Troe'),
+                                 (dFi_sride_fac, 'SRI')])
 
     write_section(
         'Unimolecular/recombination fall-off reactions (complete)', sub=True)
@@ -2218,30 +2228,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         mul_term = __var_creator(kf_sym[i], extra_var)
         dkf_pdepde = dkf_pdepde * kf_sym[i]
         write_eq(diff(kf_pdep_sym[i], extra_var), dkf_pdepde)
-        logkf = log(kf)
-        logkf1 = assert_subs(
-            logkf,
-            (logkf, log(A_1) + beta_1 * log(T) + -Ea_1 / (R * T)),
-            assumptions=[(logkf, log(A_1) + beta_1 * log(T) + -Ea_1 / (R * T))]
-        )
-
-        logkf2 = assert_subs(
-            logkf,
-            (logkf, log(A_2) + beta_2 * log(T) + -Ea_2 / (R * T)),
-            assumptions=[(logkf, log(A_2) + beta_2 * log(T) + -Ea_2 / (R * T))]
-        )
-
-        dkf_pdepde = assert_subs(
-            dkf_pdepde,
-            (log(k1_sym), logkf1),
-            (log(k2_sym), logkf2),
-            assumptions=[
-                (log(k1_sym), logkf1),
-                (log(k2_sym), logkf2)]
-        )
-        dkf_pdepde = collect(dkf_pdepde, (1 / (R * T), log(T)))
-
-        write_eq(diff(kf_pdep_sym[i], extra_var), dkf_pdepde)
 
     def get_dr_de(plog=True, writetofile=False, fwd=True):
         Ropt_sym = Ropf_sym if fwd else Ropr_sym
@@ -2339,9 +2325,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                             (krt_sym[i], kr_sym[i]),
                             (Ropr_sym[i], Ropr),
                             assumptions=[
-                (kf_sym[i], kft_sym[i]),
-                (kft_sym[i] / Kc_sym[i], krt_sym[i]),
-                (krt_sym[i], kr_sym[i])])
+                                (kf_sym[i], kft_sym[i]),
+                                (kft_sym[i] / Kc_sym[i], krt_sym[i]),
+                                (krt_sym[i], kr_sym[i])])
         if plog:
             dkrde = factor_terms(dkrde)
 
@@ -2354,7 +2340,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         dkr_pdepde = get_dkr_de(dkf_pdepde)
         dRopr_pdepde = get_dr_de(plog=True, writetofile=False, fwd=False)
         dRop_pdepde = dRopf_pdepde - dRopr_pdepde
-        # do the same trick as for plog, where we sub out for a temporary variable
+        # do the same trick as for plog, where we sub out for a temporary
+        # variable
         dRop_pdepde = __complex_collect(dRop_pdepde, dkf_pdepde / kf_sym[i])
         dRop_pdepde = collect(dRop_pdepde, 1 / (R * T))
         write_eq(diff(Rop_sym[i], extra_var), dRop_pdepde)
@@ -2439,13 +2426,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # Temperature jacobian entries
 
     write_section(r'\texorpdfstring{$\dot{T}$}{dTdt} Derivatives', subsub=True)
-    latexfile.write('Concentration derivative\n')
+    latexfile.write('Molar derivative\n')
     # first we do the concentration derivative
     dTdotdnj_sym = symbols(r'\frac{\partial\dot{T}}{\partial{n_j}}')
 
     # put in moles
-    dTdt = assert_subs(dTdt, (Ck[k], nk[k] / V))
-    dTdotdnj = simplify(diff(dTdt, nk[j]))
+    dTdotdnj = simplify(diff(
+        assert_subs(dTdt, (Ck[k], nk[k] / V)),
+        nk[j]))
 
     # put concentrations back in
     dTdotdnj = assert_subs(dTdotdnj, (nk[k] / V, Ck[k]))
@@ -2556,19 +2544,27 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdotdT = assert_subs(dTdotdT, (diff(energy[k], T), spec_heat[k]))
     write_eq(dTdotdT_sym, dTdotdT)
 
-    latexfile.write('Extra Variable Derivative\n')
+    latexfile.write('{} Derivative\n'.format(extra_var_name))
 
     starting = assert_subs(dTdt, (
-        nk[k] / V, Ck[k]), (
         Ctot_sym, Ctot))
     dTdotdE = diff(starting, extra_var)
     dTdotdE = assert_subs(dTdotdE, (
         Ctot, Ctot_sym))
-    num, den = fraction(dTdotdE)
-    # put in dTdt symbol
-    dTdotdE = assert_subs(dTdotdE, (-dTdt_full_sum, -dTdt_sym))
-    # and collapse Cv sum
-    dTdotdE = assert_subs(dTdotdE, (CkCpSum_full, CkCpSum))
+    # derivatives of Ck
+    dTdotdE = assert_subs(dTdotdE, (
+        diff(Ck[k], extra_var), dCkde))
+
+    # put the CkCp sums back together
+    dTdotdE = assert_subs(
+        dTdotdE, (CkCpSum_full, CkCpSum))
+
+    # and factor out the sum
+    dTdotdE = factor_terms(dTdotdE, CkCpSum)
+
+    # and put dTdt back in
+    dTdotdE = assert_subs(
+        dTdotdE, (-dTdt_simple, -dTdt_sym))
 
     dTdotdE_sym = symbols(
         r'\frac{{\partial\dot{{T}}}}{{\partial{{{0}}}}}'.format(
@@ -2578,6 +2574,102 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_section(
         r'\texorpdfstring{{$\dot{{{0}}}$}}{{d{0}dt}} Derivatives'.format(
             extra_var), subsub=True)
+
+    extra_var_dot = MyImplicitSymbol(
+        r'\dot{{ {} }}'.format(extra_var), (T, nk, V if conp else P))
+
+    latexfile.write('Temperature Derivative\n')
+
+    # put a dummy symbol in there that is dependent on T to get the
+    # correct derivative of dTdt
+    diff_val = MyImplicitSymbol(r'\dot{T}', (T))
+    working = assert_subs(
+        dExdt,
+        (Ctot_sym, Ctot),
+        (dTdt_simple, diff_val),
+        assumptions=[(dTdt_simple, diff_val)]
+    )
+    # and replace the dummy with the original
+    dEdotdT = diff(working, T)
+    dEdotdT = assert_subs(
+        dEdotdT,
+        (diff_val, dTdt_sym),
+        (1 / Ctot, 1 / Ctot_sym),
+        (1 / (Ctot) / T, 1 / Ctot_sym / T),
+        assumptions=[(diff_val, dTdt_sym),
+                     (1 / Ctot, 1 / Ctot_sym),
+                     (1 / (Ctot) / T, 1 / Ctot_sym / T)]
+    )
+
+    if conp:
+        dEdotdT = expand_mul(dEdotdT)
+
+    withR, withoutR = __separate_on(dEdotdT, R if not conp else Wk[k])
+
+    if conp:
+        withR = collect(simplify(withR), wdot[k])
+        withR = Mul(*[
+            x if not isinstance(x, Sum) else
+            Sum(collect(x.function, (wdot[k] / T)), x.limits)
+            for x in Mul.make_args(withR)])
+        withR = Mul(*[
+            x if not isinstance(x, Sum) else
+            Sum(collect(x.function, (1 - Wk[k] / Wk[Ns])), x.limits)
+            for x in Mul.make_args(withR)])
+        withoutR = __complex_collect(withoutR, V / T)
+    else:
+        # do some collapsing
+        # factor some terms
+        withoutR = factor_terms(withoutR)
+        # and collapse the Wk sum
+        withR = simplify(assert_subs(
+            withR, (
+                T *
+                Sum((1 - Wk[k] / Wk[Ns]) * diff(wdot[k], T), (k, 1, Ns - 1)),
+                Sum(T * (1 - Wk[k] / Wk[Ns]) * diff(wdot[k], T), (k, 1, Ns - 1)))
+        ))
+        withR = assert_subs(
+            withR,
+            (next(x for x in Mul.make_args(withR) if isinstance(x, Sum)),
+             Sum((1 - Wk[k] / Wk[Ns]) *
+                 (T * diff(wdot[k], T) + wdot[k]), (k, 1, Ns - 1))
+             )
+        )
+    # finally put back together
+    dEdotdT = Add(*[withR, withoutR])
+
+    write_eq(diff(extra_var_dot, T), dEdotdT, register=True, sympy=True)
+
+    latexfile.write('Molar Derivative\n')
+
+    # put a dummy symbol in there that is dependent on T to get the
+    # correct derivative of dTdt
+    diff_val = MyImplicitSymbol(r'\dot{T}', (nk))
+    working = assert_subs(
+        dExdt,
+        (dTdt_simple, diff_val),
+        assumptions=[(dTdt_simple, diff_val)]
+    )
+    # and replace the dummy with the original
+    dEdotdnj = diff(working, nk[j])
+
+    write_eq(diff(extra_var_dot, nk[j]), dEdotdnj, register=True, sympy=True)
+
+    latexfile.write('{} Derivative\n'.format(extra_var_name))
+
+    # put a dummy symbol in there that is dependent on T to get the
+    # correct derivative of dTdt
+    diff_val = MyImplicitSymbol(r'\dot{T}', (extra_var))
+    working = assert_subs(
+        dExdt,
+        (dTdt_simple, diff_val),
+        assumptions=[(dTdt_simple, diff_val)]
+    )
+    # and replace the dummy with the original
+    dEdotde = collect(diff(working, extra_var), 1 / T)
+
+    write_eq(diff(extra_var_dot, extra_var),
+             dEdotde, register=True, sympy=True)
 
     write_section(
         r'\texorpdfstring{$\dot{n_k}$}{dnkdt} Derivatives', subsub=True)
@@ -2802,7 +2894,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dFi_sridT_unity = __get_fi_dT(dFi_sridT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_sridT_fac,
                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.unity])
 
-    write_section('Concentration Derivatives', sub=True)
+    write_section('Molar Derivatives', sub=True)
     domegadnj = diff(omega_sym_q_k, nk[j])
     write_eq(Eq(Jac[k + 1, j + 1], diff(wdot[k], nk[j])), domegadnj,
              sympy=True)
