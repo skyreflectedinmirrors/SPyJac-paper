@@ -640,7 +640,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(dExdt_sym, dExdt, register=True, sympy=True)
 
     Cns = Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1))
-    write_eq(Ck[Ns], Cns, sympy=True)
+    write_eq(Ck[Ns], Cns, sympy=True, register=True)
     Cns = assert_subs(Cns, (Ctot_sym, Ctot))
     write_eq(Ck[Ns], Cns, register=True)
     register_equal(Ck[Ns], assert_subs(Cns, (Ctot, Ctot_sym)))
@@ -1464,33 +1464,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Ropf_sym[i], extra_var), dRopfdE, register=True, sympy=True)
     dRoprdE = __get_dr_de(False)
     write_eq(diff(Ropr_sym[i], extra_var), dRoprdE, register=True, sympy=True)
-    write_section(r'Third-Body\slash Falloff Derivatives')
-    write_section('Elementary reactions\n', sub=True)
-    write_eq(diff(ci[i], T), diff(ci_elem, T),
-             enum_conds=reaction_type.elementary)
-    write_eq(diff(ci[i], nk[j]), diff(
-        ci_elem, nk[j], enum_conds=reaction_type.elementary))
+    dRopdE = dRopfdE - dRoprdE
 
-    write_eq(diff(ci[i], extra_var), diff(
-        ci_elem, extra_var, enum_conds=reaction_type.elementary))
-
-    write_section('Third-body enhanced reactions', sub=True)
-    dci_thddT = assert_subs(diff(assert_subs(ci_thd, (Ctot_sym, Ctot)), T),
-                            (Ctot, Ctot_sym))
-
-    write_eq(diff(ci_thd_sym, T), dci_thddT, enum_conds=reaction_type.thd)
-
-    dci_thddnj = diff(assert_subs(ci_thd,
-                                  (Ctot_sym, Ctot),
-                                  (Ck[k], nk[k] / V)),
-                      nk[j])
-    dci_thddnj = assert_subs(simplify(dci_thddnj),
-                             (Sum((-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i]) *
-                                  KroneckerDelta(j, k), (k, 1, Ns - 1)),
-                                 -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
-
-    write_eq(diff(ci_thd_sym, nk[j]), dci_thddnj,
-             enum_conds=[reaction_type.thd, thd_body_type.mix])
     write_section(r'Third-Body\slash Falloff Derivatives')
     write_section('Elementary reactions\n', sub=True)
     write_eq(diff(ci[i], T), diff(ci_elem, T),
@@ -1515,7 +1490,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dci_thddnj = assert_subs(simplify(dci_thddnj),
                              (Sum((-thd_bdy_eff[Ns, i] + thd_bdy_eff[k, i]) *
                                   KroneckerDelta(j, k), (k, 1, Ns - 1)),
-                                 -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]))
+                                 -thd_bdy_eff[Ns, i] + thd_bdy_eff[j, i]),
+                             (Cns_sym, Ck[Ns]))
 
     write_eq(diff(ci_thd_sym, nk[j]), dci_thddnj,
              enum_conds=[reaction_type.thd, thd_body_type.mix])
@@ -1566,6 +1542,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # and eliminate the Delta(m, Ns, j) as it's never true
     dci_spec_dnj = assert_subs(dci_spec_dnj, (
         KroneckerDelta(Ns, m) * KroneckerDelta(j, m), S.Zero),
+        (Cns_sym, Ck[Ns]),
         assumptions=[(KroneckerDelta(Ns, m) * KroneckerDelta(j, m), S.Zero)])
 
     write_eq(diff(ci[i], nk[j]), dci_spec_dnj,
@@ -1576,7 +1553,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     if not conp:
         dci_spec_de = assert_subs(
             dci_spec_de,
-            (diff(Ctot_sym, extra_var), dCtotde))
+            (diff(Ctot_sym, extra_var), dCtotde),)
     else:
         dCkmde = assert_subs(dCkde, (k, m),
                              assumptions=[(k, m)])
@@ -1590,7 +1567,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(ci[i], extra_var), dci_spec_de)
         dci_spec_de = assert_subs(
             Add(*[simplify(x) for x in Add.make_args(dci_spec_de)]),
-            (Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns])
+            (Sum(Ck[k], (k, 1, Ns - 1)), Ctot_sym - Ck[Ns]),
         )
 
     write_eq(diff(ci[i], extra_var), dci_spec_de,
@@ -2160,13 +2137,13 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         write_eq(diff(ci[i], extra_var), dci_de)
         return dci_dT, dci_dnj, dci_de
 
-    dci_falldT, dci_falldnj, dcifall_de = __subs_ci_terms(
+    dci_falldT, dci_falldnj, dci_fallde = __subs_ci_terms(
         dci_falldT, dci_falldnj, dci_fallde, ci_fall)
 
     write_section(
         'Chemically-activated bimolecular reactions (complete)', sub=True)
 
-    dci_chemdT, dci_chemdnj, dcichem_de = __subs_ci_terms(
+    dci_chemdT, dci_chemdnj, dci_chemde = __subs_ci_terms(
         dci_chemdT, dci_chemdnj, dci_chemde, ci_chem)
 
     write_section('Pressure-dependent reaction derivatives')
@@ -2425,7 +2402,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     # Temperature jacobian entries
 
-    write_section(r'\texorpdfstring{$\dot{T}$}{dTdt} Derivatives', subsub=True)
+    write_section(r'\texorpdfstring{$\dot{T}$}{dTdt} Derivatives', sub=True)
     latexfile.write('Molar derivative\n')
     # first we do the concentration derivative
     dTdotdnj_sym = symbols(r'\frac{\partial\dot{T}}{\partial{n_j}}')
@@ -2573,7 +2550,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     write_section(
         r'\texorpdfstring{{$\dot{{{0}}}$}}{{d{0}dt}} Derivatives'.format(
-            extra_var), subsub=True)
+            extra_var), sub=True)
 
     extra_var_dot = MyImplicitSymbol(
         r'\dot{{ {} }}'.format(extra_var), (T, nk, V if conp else P))
@@ -2666,39 +2643,54 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         assumptions=[(dTdt_simple, diff_val)]
     )
     # and replace the dummy with the original
-    dEdotde = collect(diff(working, extra_var), 1 / T)
+    dEdotde = diff(working, extra_var)
+    if not conp:
+        dEdotde = collect(dEdotde, 1 / T)
+    else:
+        dEdotde = expand_mul(dEdotde)
+        dEdotde = simplify(collect(dEdotde, 1 / Ctot_sym))
+
+        withW, withoutW = __separate_on(dEdotde, Wk[k])
+        withW = assert_subs(
+            withW, (
+                next(x for x in Mul.make_args(withW) if isinstance(x, Sum)),
+                Sum((1 - Wk[k] / Wk[Ns]) * (V * diff(wdot[k], V) + wdot[k]),
+                    (k, 1, Ns - 1))
+            )
+        )
+        withoutW = collect(withoutW, 1 / T)
+        dEdotde = Add(*[withW, withoutW])
 
     write_eq(diff(extra_var_dot, extra_var),
              dEdotde, register=True, sympy=True)
 
     write_section(
-        r'\texorpdfstring{$\dot{n_k}$}{dnkdt} Derivatives', subsub=True)
+        r'\texorpdfstring{$\dot{n_k}$}{dnkdt} Derivatives', sub=True)
 
     # concentration Jacobian equations
-    dndot = MyIndexedFunc(r'\dot{n}', (nk, T, P))
-    write_eq(diff(dndot[k], nk[j]), diff(wdot[k], nk[j]))
-    write_eq(diff(dndot[k], T), diff(wdot[k], T))
+    dndot = MyIndexedFunc(r'\dot{n}', (nk, T, P, V))
+    write_eq(diff(dndot[k], nk[j]), diff(dnkdt, nk[j]))
+    write_eq(diff(dndot[k], T), diff(dnkdt, T))
+    write_eq(diff(dndot[k], extra_var), diff(dnkdt, extra_var))
 
     write_section('Jacobian Update Form')
     write_section('Temperature Derivatives', sub=True)
 
-    domegadT = diff(omega_sym_q_k, T)
-    domegadnj = diff(omega_sym_q_k, nk[j])
+    dnk_omega_dt = assert_subs(dnkdt,
+                               (wdot[k], omega_sym_q_k))
 
-    write_eq(Jac[k + 1, 1], diff(wdot[k], T))
-    write_eq(Jac[k + 1, 1], diff(omega_sym_q_k, T), sympy=True)
+    domegadT = diff(dnk_omega_dt, T)
 
-    write_eq(Jac[k + 1, j + 1], diff(wdot[k], nk[j]))
-    write_eq(Jac[k + 1, j + 1], diff(omega_sym_q_k, nk[j]), sympy=True)
+    write_eq(Jac[1, 1], dTdotdT, sympy=True)
+    write_eq(Jac[2, 1], dEdotdT, sympy=True)
+    write_eq(Jac[k + 2, 1], domegadT, sympy=True)
 
     latexfile.write('Converting to update form:\n')
-    domegadT = domegadT.function
-    domegadnj = domegadnj.function
+    domegadT_update = Mul(*[x if not isinstance(x, Sum) else x.function
+                            for x in Mul.make_args(domegadT)])
 
-    write_dummy_eq(latex(Jac[k + 1, 1]) + r'\pluseq' +
-                   latex(domegadT) + r'\text{\quad} k = 1, \ldots, N_{sp} - 1')
-    write_dummy_eq(latex(Jac[k + 1, j + 1]) + r'\pluseq' +
-                   latex(domegadnj) + r'\text{\quad} k,j = 1, \ldots, N_{sp} - 1')
+    write_dummy_eq(latex(Jac[k + 2, 1]) + r'\pluseq ' +
+                   latex(domegadT_update) + r'\text{\quad} k = 1, \ldots, N_{sp} - 1')
 
     dRopdT_temp = Symbol(r'\Theta_{\partial T, i}')
 
@@ -2752,9 +2744,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     latexfile.write('For species $m$ as third-body:\n')
     dqdT_spec_thd = assert_subs(dqdT,
                                 (ci[i], ci_thd_species),
-                                (diff(ci[i], T), dci_spec_dnj),
+                                (diff(ci[i], T), dci_spec_dT),
+                                (Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1)), Ck[Ns]),
                                 assumptions=[(ci[i], ci_thd_species),
-                                             (diff(ci[i], T), dci_spec_dnj)])
+                                             (diff(ci[i], T), dci_spec_dT)])
     write_eq(diff(q_sym[i], T), dqdT_spec_thd, enum_conds=[
              reaction_type.thd, thd_body_type.species])
 
@@ -2772,136 +2765,81 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_section(
         'Unimolecular\slash recombination fall-off reactions', subsub=True)
 
-    dummy_collector = (
-        Beta_0 - Beta_inf + Ea_0 / (R * T) - Ea_inf / (R * T)) / T
     dqdT_fall_thd = assert_subs(dqdT,
                                 (diff(ci[i], T), dci_falldT),
                                 assumptions=[(diff(ci[i], T), dci_falldT)])
-    dqdT_fall_thd = collect(dqdT_fall_thd, ci[i])
+    dqdT_fall_thd = collect(dqdT_fall_thd, [ci[i], Pri_sym / (Pri_sym + 1),
+                                            Rop_sym[i]])
 
-    write_eq(diff(q_sym[i], T), dqdT_fall_thd)
-
-    def __get_ci_dT(starting_form, pri_fac, no_pri_fac, complex_collector, other_collects, expand=False,
-                    enum_conds=None):
-        dci = assert_subs(starting_form,
-                          (dPri_dT_noprifac_sym, no_pri_fac),
-                          (dPri_dT_prifac_sym, pri_fac),
-                          assumptions=[(dPri_dT_noprifac_sym, no_pri_fac),
-                                       (dPri_dT_prifac_sym, pri_fac)])
-
-        dci = __complex_collect(dci, complex_collector, expand=expand)
-        dci = collect(dci, other_collects)
-        dq = assert_subs(dqdT,
-                         (diff(ci[i], T), dci),
-                         assumptions=[(diff(ci[i], T), dci)]
-                         )
-        dq = collect(dq, ci[i])
-        write_eq(diff(q_sym[i], T), dq, enum_conds=enum_conds)
-        return dci, dq
-
-    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
-    dci_fallmix_dT, dqdT_fall_mix_thd = __get_ci_dT(dci_falldT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
-                                                    dummy_collector, [Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]], expand=True,
-                                                    enum_conds=[reaction_type.fall, thd_body_type.mix])
-
-    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
-    dci_fallspec_dT, dqdT_fall_spec_thd = __get_ci_dT(dci_falldT, dPri_specdT_prifac, dPri_specdT_noprifac,
-                                                      dummy_collector, [ci[i]],
-                                                      enum_conds=[reaction_type.fall, thd_body_type.species])
-
-    latexfile.write(
-        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
-    dci_fallunity_dT, dqdT_fall_unity_thd = __get_ci_dT(dci_falldT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
-                                                        collect(
-                                                            dummy_collector - 1/T, 1/T), [ci[i]],
-                                                        enum_conds=[reaction_type.fall, thd_body_type.unity])
+    write_eq(diff(q_sym[i], T), dqdT_fall_thd,
+             enum_conds=[reaction_type.fall])
 
     write_section(r'Chemically-activated bimolecular reactions', subsub=True)
     dqdT_chem_thd = assert_subs(dqdT,
                                 (diff(ci[i], T), dci_chemdT),
                                 assumptions=[(diff(ci[i], T), dci_chemdT)])
-    dqdT_chem_thd = collect(dqdT_chem_thd, ci[i])
+    dqdT_chem_thd = collect(dqdT_chem_thd, [ci[i], 1 / (Pri_sym + 1),
+                                            Rop_sym[i]])
     write_eq(diff(q_sym[i], T), dqdT_chem_thd)
 
-    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
-    dci_chemmix_dT, dqdT_chem_mix_thd = __get_ci_dT(dci_chemdT, dPri_mixdT_prifac, dPri_mixdT_noprifac,
-                                                    dummy_collector, [
-                                                        Ctot_sym * k0_sym * thd_bdy_eff[Ns, i] / (T * kinf_sym * (Pri_sym + 1)), ci[i]],
-                                                    enum_conds=[reaction_type.chem, thd_body_type.mix])
+    write_section(
+        'Reduced Pressure Derivatives', subsub=True
+        )
 
-    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
-    dci_chemspec_dT, dqdT_chem_spec_thd = __get_ci_dT(dci_chemdT, dPri_specdT_prifac, dPri_specdT_noprifac,
-                                                      dummy_collector, [ci[i]],
-                                                      enum_conds=[reaction_type.chem, thd_body_type.species])
+    latexfile.write('For mixture as third-body:\n')
+    write_eq(dPri_dT_prifac_sym, dPri_mixdT_prifac, enum_conds=[
+        thd_body_type.mix])
+    write_eq(dPri_dT_noprifac_sym, dPri_mixdT_noprifac, enum_conds=[
+        thd_body_type.species])
+
+
+    latexfile.write('For species $m$ as third-body:\n')
+    write_eq(dPri_dT_prifac_sym, dPri_specdT_prifac, enum_conds=[
+        thd_body_type.species])
+    write_eq(dPri_dT_noprifac_sym, dPri_specdT_noprifac, enum_conds=[
+        thd_body_type.species])
+
 
     latexfile.write(
-        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
-    dci_chemunity_dT, dqdT_chem_unity_thd = __get_ci_dT(dci_chemdT, dPri_unitydT_prifac, dPri_unitydT_noprifac,
-                                                        collect(
-                                                            dummy_collector - 1/T, 1/T), [ci[i]],
-                                                        enum_conds=[reaction_type.chem, thd_body_type.unity])
+        'If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$ for all species j:\n')
+
+    write_eq(dPri_dT_prifac_sym, dPri_unitydT_prifac, enum_conds=[
+        thd_body_type.unity])
+    write_eq(dPri_dT_noprifac_sym, dPri_unitydT_noprifac, enum_conds=[
+        thd_body_type.unity])
 
     write_section('Falloff Blending Function Forms', subsub=True)
 
-    def __get_fi_dT(starting_form, pri_fac, no_pri_fac, fi_fac, enum_conds=None):
-        dfi = assert_subs(starting_form,
-                          (dFi_dT_fac_sym, fi_fac),
-                          (dPri_dT_prifac_sym, pri_fac),
-                          (dPri_dT_noprifac_sym, no_pri_fac),
-                          assumptions=[(dFi_dT_fac_sym, fi_fac),
-                                       (dPri_dT_prifac_sym, pri_fac),
-                                       (dPri_dT_noprifac_sym, no_pri_fac)])
-        write_eq(dFi_dT_fac_sym, dfi, enum_conds=enum_conds)
-        return dfi
-
-    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
     latexfile.write('For Lindemann\n')
-    dFi_linddT_mix = __get_fi_dT(dFi_linddT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_linddT_fac,
-                                 enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.mix])
+    write_eq(dFi_dT_fac_sym, dFi_linddT_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+             falloff_form.lind])
 
     latexfile.write('For Troe\n')
-    dFi_troedT_mix = __get_fi_dT(dFi_troedT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_troedT_fac,
-                                 enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.mix])
+    write_eq(dFi_dT_fac_sym, dFi_troedT_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+             falloff_form.troe])
 
     latexfile.write('For SRI\n')
-    dFi_sridT_mix = __get_fi_dT(dFi_sridT, dPri_mixdT_prifac, dPri_mixdT_noprifac, dFi_sridT_fac,
-                                enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.mix])
-
-    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
-    latexfile.write('For Lindemann\n')
-    dFi_linddT_spec = __get_fi_dT(dFi_linddT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_linddT_fac,
-                                  enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.species])
-
-    latexfile.write('For Troe\n')
-    dFi_troedT_spec = __get_fi_dT(dFi_troedT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_troedT_fac,
-                                  enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.species])
-
-    latexfile.write('For SRI\n')
-    dFi_sridT_spec = __get_fi_dT(dFi_sridT, dPri_specdT_prifac, dPri_specdT_noprifac, dFi_sridT_fac,
-                                 enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.species])
-
-    latexfile.write(
-        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
-    latexfile.write('For Lindemann\n')
-    dFi_linddT_unity = __get_fi_dT(dFi_linddT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_linddT_fac,
-                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.unity])
-
-    latexfile.write('For Troe\n')
-    dFi_troedT_unity = __get_fi_dT(dFi_troedT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_troedT_fac,
-                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.unity])
-
-    latexfile.write('For SRI\n')
-    dFi_sridT_unity = __get_fi_dT(dFi_sridT, dPri_unitydT_prifac, dPri_unitydT_noprifac, dFi_sridT_fac,
-                                  enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.unity])
+    write_eq(dFi_dT_fac_sym, dFi_sridT_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+             falloff_form.sri])
 
     write_section('Molar Derivatives', sub=True)
-    domegadnj = diff(omega_sym_q_k, nk[j])
-    write_eq(Eq(Jac[k + 1, j + 1], diff(wdot[k], nk[j])), domegadnj,
+    write_eq(Eq(Jac[1, j + 2], dTdotdnj_sym), dTdotdnj,
+             sympy=True)
+    write_eq(Eq(Jac[2, j + 2], diff(extra_var_dot, nk[j])), dEdotdnj,
+             sympy=True)
+    domegadnj = diff(dnk_omega_dt, nk[j])
+    dnkdotdnj = __var_creator(Symbol(r'\dot{n_k}'), nk[j])
+    write_eq(Eq(Jac[k + 2, j + 2], dnkdotdnj), domegadnj,
              sympy=True)
 
     latexfile.write('Converting to Jacobian Update form:\n')
-    domegadnj = domegadnj.function
-    write_dummy_eq(latex(Jac[k + 1, j + 1]) + r'\pluseq' + latex(domegadnj))
+    domegadnj_update = Mul(*[x if not isinstance(x, Sum) else x.function
+                             for x in Mul.make_args(domegadnj)])
+    write_dummy_eq(
+        latex(Jac[k + 2, j + 2]) + r'\pluseq ' + latex(domegadnj_update))
 
     dqdnj = diff(q, nk[j])
     dqdnj = assert_subs(dqdnj,
@@ -2968,23 +2906,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     latexfile.write(
         r'\textbf{Unimolecular\slash recombination fall-off reactions}:' + '\n')
 
-    def __get_ci_dnj(starting_form, pri_fac, other_collects, complex_collector=None,
-                     enum_conds=None):
-        dci = assert_subs(starting_form,
-                          (dPri_dnj_fac_sym, pri_fac),
-                          assumptions=[(dPri_dnj_fac_sym, pri_fac)])
-
-        if complex_collector:
-            dci = __complex_collect(dci, complex_collector, expand=True)
-        dci = collect(dci, other_collects)
-        dq = assert_subs(dqdnj,
-                         (diff(ci[i], nk[j]), dci),
-                         assumptions=[(diff(ci[i], nk[j]), dci)]
-                         )
-        dq = collect(dq, ci[i])
-        write_eq(diff(q_sym[i], nk[j]), dq, enum_conds=enum_conds)
-        return dci, dq
-
     dci_falldnj = __complex_collect(
         dci_falldnj, k0_sym * dPri_dnj_fac_sym / (kinf_sym * (Pri_sym + 1)), expand=True)
     dqdnj_fall_thd = assert_subs(dqdnj,
@@ -2992,22 +2913,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                  assumptions=[(diff(ci[i], nk[j]), dci_falldnj)])
     dqdnj_fall_thd = collect(dqdnj_fall_thd, ci[i])
     write_eq(diff(q_sym[i], nk[j]), dqdnj_fall_thd)
-
-    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
-
-    dci_fallmix_dnj, dqdnj_fall_mix_thd = __get_ci_dnj(dci_falldnj, dPri_mixdnj_fac, [ci[i]],
-                                                       enum_conds=[reaction_type.fall, thd_body_type.mix])
-
-    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
-
-    dci_fallspec_dnj, dqdnj_fall_spec_thd = __get_ci_dnj(dci_falldnj, dPri_specdnj_fac, [ci[i]],
-                                                         enum_conds=[reaction_type.fall, thd_body_type.species])
-
-    latexfile.write(
-        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
-
-    dci_fallunity_dnj, dqdnj_fall_unity_thd = __get_ci_dnj(dci_falldnj, dPri_unitydnj_fac, [ci[i]],
-                                                           enum_conds=[reaction_type.fall, thd_body_type.unity])
 
     write_section('Chemically-activated bimolecular reactions', subsub=True)
 
@@ -3019,73 +2924,177 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dqdnj_chem_thd = collect(dqdnj_chem_thd, ci[i])
     write_eq(diff(q_sym[i], nk[j]), dqdnj_chem_thd)
 
+    write_section('Reduced Pressure Derivatives', subsub=True)
+
     latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
 
-    dci_chemmix_dnj, dqdnj_chem_mix_thd = __get_ci_dnj(dci_chemdnj, dPri_mixdnj_fac, [ci[i]],
-                                                       enum_conds=[reaction_type.chem, thd_body_type.mix])
+    write_eq(dPri_dnj_fac_sym, dPri_mixdnj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.mix])
 
     latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
 
-    dci_chemspec_dnj, dqdnj_chem_spec_thd = __get_ci_dnj(dci_chemdnj, dPri_specdnj_fac, [ci[i]],
-                                                         enum_conds=[reaction_type.chem, thd_body_type.species])
-
+    write_eq(dPri_dnj_fac_sym, dPri_specdnj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.species])
     latexfile.write(
         r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
 
-    dci_chemunity_dnj, dqdnj_chem_unity_thd = __get_ci_dnj(dci_chemdnj, dPri_unitydnj_fac, [ci[i]],
-                                                           enum_conds=[reaction_type.chem, thd_body_type.unity])
+    write_eq(dPri_dnj_fac_sym, dPri_unitydnj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.unity])
 
     write_section('Falloff Blending Function Forms', subsub=True)
 
-    def __get_fi_dnj(starting_form, pri_fac, fi_fac, enum_conds=None):
-        dfi = assert_subs(starting_form,
-                          (dFi_dnj_fac_sym, fi_fac),
-                          (dPri_dnj_fac_sym, pri_fac),
-                          assumptions=[(dFi_dnj_fac_sym, fi_fac),
-                                       (dPri_dnj_fac_sym, pri_fac)])
-        write_eq(dFi_dnj_fac_sym, dfi, enum_conds=enum_conds)
-        return dfi
-
-    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n\n')
     latexfile.write('For Lindemann\n')
-    dFi_linddnj_mix = __get_fi_dnj(dFi_linddnj, dPri_mixdnj_fac, dFi_linddnj_fac,
-                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.mix])
+    write_eq(dFi_dnj_fac_sym, dFi_linddnj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind])
 
     latexfile.write('For Troe\n')
-    dFi_troednj_mix = __get_fi_dnj(dFi_troednj, dPri_mixdnj_fac, dFi_troednj_fac,
-                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.mix])
+    write_eq(dFi_dnj_fac_sym, dFi_troednj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe])
 
     latexfile.write('For SRI\n')
-    dFi_sridnj_mix = __get_fi_dnj(dFi_sridnj, dPri_mixdnj_fac, dFi_sridnj_fac,
-                                  enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.mix])
+    write_eq(dFi_dnj_fac_sym, dFi_troednj_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri])
 
-    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n\n')
-    latexfile.write('For Lindemann\n')
-    dFi_linddnj_spec = __get_fi_dnj(dFi_linddnj, dPri_specdnj_fac, dFi_linddnj_fac,
-                                    enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.species])
+    write_section('{} Derivatives'.format(extra_var_name), sub=True)
+    write_eq(Eq(Jac[1, 2], dTdotdE_sym), dTdotdE,
+             sympy=True)
+    write_eq(Eq(Jac[2, 2], diff(extra_var_dot, extra_var)), dEdotde,
+             sympy=True)
+    domegade = simplify(diff(dnk_omega_dt, extra_var))
+    write_eq(Eq(Jac[k + 2, 2], __var_creator(Symbol(r'\dot{n_k}'), extra_var)), domegade,
+             sympy=True)
 
-    latexfile.write('For Troe\n')
-    dFi_troednj_spec = __get_fi_dnj(dFi_troednj, dPri_specdnj_fac, dFi_troednj_fac,
-                                    enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.species])
+    latexfile.write('Converting to Jacobian Update form:\n')
+    domegade_update = Mul(*[x if not isinstance(x, Sum) else x.function
+                            for x in Mul.make_args(domegade)])
+    write_dummy_eq(latex(Jac[k + 2, 2]) + r'\pluseq ' + latex(domegade_update))
 
-    latexfile.write('For SRI\n')
-    dFi_sridnj_spec = __get_fi_dnj(dFi_sridnj, dPri_specdnj_fac, dFi_sridnj_fac,
-                                   enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.species])
+    dqde = diff(q, extra_var)
+    dqde = assert_subs(dqde,
+                       (diff(Rop_sym[i], extra_var), dRopdE),
+                       assumptions=[(diff(Rop_sym[i], extra_var), dRopdE)])
+    write_eq(diff(q_sym[k], extra_var), dqde)
+
+    write_section('Pressure-dependent reactions', subsub=True)
+
+    dqde_pdep = assert_subs(factor_terms(dqde),
+                            (ci[i], ci_elem),
+                            (diff(ci[i], extra_var), diff(ci_elem, extra_var)),
+                            assumptions=[(ci[i], ci_elem),
+                                         (diff(ci[i], extra_var),
+                                          diff(ci_elem, extra_var))])
+    write_eq(diff(q_sym[k], extra_var), dqde_pdep, enum_conds=[
+             reaction_type.plog, reaction_type.chem])
+
+    write_section('Pressure independent reactions', subsub=True)
+
+    dqde_ind = assert_subs(dqde,
+                           (ci[i], ci_elem),
+                           (diff(ci[i], extra_var), diff(ci_elem, extra_var)),
+                           assumptions=[(ci[i], ci_elem),
+                                        (diff(ci[i], extra_var), diff(ci_elem, extra_var))])
+    write_eq(diff(q_sym[k], extra_var), dqde_ind,
+             enum_conds=[reaction_type.elementary])
+
+    write_section('Third-body enhanced reactions', subsub=True)
+
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
+    dqde_thd = assert_subs(dqde,
+                           (ci[i], ci_thd_sym),
+                           (diff(ci[i], extra_var), dci_thdde),
+                           assumptions=[(ci[i], ci_thd_sym),
+                                        (diff(ci[i], extra_var), dci_thdde)]
+                           )
+
+    write_eq(diff(q_sym[k], extra_var), dqde_thd,
+             enum_conds=[reaction_type.thd, thd_body_type.mix])
+
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    dqde_thd_spec = assert_subs(dqde,
+                                (ci[i], ci_thd_species),
+                                (diff(ci[i], extra_var), dci_spec_de),
+                                (Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1)), Ck[Ns]),
+                                assumptions=[(ci[i], ci_thd_species),
+                                             (diff(ci[i], extra_var), dci_spec_de)]
+                                )
+
+    write_eq(diff(q_sym[k], extra_var), dqde_thd_spec,
+             enum_conds=[reaction_type.thd, thd_body_type.species])
 
     latexfile.write(
-        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n\n')
+        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    dqde_thd_unity = assert_subs(dqde,
+                                 (ci[i], Ctot_sym),
+                                 (diff(ci[i], extra_var), dci_unity_de),
+                                 assumptions=[(ci[i], Ctot_sym),
+                                              (diff(ci[i], extra_var), dci_unity_de)]
+                                 )
+
+    write_eq(diff(q_sym[k], extra_var), dqde_thd_unity,
+             enum_conds=[reaction_type.thd, thd_body_type.unity])
+
+    write_section(r'Unimolecular/recombination fall-off reactions', subsub=True)
+    dqde_fall_thd = assert_subs(dqde,
+                                (diff(ci[i], extra_var), dci_fallde),
+                                assumptions=[(diff(ci[i], extra_var), dci_fallde)])
+    dqde_fall_thd = collect(dqde_fall_thd, ci[i])
+    write_eq(diff(q_sym[i], extra_var), dqde_fall_thd)
+
+    write_section(r'Chemically-activated bimolecular reactions', subsub=True)
+    dqde_chem_thd = assert_subs(dqde,
+                                (diff(ci[i], extra_var), dci_chemde),
+                                assumptions=[(diff(ci[i], extra_var), dci_chemde)])
+    dqde_chem_thd = collect(dqde_chem_thd, ci[i])
+    write_eq(diff(q_sym[i], extra_var), dqde_chem_thd)
+
+    write_section(r'Reduced Pressure Derivatives', subsub=True)
+    latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
+    write_eq(dPri_de_prifac_sym, dPri_mixde_prifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.mix])
+
+    write_eq(dPri_de_noprifac_sym, dPri_mixde_noprifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.mix])
+
+    latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
+    write_eq(dPri_de_prifac_sym, dPri_specde_prifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.species])
+
+    write_eq(dPri_de_noprifac_sym, dPri_specde_noprifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.species])
+
+    latexfile.write(
+        r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
+    write_eq(dPri_de_prifac_sym, dPri_unityde_prifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.unity])
+
+    write_eq(dPri_de_noprifac_sym, dPri_unityde_noprifac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         thd_body_type.unity])
+
+    write_section('Falloff Blending Function Forms', subsub=True)
+
     latexfile.write('For Lindemann\n')
-    dFi_linddnj_unity = __get_fi_dnj(dFi_linddnj, dPri_unitydnj_fac, dFi_linddnj_fac,
-                                     enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.lind, thd_body_type.unity])
+    write_eq(dFi_de_fac_sym, dFi_lindde_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         falloff_form.lind])
 
     latexfile.write('For Troe\n')
-    dFi_troednj_unity = __get_fi_dnj(dFi_troednj, dPri_unitydnj_fac, dFi_troednj_fac,
-                                     enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe, thd_body_type.unity])
+    write_eq(dFi_de_fac_sym, dFi_troede_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         falloff_form.troe])
 
     latexfile.write('For SRI\n')
-    dFi_sridnj_unity = __get_fi_dnj(dFi_sridnj, dPri_unitydnj_fac, dFi_sridnj_fac,
-                                    enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri, thd_body_type.unity])
-
+    write_eq(dFi_de_fac_sym, dFi_sride_fac,
+             enum_conds=[reaction_type.fall, reaction_type.chem,
+                         falloff_form.sri])
 
 class filer(object):
 
