@@ -620,7 +620,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dExdt = simplify(assert_subs(dExdt, (
         diff(n_sym, t), dndt), (
-        diff(T, t), dTdt), (
         diff(nk[k], t), dnkdt), (
         n_sym, P * V / (R * T))
     ))
@@ -2563,8 +2562,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     working = assert_subs(
         dExdt,
         (Ctot_sym, Ctot),
-        (dTdt_simple, diff_val),
-        assumptions=[(dTdt_simple, diff_val)]
+        (dTdt_sym, diff_val),
+        assumptions=[(dTdt_sym, diff_val)]
     )
     # and replace the dummy with the original
     dEdotdT = diff(working, T)
@@ -2624,8 +2623,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     diff_val = MyImplicitSymbol(r'\dot{T}', (nk))
     working = assert_subs(
         dExdt,
-        (dTdt_simple, diff_val),
-        assumptions=[(dTdt_simple, diff_val)]
+        (dTdt_sym, diff_val),
+        assumptions=[(dTdt_sym, diff_val)]
     )
     # and replace the dummy with the original
     dEdotdnj = diff(working, nk[j])
@@ -2639,8 +2638,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     diff_val = MyImplicitSymbol(r'\dot{T}', (extra_var))
     working = assert_subs(
         dExdt,
-        (dTdt_simple, diff_val),
-        assumptions=[(dTdt_simple, diff_val)]
+        (dTdt_sym, diff_val),
+        assumptions=[(dTdt_sym, diff_val)]
     )
     # and replace the dummy with the original
     dEdotde = diff(working, extra_var)
