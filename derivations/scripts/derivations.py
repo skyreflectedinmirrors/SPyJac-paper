@@ -80,6 +80,9 @@ class CustomReprPrinter(ReprPrinter):
     def _print_NumberSymbol(self, expr):
         return repr(expr)
 
+    def _print_Float(self, expr):
+        return repr(expr)
+
     def _print_IndexedFunc(self, expr):
         r = expr.__class__.__name__
         r += '(%s,%s)' % (srepr(expr.label), self.__get_func_form(expr))
@@ -566,13 +569,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     else:
         dTdt = -Sum(u[k] * wdot[k], (k, 1, Ns)) / \
             Sum(Ck[k] * cv[k], (k, 1, Ns))
-    write_eq(dTdt_sym, dTdt, register=True)
-
-    write_eq(dTdt_sym,
-             assert_subs(
-                dTdt,
-                (wdot[k], dnkdt_sym / V)),
-             sympy=True)
+    write_eq(dTdt_sym, dTdt, register=True, sympy=True)
 
     latexfile.write('From conservation of mass:\n')
     n_eq = Sum(nk[k] * Wk[k], (k, 1, Ns))
