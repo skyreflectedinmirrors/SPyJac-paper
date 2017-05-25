@@ -557,6 +557,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dnkdt = wdot[k] * V
     write_eq(dnkdt_sym, dnkdt, register=True)
 
+    register_equal(dnkdt_sym / V, dnkdt / V)
+
     dTdt_sym = diff(T, t)
     if conp:
         dTdt = -Sum(h[k] * wdot[k], (k, 1, Ns)) / \
@@ -565,6 +567,12 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         dTdt = -Sum(u[k] * wdot[k], (k, 1, Ns)) / \
             Sum(Ck[k] * cv[k], (k, 1, Ns))
     write_eq(dTdt_sym, dTdt, register=True)
+
+    write_eq(dTdt_sym,
+             assert_subs(
+                dTdt,
+                (wdot[k], dnkdt_sym / V)),
+             sympy=True)
 
     latexfile.write('From conservation of mass:\n')
     n_eq = Sum(nk[k] * Wk[k], (k, 1, Ns))
@@ -2381,7 +2389,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     # save a copy of this form as it's very compact
     dTdt_simple = dTdt
-    write_eq(dTdt_sym, dTdt, sympy=True, register=True)
+    write_eq(dTdt_sym, dTdt)
 
     # and simplify the full sum more
     dTdt = assert_subs(
@@ -2396,8 +2404,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     CkCpSum_full = den
     register_equal(CkCpSum_full, CkCpSum)
     write_eq(dTdt_sym, dTdt, register=True)
-
-    dTdt_full_sum = dTdt
 
     # Temperature jacobian entries
 
