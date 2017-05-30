@@ -2843,46 +2843,47 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_dummy_eq(
         latex(Jac[k + 2, j + 2]) + r'\pluseq ' + latex(domegadnj_update))
 
-    dqdnj = diff(q, nk[j])
-    dqdnj = assert_subs(dqdnj,
-                        (diff(Rop_sym[i], nk[j]), dRopdnj))
-    write_eq(diff(q_sym[k], nk[j]), dqdnj)
+    Vdqdnj = diff(q, nk[j])
+    Vdqdnj = assert_subs(Vdqdnj,
+                         (diff(Rop_sym[i], nk[j]), dRopdnj))
+    Vdqdnj = __simplify_per_term(V * Vdqdnj)
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj)
 
     write_section('Pressure-dependent reactions', subsub=True)
 
-    dqdnj_pdep = assert_subs(dqdnj,
+    Vdqdnj_pdep = assert_subs(Vdqdnj,
                              (ci[i], ci_elem),
                              (diff(ci[i], nk[j]), diff(ci_elem, nk[j])),
                              assumptions=[(ci[i], ci_elem),
                                           (diff(ci[i], nk[j]), diff(ci_elem, nk[j]))])
-    write_eq(diff(q_sym[k], nk[j]), dqdnj_pdep, enum_conds=[
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj_pdep, enum_conds=[
              reaction_type.plog, reaction_type.chem])
 
     write_section('Pressure independent reactions', subsub=True)
 
-    dqdnj_ind = assert_subs(dqdnj,
+    Vdqdnj_ind = assert_subs(Vdqdnj,
                             (ci[i], ci_elem),
                             (diff(ci[i], nk[j]), diff(ci_elem, nk[j])),
                             assumptions=[(ci[i], ci_elem),
                                          (diff(ci[i], nk[j]), diff(ci_elem, nk[j]))])
-    write_eq(diff(q_sym[k], nk[j]), dqdnj_ind,
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj_ind,
              enum_conds=[reaction_type.elementary])
 
     write_section('Third-body enhanced reactions', subsub=True)
 
     latexfile.write(r'\textbf{For mixture as third-body}:' + '\n')
-    dqdnj_thd = assert_subs(dqdnj,
+    Vdqdnj_thd = assert_subs(Vdqdnj,
                             (ci[i], ci_thd_sym),
                             (diff(ci[i], nk[j]), dci_thddnj),
                             assumptions=[(ci[i], ci_thd_sym),
                                          (diff(ci[i], nk[j]), dci_thddnj)]
                             )
 
-    write_eq(diff(q_sym[k], nk[j]), dqdnj_thd,
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj_thd,
              enum_conds=[reaction_type.thd, thd_body_type.mix])
 
     latexfile.write(r'\textbf{For species $m$ as third-body}:' + '\n')
-    dqdnj_thd_spec = assert_subs(dqdnj,
+    Vdqdnj_thd_spec = assert_subs(Vdqdnj,
                                  (ci[i], ci_thd_species),
                                  (diff(ci[i], nk[j]), dci_spec_dnj),
                                  (Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1)), Ck[Ns]),
@@ -2890,19 +2891,19 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                               (diff(ci[i], nk[j]), dci_spec_dnj)]
                                  )
 
-    write_eq(diff(q_sym[k], nk[j]), dqdnj_thd_spec,
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj_thd_spec,
              enum_conds=[reaction_type.thd, thd_body_type.species])
 
     latexfile.write(
         r'\textbf{If all $' + latex(thd_bdy_eff[j, i]) + ' = 1$}:' + '\n')
-    dqdnj_thd_unity = assert_subs(dqdnj,
+    Vdqdnj_thd_unity = assert_subs(Vdqdnj,
                                   (ci[i], Ctot_sym),
                                   (diff(ci[i], nk[j]), dci_unity_dnj),
                                   assumptions=[(ci[i], Ctot_sym),
                                                (diff(ci[i], nk[j]), dci_unity_dnj)]
                                   )
 
-    write_eq(diff(q_sym[k], nk[j]), dqdnj_thd_unity,
+    write_eq(V * diff(q_sym[k], nk[j]), Vdqdnj_thd_unity,
              enum_conds=[reaction_type.thd, thd_body_type.unity])
 
     write_section('Falloff Reactions', subsub=True)
@@ -2911,21 +2912,21 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dci_falldnj = __complex_collect(
         dci_falldnj, k0_sym * dPri_dnj_fac_sym / (kinf_sym * (Pri_sym + 1)), expand=True)
-    dqdnj_fall_thd = assert_subs(dqdnj,
+    Vdqdnj_fall_thd = assert_subs(Vdqdnj,
                                  (diff(ci[i], nk[j]), dci_falldnj),
                                  assumptions=[(diff(ci[i], nk[j]), dci_falldnj)])
-    dqdnj_fall_thd = collect(dqdnj_fall_thd, ci[i])
-    write_eq(diff(q_sym[i], nk[j]), dqdnj_fall_thd)
+    Vdqdnj_fall_thd = collect(Vdqdnj_fall_thd, ci[i])
+    write_eq(V * diff(q_sym[i], nk[j]), Vdqdnj_fall_thd)
 
     write_section('Chemically-activated bimolecular reactions', subsub=True)
 
     dci_chemdnj = __complex_collect(
         dci_chemdnj, k0_sym * dPri_dnj_fac_sym / (kinf_sym * (Pri_sym + 1)), expand=True)
-    dqdnj_chem_thd = assert_subs(dqdnj,
+    Vdqdnj_chem_thd = assert_subs(Vdqdnj,
                                  (diff(ci[i], nk[j]), dci_chemdnj),
                                  assumptions=[(diff(ci[i], nk[j]), dci_chemdnj)])
-    dqdnj_chem_thd = collect(dqdnj_chem_thd, ci[i])
-    write_eq(diff(q_sym[i], nk[j]), dqdnj_chem_thd)
+    Vdqdnj_chem_thd = collect(Vdqdnj_chem_thd, ci[i])
+    write_eq(V * diff(q_sym[i], nk[j]), Vdqdnj_chem_thd)
 
     write_section('Reduced Pressure Derivatives', subsub=True)
 
