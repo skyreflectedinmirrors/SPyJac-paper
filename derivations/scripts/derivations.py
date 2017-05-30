@@ -2885,6 +2885,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dqdnj_thd_spec = assert_subs(dqdnj,
                                  (ci[i], ci_thd_species),
                                  (diff(ci[i], nk[j]), dci_spec_dnj),
+                                 (Ctot_sym - Sum(Ck[k], (k, 1, Ns - 1)), Ck[Ns]),
                                  assumptions=[(ci[i], ci_thd_species),
                                               (diff(ci[i], nk[j]), dci_spec_dnj)]
                                  )
