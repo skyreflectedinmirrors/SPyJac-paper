@@ -2959,7 +2959,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
              enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.troe])
 
     latexfile.write('For SRI\n')
-    write_eq(dFi_dnj_fac_sym, dFi_troednj_fac,
+    write_eq(dFi_dnj_fac_sym, dFi_sridnj_fac,
              enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri])
 
     write_section('{} Derivatives'.format(extra_var_name), sub=True)
