@@ -2491,7 +2491,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # now expand to replace with the dT/dt term
     num, den = fraction(factor_terms(dTdotdnj, CkCpSum))
     # need to move to fraction rather than 1 /
-    num = assert_subs(num, (dTdt_simple, dTdt_sym))
+    num = assert_subs(num, (-dTdt_simple, -dTdt_sym))
     dTdotdnj = num / den
     write_eq(dTdotdnj_sym, dTdotdnj)
 
@@ -2718,6 +2718,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(dndot[k], T), diff(dnkdt, T))
     write_eq(diff(dndot[k], extra_var), diff(dnkdt, extra_var))
 
+    # get wdot diffs in terms of dnk's
+    dwdotdnj = solve(Eq(diff(dndot[k], nk[j]), diff(dnkdt, nk[j])), diff(wdot[k], nk[j]))[0]
+    register_equal(diff(wdot[k], nk[j]), dwdotdnj)
+    dwdotdT = solve(Eq(diff(dndot[k], T), diff(dnkdt, T)), diff(wdot[k], T))[0]
+    register_equal(diff(wdot[k], T), dwdotdT)
+    dwdotdE = solve(Eq(diff(dndot[k], extra_var), diff(dnkdt, extra_var)), diff(wdot[k], extra_var))[0]
+    register_equal(diff(wdot[k], extra_var), dwdotdE)
+
     write_section('Jacobian Update Form')
     write_section('Temperature Derivatives', sub=True)
 
@@ -2725,6 +2733,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                                (wdot[k], omega_sym_q_k))
 
     domegadT = diff(dnk_omega_dt, T)
+
+    dTdotdT = assert_subs(dTdotdT, (diff(wdot[k], T), dwdotdT))
+    dEdotdT = assert_subs(dEdotdT, (diff(wdot[k], T), dwdotdT))
 
     write_eq(Jac[1, 1], dTdotdT, sympy=True)
     write_eq(Jac[2, 1], dEdotdT, sympy=True)
@@ -2871,6 +2882,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
              falloff_form.sri])
 
     write_section('Molar Derivatives', sub=True)
+
+    dTdotdnj = assert_subs(dTdotdnj, (diff(wdot[k], nk[j]), dwdotdnj))
+    dEdotdnj = assert_subs(dEdotdnj, (diff(wdot[k], nk[j]), dwdotdnj))
+
     write_eq(Eq(Jac[1, j + 2], dTdotdnj_sym), dTdotdnj,
              sympy=True)
     write_eq(Eq(Jac[2, j + 2], diff(extra_var_dot, nk[j])), dEdotdnj,
@@ -3006,6 +3021,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
              enum_conds=[reaction_type.fall, reaction_type.chem, falloff_form.sri])
 
     write_section('{} Derivatives'.format(extra_var_name), sub=True)
+
+    dTdotdE = assert_subs(dTdotdE, (diff(wdot[k], extra_var), dwdotdE))
+    dEdotde = assert_subs(dEdotde, (diff(wdot[k], extra_var), dwdotdE))
     write_eq(Eq(Jac[1, 2], dTdotdE_sym), dTdotdE,
              sympy=True)
     write_eq(Eq(Jac[2, 2], diff(extra_var_dot, extra_var)), dEdotde,
