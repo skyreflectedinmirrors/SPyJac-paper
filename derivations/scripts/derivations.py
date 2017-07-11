@@ -273,6 +273,18 @@ def assert_subs(obj, *subs_args, **kw_args):
         # the reverse
 
         def __sum_test(v1, v2):
+            if v1 in equivalences:
+                if any(v1t == v2 for v1t in equivalences[v1]):
+                    return True
+            elif -v1 in equivalences:
+                if any(v1t == -v2 for v1t in equivalences[-v1]):
+                    return True
+            if v2 in equivalences:
+                if any(v2t == v1 for v2t in equivalences[v2]):
+                    return True
+            elif -v2 in equivalences:
+                if any(v2t == -v1 for v2t in equivalences[-v2]):
+                    return True
             lim = v1.limits[0]
             # get the Ns term, and test equivalence
             v2Ns = next((x for x in v2.args if
@@ -477,6 +489,20 @@ def __separate_on(term, separate_on, separator_class=Add):
                 withoutterms.append(x)
     return separator_class(*withterms), separator_class(*withoutterms)
 
+def __complex_collect(obj, term_list, expand=False):
+    if not isinstance(term_list, list):
+        term_list = [term_list]
+    temp_syms = [Symbol('temp{}'.format(i)) for i in range(len(term_list))]
+    cobj = assert_subs(obj,
+                       *[(term_list[i], temp_syms[i]) for i in range(len(term_list))],
+                       assumptions=[(term_list[i], temp_syms[i]) for i in range(len(term_list))])
+    if expand:
+        cobj = factor_terms(collect(expand_mul(cobj), temp_syms))
+    else:
+        cobj = collect(cobj, temp_syms)
+    return assert_subs(cobj,
+                       *[(temp_syms[i], term_list[i]) for i in range(len(term_list))],
+                       assumptions=[(temp_syms[i], term_list[i]) for i in range(len(term_list))])
 
 def _derivation(file, efile, conp=True, thermo_deriv=False):
     # set files
@@ -564,9 +590,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dTdt_sym = diff(T, t)
     if conp:
+        energy = h
         dTdt = -Sum(h[k] * wdot[k], (k, 1, Ns)) / \
             Sum(Ck[k] * cp[k], (k, 1, Ns))
     else:
+        energy = u
         dTdt = -Sum(u[k] * wdot[k], (k, 1, Ns)) / \
             Sum(Ck[k] * cv[k], (k, 1, Ns))
     write_eq(dTdt_sym, dTdt, register=True, sympy=True)
@@ -601,6 +629,31 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         diff(nk[k], t), dnkdt_sym))
     dndt_sym = diff(n_sym, t)
 
+    latexfile.write('Thus...')
+    wdot_ns = assert_subs(diff(nk[Ns], t),
+                          (diff(nk[Ns], t), wdot[Ns] * V),
+                          assumptions=[(Ns, k)])
+    dwdotNsdt = assert_subs(dnNsdt,
+                            (diff(nk[k], t), wdot[k] * V))
+    dwdotNsdt = solve(
+        Eq(wdot_ns, dwdotNsdt), wdot[Ns])[0]
+    dwdotNsdt = assert_subs(
+        dwdotNsdt,
+        (Sum(KroneckerDelta(Ns, k) * Wk[k], (k, 1, Ns - 1)), S.Zero),
+        assumptions=[
+            (Sum(KroneckerDelta(Ns, k) * Wk[k], (k, 1, Ns - 1)), S.Zero)])
+    write_eq(wdot[Ns], dwdotNsdt, register=True)
+
+    latexfile.write('And...')
+    dTdt = assert_subs(
+            dTdt,
+            (Sum(energy[k] * wdot[k], (k, 1, Ns)),
+             Sum(energy[k] * wdot[k], (k, 1, Ns - 1)) +
+             energy[Ns] * dwdotNsdt)
+        )
+    dTdt = __simplify_per_term(dTdt, Mul)
+    write_eq(dTdt_sym, dTdt)
+
     write_eq(dndt_sym, dndt)
 
     dndt = simplify(assert_subs(dndt, (
@@ -630,6 +683,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     ))
 
     write_eq(dExdt_sym, dExdt)
+
+    write_section('Other defns', sub=True)
 
     Ctot_sym = MyImplicitSymbol('[C]', args=(T, P), **assumptions)
     Ctot = P / (R * T)
@@ -1665,7 +1720,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         register_equal(dPri_dT_noprifac_sym, dPri_dT_noprifac)
 
         # now do the dPri/dnj term
-        dPri_dnj_fac = dPri_dnj / (k0_sym / kinf_sym)
+        dPri_dnj_fac = dPri_dnj / (k0_sym / (kinf_sym * V))
         dPri_dnj_fac_sym = Symbol(
             r'\bar{{\theta}}_{{P_{{r, i}}, \partial n_j, {}}}'.format(descriptor))
         register_equal(dPri_dnj_fac_sym, dPri_dnj_fac)
@@ -1998,8 +2053,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     dFi_troednj = assert_subs(dFi_troednj, (diff(Fi_troe_sym, Pri_sym), dFi_troedPri),
                               (diff(Pri_sym, nk[j]), dPri_dnj))
-    dFi_troednj = simplify(dFi_troednj)
-    dFi_troednj_fac = dFi_troednj / Fi_troe_sym
+    dFi_troednj = __complex_collect(simplify(dFi_troednj), Fi_troe_sym * dPri_dnj)
+    dFi_troednj_fac = dFi_troednj / (Fi_troe_sym * dPri_dnj)
 
     dFi_troednj = assert_subs(dFi_troednj, (dFi_troednj_fac, dFi_dnj_fac_sym),
                               assumptions=[(dFi_troednj_fac, dFi_dnj_fac_sym)])
@@ -2037,7 +2092,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     latexfile.write('Where\n')
     dXdPri = assert_subs(diff(X, Pri_sym), (X, X_sym))
     write_eq(diff(X_sym, Pri_sym), dXdPri, register=True)
-    register_equal(diff(X_sym, Pri_sym), dXdPri)
 
     write_eq(
         r'\frac{\partial X}{\partial n_j} = ' + latex(diff(X_sym, nk[j])))
@@ -2055,8 +2109,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dFi_sridnj = simplify(
         assert_subs(dFi_sridnj, (diff(X_sym, Pri_sym), dXdPri),
                     (diff(Pri_sym, nk[j]), dPri_dnj)))
+    dFi_sridnj = __complex_collect(dFi_sridnj, Fi_sym * dPri_dnj)
 
-    dFi_sridnj_fac = dFi_sridnj / Fi_sym
+    dFi_sridnj_fac = dFi_sridnj / (Fi_sym * dPri_dnj)
     dFi_sridnj = assert_subs(dFi_sridnj, (dFi_sridnj_fac, dFi_dnj_fac_sym),
                              assumptions=[(dFi_sridnj_fac, dFi_dnj_fac_sym)])
     write_eq(diff(Fi_sym, nk[j]), dFi_sridnj)
@@ -2127,7 +2182,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
             (ci_term, ci[i]),
             assumptions=[(ci_term, ci[i])])
         dci_dnj = factor_terms(collect(dci_dnj,
-                                       [ci[i], Pri_sym]))
+                                       [dPri_dnj, Fi_sym]))
 
         dci_de = assert_subs(
             expand(assert_subs(dci_de, (diff(Fi_sym, extra_var), dFi_de),
@@ -2135,7 +2190,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
             (ci_term, ci[i]),
             assumptions=[(ci_term, ci[i])])
         dci_de = factor_terms(collect(dci_de,
-                                      [ci[i], Pri_sym]))
+                                      [ci[i], Pri_sym, dPri_de_prifac_sym]))
         write_eq(diff(ci[i], T), dci_dT)
         write_eq(diff(ci[i], nk[j]), dci_dnj)
         write_eq(diff(ci[i], extra_var), dci_de)
@@ -2183,20 +2238,6 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_pdepdT = dRopf_pdepdT - dRopr_pdepdT
 
     # transfer dkf_pdepdT / kf_sym for a temporary variable for simplification
-    def __complex_collect(obj, term_list, expand=False):
-        if not isinstance(term_list, list):
-            term_list = [term_list]
-        temp_syms = [Symbol('temp{}'.format(i)) for i in range(len(term_list))]
-        cobj = assert_subs(obj,
-                           *[(term_list[i], temp_syms[i]) for i in range(len(term_list))],
-                           assumptions=[(term_list[i], temp_syms[i]) for i in range(len(term_list))])
-        if expand:
-            cobj = factor_terms(collect(expand_mul(cobj), temp_syms))
-        else:
-            cobj = collect(cobj, temp_syms)
-        return assert_subs(cobj,
-                           *[(temp_syms[i], term_list[i]) for i in range(len(term_list))],
-                           assumptions=[(temp_syms[i], term_list[i]) for i in range(len(term_list))])
 
     dRop_pdepdT = __complex_collect(dRop_pdepdT, dkf_pdepdT / kf_sym[i])
     dRop_pdepdT = collect(dRop_pdepdT, Ctot_sym / T)
@@ -2386,7 +2427,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     # save a copy of this form as it's very compact
     dTdt_simple = dTdt
-    write_eq(dTdt_sym, dTdt)
+    write_eq(dTdt_sym, dTdt, register=True)
 
     # and simplify the full sum more
     dTdt = assert_subs(
@@ -2402,10 +2443,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     register_equal(CkCpSum_full, CkCpSum)
     write_eq(dTdt_sym, dTdt, register=True)
 
-    # Temperature jacobian entries
-
     write_section(r'\texorpdfstring{$\dot{T}$}{dTdt} Derivatives', sub=True)
     latexfile.write('Molar derivative\n')
+    # Temperature jacobian entries
+    register_equal(dTdt_simple, dTdt_sym)
     # first we do the concentration derivative
     dTdotdnj_sym = symbols(r'\frac{\partial\dot{T}}{\partial{n_j}}')
 
@@ -2428,8 +2469,9 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdotdnj_rep = 0
     for term in Add.make_args(dTdotdnj):
         num, den = fraction(term)
-        num = factor_terms(
-            assert_subs(simplify(num), (CkCpSum_full, CkCpSum)))
+        if num.has(CkCpSum_full):
+            num = factor_terms(
+                assert_subs(simplify(num), (CkCpSum_full, CkCpSum)))
         if isinstance(den, Pow):
             den = assert_subs(__powsimp(den),
                               (CkCpSum_full, CkCpSum))
@@ -2440,28 +2482,17 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dTdotdnj = dTdotdnj_rep
     write_eq(dTdotdnj_sym, dTdotdnj)
 
-    # another level of compactness, replaces the kronecker delta sum
     dTdotdnj = assert_subs(dTdotdnj, (
-        Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1), (
-        Sum(KroneckerDelta(j, k) * spec_heat[k], (k, 1, Ns - 1)),
-            spec_heat[j]))
+            Sum(KroneckerDelta(j, k), (k, 1, Ns - 1)), 1), (
+            Sum(-KroneckerDelta(j, k) * (spec_heat[Ns] - spec_heat[k]) / V, (k, 1, Ns - 1)),
+                -(spec_heat[Ns] - spec_heat[j]) / V))
     write_eq(dTdotdnj_sym, dTdotdnj)
 
     # now expand to replace with the dT/dt term
-    def __factor_denom(expr):
-        num, den = fraction(ratsimp(expr))
-        factor = next(x for x in den.args if isinstance(x, Pow))
-        arg, power = factor.args
-        new_den = Mul(*[x for x in den.args if x != factor] +
-                      [arg**(power - 1)])
-        return Add(*[simplify(x) / arg for x in Add.make_args(num)]) / new_den
-
-    dTdotdnj = __factor_denom(dTdotdnj)
-    write_eq(dTdotdnj_sym, dTdotdnj)
-
-    dTdotdnj = collect(dTdotdnj, dTdt_simple)
-    dTdotdnj = assert_subs(dTdotdnj, (-dTdt_simple, -dTdt_sym),
-                           (dTdt_simple, dTdt_sym))
+    num, den = fraction(factor_terms(dTdotdnj, CkCpSum))
+    # need to move to fraction rather than 1 /
+    num = assert_subs(num, (dTdt_simple, dTdt_sym))
+    dTdotdnj = num / den
     write_eq(dTdotdnj_sym, dTdotdnj)
 
     latexfile.write('Temperature derivative\n')
@@ -2490,6 +2521,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         else:
             rv = rv + num / assert_subs(simplify(den), (CkCpSum_full, CkCpSum))
     dTdotdT = rv
+
     write_eq(dTdotdT_sym, dTdotdT)
 
     # now we factor out the Ck cp sum
@@ -2499,6 +2531,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     # and replace the dTdt term
     dTdotdT = assert_subs(dTdotdT, (dTdt_simple, dTdt_sym),
                           (-dTdt_simple, -dTdt_sym))
+
     write_eq(dTdotdT_sym, dTdotdT)
 
     # the next simplification is of the [C] terms
@@ -2509,14 +2542,24 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
 
     num = assert_subs(num, (Sum(Ck[k], (k, 1, Ns)), Sum(
         Ck[k], (k, Ns, Ns)) + Sum(Ck[k], (k, 1, Ns - 1))))
-    num = collect(simplify(num), dTdt_sym)
+    num = __simplify_per_term(collect(num, dTdt_sym))
 
     num = assert_subs(num, ((-diff(spec_heat[Ns], T) + spec_heat[Ns] / T) * Sum(Ck[k], (k, Ns, Ns)),
                             Sum((-diff(spec_heat[k], T) + spec_heat[Ns] / T) * Ck[k], (k, Ns, Ns))))
 
-    num = collect(simplify(num), dTdt_sym)
+    num = __simplify_per_term(num)
+    # collect terms inside sums
+    terms = list(Add.make_args(num))
+    for ind, term in enumerate(terms):
+        inner = Mul.make_args(term)
+        inner = [x if not isinstance(x, Sum) else
+                 Sum(collect(x.function, (wdot[k], diff(wdot[k], T))), *x.limits) for x in inner]
+        terms[ind] = Mul(*inner)
+    num = Add(*terms)
 
     dTdotdT = num / den
+    assert_subs(dTdotdT, (diff(energy[Ns], T), spec_heat[Ns]),
+                assumptions=[(diff(energy[Ns], T), spec_heat[Ns])])
     write_eq(dTdotdT_sym, dTdotdT)
 
     # and finally substitute the energy derivative
