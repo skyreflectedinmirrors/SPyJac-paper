@@ -1314,6 +1314,14 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Rop_sym[i], T), dRop_nonexpdT,
              enum_conds=reversible_type.non_explicit)
 
+    dBkdt = simplify(diff(Bk, T))
+    dBkdt = assert_subs(dBkdt, (
+        dBkdt, (a[k, 0] - 1 + a[k, 5] / T) / T + Rational(1, 2) * a[k, 1] + T * (
+            Rational(1, 3) * a[k, 2] + T * (Rational(1, 4) * a[k, 3] +
+                                            Rational(1, 5) * T * a[k, 4]))))
+
+    write_eq(diff(B_sym[k], T), dBkdt, sympy=True)
+
     # Derivatives of the extra dependent variable
     write_section(r'{} derivatives'.format(extra_var_name), sub=True)
 
