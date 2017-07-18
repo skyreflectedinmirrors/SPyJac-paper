@@ -2381,8 +2381,8 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
         dRopr_pdepde = dRoprdE
 
     latexfile.write('For Chebyshev reactions\n')
-    mul_term = diff(kf_sym[i], T) / diff(log(kf_sym[i]), T)
-    assert mul_term == kf_sym[i]
+    mul_term = diff(kf_sym[i], T) / diff(log(kf_sym[i], 10), T)
+    assert mul_term == kf_sym[i] * log(10)
     dkf_chebdT = diff(kf_cheb, T) * mul_term
     write_eq(diff(kf_sym[i], T), dkf_chebdT)
     dkf_chebdT = assert_subs(dkf_chebdT, (diff(Tred_sym, T), diff(Tred, T)))
