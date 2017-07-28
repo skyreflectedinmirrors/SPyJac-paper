@@ -2335,8 +2335,10 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
                     Product(Ck[k]**nuv[k, i], (k, 1, Ns))))
 
         dRoptde = assert_subs(dRoptde, (diff(kt_sym[i], extra_var), dkde),
+                              (kt_sym[i], ksym[i]),
                               (Ropf if fwd else Ropr, Ropt_sym[i]),
-                              assumptions=[(diff(kt_sym[i], extra_var), dkde)])
+                              assumptions=[(diff(kt_sym[i], extra_var), dkde),
+                                           (kt_sym[i], ksym[i])])
         write_eq(diff(Ropt_sym[i], extra_var), dRoptde,
                  register=writetofile, sympy=writetofile)
 
@@ -2402,8 +2404,11 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     dRop_chebdT = collect(dRop_chebdT, Ctot_sym / T)
     write_eq(diff(Rop_sym[i], T), dRop_chebdT)
 
-    dkf_chebde = diff(kf_cheb, extra_var) * kf_sym[i]
+    mul_term = diff(kf_cheb_sym[i], extra_var) / diff(
+        log(kf_cheb_sym[i], 10), extra_var)
+    dkf_chebde = diff(kf_cheb, extra_var) * mul_term
     if not conp:
+        assert mul_term == kf_cheb_sym[i] * log(10)
         write_eq(diff(kf_cheb_sym[i], extra_var), dkf_chebde)
         register_equal(diff(Pred_sym, extra_var), diff(Pred, extra_var))
         dkf_chebde = assert_subs(
