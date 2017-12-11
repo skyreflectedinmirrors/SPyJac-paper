@@ -24,10 +24,10 @@ from sympy.core.singleton import S
 from sympy.printing.repr import srepr
 
 
-from constants import *
-from sympy_addons import ImplicitSymbol, MyIndexedBase
-from custom_sympy_classes import MyImplicitSymbol, MyIndexedFunc, IndexedConc
-from reaction_types import *
+from .constants import *
+from .sympy_addons import ImplicitSymbol, MyIndexedBase
+from .custom_sympy_classes import MyImplicitSymbol, MyIndexedFunc, IndexedConc
+from .reaction_types import *
 import os
 
 home_dir = os.path.dirname(os.path.realpath(__file__))
