@@ -8,14 +8,12 @@
 ]{biblatex}
 \addbibresource{derivations.bib}
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
-% multiple eq references
-\usepackage{cleverref}
 
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
 \newcommand{\ns}{\ensuremath{{N_{sp}}}}
-\newcommand{\conp}{constant-pressure}
-\newcommand{\conv}{constant-volume}
+\newcommand{\conp}{CONP}
+\newcommand{\conv}{CONV}
 \newcommand{\dconp}{\ensuremath{,\qquad\text{for \conp}}}
 \newcommand{\dconv}{\ensuremath{,\qquad\text{for \conv}}}
 \newcommand{\Ru}{\ensuremath{\mathcal{R}}}
@@ -23,6 +21,7 @@
 \begin{document}
 \section{Introduction}
 This document contains the complete derivations for \texttt{pyJac} v2.0, which generates code to evaluate the chemical source term and analytical chemical kinetic Jacobians of \conp\slash\conv, fixed-mass, adiabatic reactors.
+Note that equations specific to the constant-pressure or constant-volume derivation will be marked with \conp or \conv respectively
 
 \section{State variables}
 
@@ -91,16 +90,22 @@ Using~\eqref{source:spec_ns}, the total molar rate of change can be determined:
 \label{source:total_molar}
 \end{align}
 
-Combining~\cref{source:param_incomplete,source:total_molar,source:spec} gives the final form of the pressure and volume terms:
+Combining~\eqref{source:spec},\eqref{source:param_incomplete},\eqref{source:total_molar} gives the final form of the pressure and volume terms:
 \begin{subequations}
 \label{source:param_complete}
 \begin{align}
-\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T R_u}{P} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)\dconp, \\
-\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T R_u \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}\dconv
+\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T R_u}{P} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)&\dconp, \\
+\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T R_u \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\dconv
 \end{align}
 \end{subequations}
-
-
+Additionally, the temperature source terms may be expanded to remove references to the last species' source term and overall production rate:
+\begin{subequations}
+\label{source:temperature_complete}
+\begin{align}
+\frac{\text{d} T }{\text{d} t } = - \frac{\sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{p,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{p,\ns}} + {C_{p, k}}\right) [C]_{k}}\dconp,\\
+\frac{\text{d} T }{\text{d} t } = - \frac{\sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{v,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{v,\ns}} + {C_{v, k}}\right) [C]_{k}}\dconv
+\end{align}
+\end{subequations}
 
 
 \printbibliography 
