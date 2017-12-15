@@ -1,0 +1,108 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb}
+\usepackage[
+    backend=biber,
+    style=numeric,
+    citestyle=numeric
+]{biblatex}
+\addbibresource{derivations.bib}
+\usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
+% multiple eq references
+\usepackage{cleverref}
+
+\newcommand{\pluseq}{\mathrel{{+}{=}}}
+\newcommand{\minuseq}{\mathrel{{-}{=}}}
+\newcommand{\ns}{\ensuremath{{N_{sp}}}}
+\newcommand{\conp}{constant-pressure}
+\newcommand{\conv}{constant-volume}
+\newcommand{\dconp}{\ensuremath{,\qquad\text{for \conp}}}
+\newcommand{\dconv}{\ensuremath{,\qquad\text{for \conv}}}
+\newcommand{\Ru}{\ensuremath{\mathcal{R}}}
+
+\begin{document}
+\section{Introduction}
+This document contains the complete derivations for \texttt{pyJac} v2.0, which generates code to evaluate the chemical source term and analytical chemical kinetic Jacobians of \conp\slash\conv, fixed-mass, adiabatic reactors.
+
+\section{State variables}
+
+\begin{subequations}
+\begin{align}
+\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns - 1}\right\}\dconp, \\
+\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns - 1}\right\}\dconv
+\end{align}
+\end{subequations}
+where $T$ is the temperature, $P$ and $V$ the pressure and volume respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
+
+From the ideal gas law, the number of moles of the final species is determined as:
+\begin{subequations}
+\begin{align}
+n &= \frac{V P}{T \Ru} = \sum_{i=1}^{\ns}{n_i}, \label{source:moles}\\
+n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
+\end{align}
+\end{subequations}
+
+\section{Chemical source terms}
+The chemical source terms for this system are:
+\begin{subequations}
+\begin{align}
+\frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
+\frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
+\end{align}
+\end{subequations}
+For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
+\begin{equation}
+\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k}
+\label{source:spec}
+\end{equation}
+where $\dot{\omega}_k$ is the $kth$ species overall production rate, and the temperature production rates are~\cite{TurnsStephenR2012Aitc}:
+\begin{subequations}
+\label{source:temperature_incomplete}
+\begin{align}
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{p, k}}}\dconp, \\
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{v, k}}}\dconv
+\end{align}
+\end{subequations}
+where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure specific heat, constant-volume specific heat of species $k$ in molar units, while $[C]_{k}$ is the concentration.
+
+From the ideal gas law, source terms for the volume and pressure variables may derived:
+\begin{subequations}
+\label{source:param_incomplete}
+\begin{align}
+\frac{\text{d} V }{\text{d} t } &= \frac{R_u}{P} \left(T \frac{\text{d} n }{\text{d} t } + \frac{\text{d} T }{\text{d} t } n\right)\dconp, \\
+\frac{\text{d} P }{\text{d} t } &= \frac{R_u}{V} \left(T \frac{\text{d} n }{\text{d} t } + \frac{\text{d} T }{\text{d} t } n\right)\dconv
+\end{align}
+\end{subequations}
+
+Finally, the conservation of mass is invoked:
+\begin{equation*}
+ m = \sum_{k=1}^{\ns} W_{k} n_{k},
+\end{equation*}
+to determine the source term of the last species:
+\begin{equation}
+ \frac{\text{d} n }{\text{d} t }_{\ns} = - \frac{1}{W_{\ns}} \sum_{k=1}^{\ns - 1} W_{k} \frac{\text{d} n }{\text{d} t }_{k}
+ \label{source:spec_ns}
+\end{equation}
+where $W_{k}$ is the molecular weight of the $k$th species.
+Using~\eqref{source:spec_ns}, the total molar rate of change can be determined:
+\begin{align}
+\frac{\text{d} n }{\text{d} t } &= \sum_{k=1}^{\ns} \frac{\text{d} n }{\text{d} t }_{k}, \nonumber \\
+\frac{\text{d} n }{\text{d} t } &= \sum_{k=1}^{\ns - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \frac{\text{d} n }{\text{d} t }_{k}
+\label{source:total_molar}
+\end{align}
+
+Combining~\cref{source:param_incomplete,source:total_molar,source:spec} gives the final form of the pressure and volume terms:
+\begin{subequations}
+\label{source:param_complete}
+\begin{align}
+\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T R_u}{P} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)\dconp, \\
+\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T R_u \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}\dconv
+\end{align}
+\end{subequations}
+
+
+
+
+\printbibliography 
+
+\end{document}
