@@ -10,6 +10,8 @@
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % dcases
 \usepackage{mathtools}
+% for text right arrow
+\usepackage{textcomp}
 
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
@@ -59,8 +61,8 @@ n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
 \end{align}
 \end{subequations}
 
-\subsection{Chemical source terms}
-The chemical source terms for this system are:
+\subsection{Thermo-chemical source terms}
+The evolution of the thermo-chemical state variables of this system is described by a set of ordinary-differential equations:
 \begin{subequations}
 \begin{align}
 \frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
@@ -159,6 +161,7 @@ R_{i} &= {R_f}_{i} - {R_r}_{i} \\
 \end{align}
 where ${k_f}_{i}$ and ${k_r}_{i}$ are the forward and reverse reaction coefficients (respectively) for the $i$th reaction, and the third-body\slash pressure modification $c_{i}$ is given by:
 \begin{equation}
+\label{e:rxn_pressure}
 c_i = \begin{dcases}
   1 &\text{for elementary reactions,} \\
   [X]_i &\text{for third-body enhanced reactions,} \\
@@ -171,7 +174,8 @@ These terms are defined in the following sections.
 
 The forward reaction rate coefficient $k_{f, i}$ is given by the three-parameter Arrhenius expression:
 \begin{equation}
-  {k_f}_{i} = A_{i} T^{\beta_{i}} \operatorname{exp}\left({- \frac{{E_{a}}_{i}}{T R_u}}\right) \;,
+  \label{e:arrhenius}
+  {k_f}_{i} = A_{i} T^{\beta_{i}} \operatorname{exp}\left({- \frac{{E_{a}}_{i}}{T \Ru}}\right) \;,
 \end{equation}
 where $A_i$ is the pre-exponential factor, $\beta_i$ is the temperature exponent, and $T_{a, i}$ is the activation temperature given by $T_{a, i} = E_{a, i} / \mathcal{R}$.
 
@@ -194,8 +198,119 @@ Note that in \texttt{pyJac}, reversible reactions with explicit reverse Arrheniu
 For reversible reactions without an explicit parameterization, the reverse rate coefficient is calculated from ratio of the forward rate coefficient and the equilibrium constant:
 \begin{align}
  {k_r}_{i} &= \frac{{k_f}_{i}}{{K_c}_{i}}\; , \\
- {K_c}_{i} &= \left(\left(\frac{P_{atm}}{T R_u}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) {K_p}_{i}\; , \\
+ {K_c}_{i} &= \left(\left(\frac{P_{atm}}{T \Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) {K_p}_{i}\; ,\text{ and} \label{e:kc}\\
+ {K_p}_{i} &= \text{exp}\left(\frac{\Delta S^{\circ}_k}{\Ru} - \frac{\Delta H^{\circ}_k}{\Ru T}\right) = \text{exp}\left(\sum_{k=1}^{\ns}\nu_{ki}\left(\frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T}\right)\right) \label{e:kp}
 \end{align}
+where $P_{atm}$ is the pressure of one standard atmosphere in appropriate units.
+
+By combining~\eqref{e:kc}~and~\eqref{e:kp}, we obtain:
+\begin{equation}
+ {K_c}_{i} = \left(\left(\frac{P_{atm}}{\Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) \operatorname{exp}\left({\sum_{k=1}^{\ns} \nu_{k,i} B_{k}}\right)
+\end{equation}
+where, $B_k$ is:
+\begin{align}
+ B_{k} &= \frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T} - \ln{T} \nonumber\; , \\
+ B_{k} &= T \left(T \left(T \left(\frac{T a_{k,4}}{20} + \frac{a_{k,3}}{12}\right) + \frac{a_{k,2}}{6}\right) + \frac{a_{k,1}}{2}\right) \nonumber \\
+       & \quad + \left(a_{k,0} - 1\right) \log{\left (T \right )} - a_{k,0} + a_{k,6} - \frac{a_{k,5}}{T}
+\end{align}
+from Eqs.~\eqref{e:hk} and~\eqref{e:sk}.
+
+\subsection{Third-body effects}
+\label{s:thdbody}
+
+For a reaction enhanced (or diminished) by the presence of a third body, the reaction rate is modified by the third-body concentration $[X]_i$ given by
+\begin{equation}
+[X]_{i} = \sum_{k=1}^{\ns} \alpha_{k,i} [C]_{k} \;,
+\end{equation}
+where $\alpha_{k,i}$ is the third-body efficiency of species $k$ in the $i$th reaction.
+For a default third-body efficiency of $\alpha_{k,i} = 1$, this may be rearranged to the compact-storage form:
+\begin{equation}
+ [X]_{i} = [C] + \sum_{k=1}^{\ns} \left(\alpha_{k,i} - 1\right) [C]_{k} \;,
+\end{equation}
+where only species with non-default third-body efficiencies must be stored in the model.
+Expanding the concentration of the last species gives:
+\begin{equation}
+\label{e:thd_mix}
+ [X]_{i}=[C] \alpha_{\ns,i} + \sum_{k=1}^{-1 + \ns} \left(- \alpha_{\ns,i} + \alpha_{k,i}\right) [C]_{k}\;.
+\end{equation}
+If all species in the mixture contribute equally as third bodies, then $\alpha_{k,i} = 1$ for all species:
+\begin{equation}
+\label{e:thd_unity}
+ [X]_{i} = [C] = \frac{P}{\Ru T} \;.
+\end{equation}
+In addition, a single species may act as the third body in which case
+\begin{equation}
+ [X]_{i} = [C_m]
+\end{equation}
+where the $m$th species is the third body.
+For evaluation of Jacobian entries, the expanded form:
+\begin{equation}
+\label{e:thd_spec}
+ [X]_{i}=\left([C] - \sum_{k=1}^{-1 + \ns} [C]_{k}\right) \delta_{\ns m} + \left(- \delta_{\ns m} + 1\right) [C]_{m}
+\end{equation}
+will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if the third body species $m$ is the last species in the model.
+
+
+\subsection{Falloff reactions}
+Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure- ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using Eq.~\eqref{e:arrhenius}.
+The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the third-body concentration (based on either the mixture as a whole including any efficiencies $\alpha_{k,i}$, or a specific species), define a reduced pressure $P_{r,i}$ given by
+\begin{equation}
+ P_{r, i}=\frac{[X]_{i} k_{0, i}}{k_{\infty, i}}
+\end{equation}
+where $[X]_{i}$ is the appropriate third-body concentration as described in Sec.~\ref{s:thdbody}
+
+The falloff blending factor $F_i$ used in Eq.~\eqref{e:rxn_pressure} is determined based on one of three representations: the Lindemann~\cite{Lindemann:1922cz}, Troe~\cite{Gilbert:1983bb}, and SRI~\cite{Stewart:1989gj} falloff approaches
+\begin{equation}
+F_i = \begin{dcases}
+1 &\text{for Lindemann,} \\
+F_{\text{cent}}^{ \left( 1 + ( A_{\text{Troe}} / B_{\text{Troe}} )^2 \right)^{-1} } &\text{for Troe, or} \\
+d T^e \left( a \cdot \exp \left( -\frac{b}{T} \right) + \exp \left( -\frac{T}{c} \right) \right)^X &\text{for SRI.}
+\end{dcases}
+\end{equation}
+The Troe representation is described by the variables:
+\begin{align}
+ F_{cent} &= a \operatorname{exp}\left({- \frac{T}{T^{*}}}\right) + \left(- a + 1\right) \operatorname{exp}\left({- \frac{T}{T^{***}}}\right) + \operatorname{exp}\left({- \frac{T^{**}}{T}}\right) \;, \\ 
+ A_{Troe} &= - 0.67 \log_{10}{\left (F_{cent} \right )} + \log_{10}{\left (P_{r, i} \right )} - 0.4 \;\text{, and}\\
+ B_{Troe} &= - 1.1762 \log_{10}{\left (F_{cent} \right )} - 0.14 \log_{10}{\left (P_{r, i} \right )} + 0.806 
+\end{align}
+where $a$, $T^{***}$, $T^*$, and $T^{**}$ are specified parameters.
+The final parameter $T^{**}$ is optional, and, if it is not used, the final term of $F_{\text{cent}}$ is omitted.
+
+The exponent used in the SRI representation is given by:
+\begin{equation}
+ X = \frac{1}{\log_{10}^{2}{\left (P_{r, i} \right )} + 1}
+\end{equation}
+where $a$, $b$, and $c$ are required parameters.
+The parameters $d$ and $e$ are optional; if not specified, $d = 1$ and $e = 0$.
+
+\subsection{Pressure-dependent reactions}
+
+In addition to the falloff approach given previously, two additional formulations can be used to describe the pressure dependence of reactions that do not follow the modification factor $c_i$ approach.
+The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using Eq.~\eqref{e:arrhenius}:
+\begin{align}
+k_1 (T) &= A_1 T^{\beta_1} \exp \left( -\frac{T_{a, 1}}{T} \right) \text{ at } P_1 \text{ and} \label{e:plog_k1} \\
+k_2 (T) &= A_2 T^{\beta_2} \exp \left( -\frac{T_{a, 2}}{T} \right) \text{ at } P_2 \;, \label{e:plog_k2}
+\end{align}
+where the Arrhenius coefficients are given for each pressure $p_1$ and $p_2$.
+Then, the reaction rate coefficient at a particular pressure $p$ between $p_1$ and $p_2$ can be determined through logarithmic interpolation:
+\begin{equation}
+\log{\left ({k_f}_{i} \right )} = \frac{\left(- \log{\left (k_{1} \right )} + \log{\left (k_{2} \right )}\right) \left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \log{\left (k_{1} \right )}
+\end{equation}
+
+In addition, the pressure dependence of a reaction can be expressed through a bivariate Chebyshev polynomial fit~\cite{Venkatesh:1997hv,Venkatesh:1997ik,Venkatesh:2000gj,chemkin:2012,Goodwin:2015aa}:
+\begin{equation}
+\log_{10} k_f (T, p) = \sum_{i = 1}^{N_T} \sum_{j = 1}^{N_p} \eta_{ij} \phi_i (\tilde{T}) \phi_j \left(\tilde{p}\right) \label{e:cheb} \;,
+\end{equation}
+where $\eta_{ij}$ is the coefficient corresponding to the grid points $i$ and $j$, $N_T$ and $N_p$ are the numbers of grid points for temperature and pressure, respectively, and $\phi_n$ is the Chebyshev polynomial of the first kind of degree $n - 1$ typically expressed as
+\begin{equation}
+\phi_n (x) = \mathcal{T}_{n-1} (x) = \cos \left( (n - 1) \arccos (x) \right) \quad \text{for } |x| \leq 1 \;.
+\end{equation}
+The reduced temperature $\tilde{T}$ and pressure $\tilde{p}$ are given by
+\begin{align}
+\tilde{T} &\equiv \frac{2 T^{-1} - T^{-1}_{\min} - T^{-1}_{\max}}{T^{-1}_{\max} - T^{-1}_{\min}} \quad\text{and} \\
+\tilde{p} &\equiv \frac{2\log_{10} p - \log_{10} p_{\min} - \log_{10} p_{\max}}{\log_{10} p_{\max} - \log_{10} p_{\min}} \;,
+\end{align}
+where $T_{\min} \leq T \leq T_{\max}$ and $p_{\min} \leq p \leq p_{\max}$ describe the ranges of validity for temperature and pressure.
 
 
 \printbibliography 
