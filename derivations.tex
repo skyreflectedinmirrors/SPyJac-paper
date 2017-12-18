@@ -12,6 +12,7 @@
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
 \newcommand{\ns}{\ensuremath{{N_{sp}}}}
+\newcommand{\nr}{\ensuremath{{N_{reac}}}}
 \newcommand{\conp}{CONP}
 \newcommand{\conv}{CONV}
 \newcommand{\dconp}{\ensuremath{,\qquad\text{for \conp}}}
@@ -20,8 +21,10 @@
 
 \begin{document}
 \section{Introduction}
-This document contains the complete derivations for \texttt{pyJac} v2.0, which generates code to evaluate the chemical source term and analytical chemical kinetic Jacobians of \conp\slash\conv, fixed-mass, adiabatic reactors.
-Note that equations specific to the constant-pressure or constant-volume derivation will be marked with \conp or \conv respectively
+This document contains the complete derivations for \texttt{pyJac} v2.0, which generates code to evaluate the chemical source term and analytical chemical kinetic Jacobians of constant-pressure\slash constant-volume, fixed-mass, adiabatic reactors.
+Note that equations specific to the constant-pressure or constant-volume derivation will be marked with \conp~or \conv~respectively.
+The derivations in this script based upon the output of the script \href{https://github.com/arghdos/SPyJac-paper/blob/master/derivations/scripts/derivations.py}{derivations.py} in the GitHub repository for this paper.
+This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and was tested with versions 1.0 and 1.1.1
 
 \section{State variables}
 
@@ -74,9 +77,10 @@ From the ideal gas law, source terms for the volume and pressure variables may d
 \end{subequations}
 
 Finally, the conservation of mass is invoked:
-\begin{equation*}
- m = \sum_{k=1}^{\ns} W_{k} n_{k},
-\end{equation*}
+\begin{align*}
+ \frac{\text{d} m }{\text{d} t } &= 0 \\
+ &= \sum_{k=1}^{\ns}  W_{k} \frac{\text{d} n }{\text{d} t }_{k},
+\end{align*}
 to determine the source term of the last species:
 \begin{equation}
  \frac{\text{d} n }{\text{d} t }_{\ns} = - \frac{1}{W_{\ns}} \sum_{k=1}^{\ns - 1} W_{k} \frac{\text{d} n }{\text{d} t }_{k}
@@ -98,7 +102,7 @@ Combining~\eqref{source:spec},\eqref{source:param_incomplete},\eqref{source:tota
 \frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\dconv
 \end{align}
 \end{subequations}
-Additionally, the temperature source terms may be expanded to remove references to the last species' source term and overall production rate:
+Additionally, the temperature source terms may be expanded to contain only state variables (i.e., by removal of the last species' source term and overall production rate):
 \begin{subequations}
 \label{source:temperature_complete}
 \begin{align}
@@ -110,6 +114,28 @@ where $[C]$ is the total concentration:
 \begin{equation}
  [C] = \frac{P}{T \Ru}
 \end{equation}
+This form is used for differentiation, but~\eqref{source:temperature_incomplete} will often be used as well due to its compactness.
+
+\section{Thermal properties}
+The standard-state thermodynamic properties (in molar units) for a gaseous species $k$ is defined using the standard seven-coefficient polynomial of Gordon and McBride~\cite{gordon1994computer}:
+\begin{align}
+\frac{C_{p,k}^{\circ}}{\mathcal{R}} &= a_{0,k} + T \left( a_{1,k} + T \left( a_{2,k} + T \left( a_{3,k} + a_{4,k} T \right) \right) \right) \label{e:cpk} \\
+\frac{H_k^{\circ}}{\mathcal{R}} &= T \left( a_{0,k} + T \left( \frac{a_{1,k}}{2} + T \left( \frac{a_{2,k}}{3} + T \left( \frac{a_{3,k}}{4} + \frac{a_{4,k}}{5} T \right) \right) \right) \right) + a_{5,k} \label{e:hk} \\
+\frac{S_k^{\circ}}{\mathcal{R}} &= a_{0,k} \ln T + T \left( a_{1,k} + T \left( \frac{a_{2,k}}{2} + T \left( \frac{a_{3,k}}{3} + \frac{a_{4,k}}{4} T \right) \right) \right) + a_{6,k} \label{e:sk}
+\end{align}
+where $C_{p,k}$ and $H_k$ are as described previously, $S_k$ is the entropy in molar units, and the ${}^{\circ}$ indicates a standard-state property at one atmosphere (equivalent to the property at any pressure for calorically perfect gases).
+
+\section{Reaction rate expressions}
+The net species rate of production is defined as:
+\begin{equation}
+ \dot{\omega}_{k} = \sum_{i=1}^{\nr} \nu_{k,i} q_{i}
+\end{equation}
+where $\nr$ is the number of reactions in the chemical kinetic model, $\nu_{k, i}$ the overall stoichionetric coefficient of species $k$ in reaction $i$ and $q_i$ the net rate-of-progress for reaction $i$:
+\begin{align}
+\nu_{k,i} &= \nu^{\prime}_{k,i} - \nu^{\prime\prime}_{k,i} \\
+q_{i} &= R_{i} c_{i}
+\end{align}
+with $\nu^{\prime}_{k,i}$ and $\nu^{\prime\prime}_{k,i}$ the 
 
 
 
