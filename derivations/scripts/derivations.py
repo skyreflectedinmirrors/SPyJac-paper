@@ -800,7 +800,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_section('Definitions')
     nu_f = MyIndexedBase(r'\nu^{\prime}')
     nu_r = MyIndexedBase(r'\nu^{\prime\prime}')
-    nu = nu_f[k, i] - nu_r[k, i]
+    nu = nu_r[k, i] - nu_f[k, i]
     nu_sym = MyIndexedBase(r'\nu')
     write_eq(nu_sym[k, i], nu)
 
