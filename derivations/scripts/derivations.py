@@ -871,7 +871,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_dummy_eq(latex(Kp_sym[i]) + ' = ' +
                    r'\text{exp}(\frac{\Delta S^{\circ}_k}{R_u} - \frac{\Delta H^{\circ}_k}{R_u T})')
     write_dummy_eq(latex(Kp_sym[i]) + ' = ' +
-                   r'\text{exp}(\sum_{k=1}^{N_s}\frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T})')
+                   r'\text{exp}\left(\sum_{k=1}^{N_s}\nu_{ki}\left(\frac{S^{\circ}_k}{R_u} - \frac{H^{\circ}_k}{R_u T}\right)\right)')
 
     B_sym = MyIndexedFunc('B', T)
     Kc = ((Patm / R)**Sum(nu_sym[k, i], (k, 1, Ns))) * \
