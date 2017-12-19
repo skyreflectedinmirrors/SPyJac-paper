@@ -56,7 +56,7 @@ where $T$ is the temperature, $P$ and $V$ the pressure and volume respectively, 
 From the ideal gas law, the number of moles of the final species is determined as:
 \begin{subequations}
 \begin{align}
-n &= \frac{V P}{T \Ru} = \sum_{i=1}^{\ns}{n_i}, \label{source:moles}\\
+n &= \frac{V P}{T \Ru} = \sum_{i=1}^{\ns}{n_i}, \label{e:source_moles}\\
 n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
 \end{align}
 \end{subequations}
@@ -64,9 +64,10 @@ n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
 \subsection{Thermo-chemical source terms}
 The evolution of the thermo-chemical state variables of this system is described by a set of ordinary-differential equations:
 \begin{subequations}
+\label{e:source_terms}
 \begin{align}
-\frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
-\frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
+f &= \frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
+f &= \frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
 \end{align}
 \end{subequations}
 For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
@@ -119,7 +120,14 @@ Combining~\eqref{source:spec},\eqref{source:param_incomplete},\eqref{source:tota
 \frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\dconv
 \end{align}
 \end{subequations}
-Additionally, the temperature source terms may be expanded to contain only state variables (i.e., by removal of the last species' source term and overall production rate):
+
+Additionally, the concentration and moles of the last species in the model (which is not a state variable) may be expanded in terms of the state variables of the system:
+\begin{equation}
+ \label{e:last_spec_conc}
+   [C]_{\ns} = [C] - \sum_{k=1}^{-1 + \ns} [C]_{k}
+\end{equation}
+
+Using Eqs.~\eqref{e:last_spec_conc}, \eqref{source:spec} and \eqref{source:spec_ns}, the temperature source terms may be expanded to contain only state variables (i.e., by removal of the last species' source term and overall production rate):
 \begin{subequations}
 \label{source:temperature_complete}
 \begin{align}
@@ -145,6 +153,7 @@ where $C_{p,k}$ and $H_k$ are as described previously, $S_k$ is the entropy in m
 \subsection{Reaction rate expressions}
 The net species rate of production is defined as:
 \begin{equation}
+ \label{e:spec_rop}
  \dot{\omega}_{k} = \sum_{i=1}^{\nr} \nu_{k,i} q_{i}
 \end{equation}
 where $\nr$ is the number of reactions in the chemical kinetic model, $\nu_{k, i}$ the overall stoichiometric coefficient of species $k$ in reaction $i$ and $q_i$ the net rate-of-progress for reaction $i$:
@@ -155,9 +164,9 @@ q_{i} &= R_{i} c_{i}
 with $\nu^{\prime}_{k,i}$ and $\nu^{\prime\prime}_{k,i}$ the product and reactant stoichiometric cofficients (respectively) of species $k$ in reaction $i$.
 The base rate-of-progress for the $i$th reversible reaction $R_{i}$ is given by:
 \begin{align}
-R_{i} &= {R_f}_{i} - {R_r}_{i} \\
-{R_f}_{i} &= {k_f}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} \\
-{R_r}_{i} &= {k_r}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
+R_{i} &= {R_f}_{i} - {R_r}_{i} \label{e:ropnet}\\
+{R_f}_{i} &= {k_f}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} \label{e:ropf}\\
+{R_r}_{i} &= {k_r}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} \label{e:ropr}
 \end{align}
 where ${k_f}_{i}$ and ${k_r}_{i}$ are the forward and reverse reaction coefficients (respectively) for the $i$th reaction, and the third-body\slash pressure modification $c_{i}$ is given by:
 \begin{equation}
@@ -197,7 +206,7 @@ By definition, the reverse rate coefficient of irreversible reactions ${k_r}_{i}
 Note that in \texttt{pyJac}, reversible reactions with explicit reverse Arrhenius parameters are split into two irreversible reactions; this simplifies calculation inside the generated code, and eases comparison to Cantera~\cite{Goodwin:2015aa} which applies the same transformation.
 For reversible reactions without an explicit parameterization, the reverse rate coefficient is calculated from ratio of the forward rate coefficient and the equilibrium constant:
 \begin{align}
- {k_r}_{i} &= \frac{{k_f}_{i}}{{K_c}_{i}}\; , \\
+ {k_r}_{i} &= \frac{{k_f}_{i}}{{K_c}_{i}}\; , \label{e:kr}\\
  {K_c}_{i} &= \left(\left(\frac{P_{atm}}{T \Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) {K_p}_{i}\; ,\text{ and} \label{e:kc}\\
  {K_p}_{i} &= \text{exp}\left(\frac{\Delta S^{\circ}_k}{\Ru} - \frac{\Delta H^{\circ}_k}{\Ru T}\right) = \text{exp}\left(\sum_{k=1}^{\ns}\nu_{ki}\left(\frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T}\right)\right) \label{e:kp}
 \end{align}
@@ -205,10 +214,12 @@ where $P_{atm}$ is the pressure of one standard atmosphere in appropriate units.
 
 By combining~\eqref{e:kc}~and~\eqref{e:kp}, we obtain:
 \begin{equation}
+ \label{e:kc_in_kp}
  {K_c}_{i} = \left(\left(\frac{P_{atm}}{\Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) \operatorname{exp}\left({\sum_{k=1}^{\ns} \nu_{k,i} B_{k}}\right)
 \end{equation}
 where, $B_k$ is:
 \begin{align}
+ \label{e:Bk}
  B_{k} &= \frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T} - \ln{T} \nonumber\; , \\
  B_{k} &= T \left(T \left(T \left(\frac{T a_{k,4}}{20} + \frac{a_{k,3}}{12}\right) + \frac{a_{k,2}}{6}\right) + \frac{a_{k,1}}{2}\right) \nonumber \\
        & \quad + \left(a_{k,0} - 1\right) \log{\left (T \right )} - a_{k,0} + a_{k,6} - \frac{a_{k,5}}{T}
@@ -312,6 +323,164 @@ The reduced temperature $\tilde{T}$ and pressure $\tilde{p}$ are given by
 \end{align}
 where $T_{\min} \leq T \leq T_{\max}$ and $p_{\min} \leq p \leq p_{\max}$ describe the ranges of validity for temperature and pressure.
 
+\section{Jacobian derivation}
+
+Let $\mathcal{J}$ denote the Jacobian matrix corresponding to the set of ODEs defined in~\eqref{e:source_terms}.
+$\mathcal{J}$ is filled with the partial derivatives $\partial f / \partial \Phi$, such that:
+\begin{equation}
+ \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns - 1
+\end{equation}
+We will begin by deriving subcomponents of the Jacobian matrix in the subsequent sections before presenting the final form of the Jacobian matrix in Sec.~\ref{s:jac_final}.
+
+\subsection{Species rate of production derivatives}
+First, we evaluate the derivatives of the net species rate of production equation~\eqref{e:spec_rop}, with respect to temperature:
+\begin{equation}
+ \frac{\partial \dot{\omega} }{\partial T }_{k} = \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right) \;,
+\end{equation}
+other species:
+\begin{equation}
+ \frac{\partial q }{\partial n[k] }_{i} = R_{i} \frac{\partial c }{\partial n[j] }_{i} + \frac{\partial R }{\partial n[j] }_{i} c_{i}
+\end{equation}
+and the state parameter:
+\begin{subequations}
+ \begin{align}
+  \frac{\partial \dot{\omega} }{\partial V }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial V }_{i} + \nu_{k,i} \frac{\partial R }{\partial V }_{i} c_{i}\right)\dconp,\\
+  \frac{\partial \dot{\omega} }{\partial P }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial P }_{i} + \nu_{k,i} \frac{\partial R }{\partial P }_{i} c_{i}\right)\dconv
+ \end{align}
+\end{subequations}
+
+\subsection{Rate of progress derivatives}
+\subsubsection{Temperature derivative}
+Next, the rate of progress derivatives are evaluated, first with respect to temperature:
+\begin{equation}
+ \frac{\partial R }{\partial T }_{i} = \frac{\partial}{\partial T}\left({k_f}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}}\right)
+\end{equation}
+the derivative of the forward reaction rate coefficient is:
+\begin{equation}
+ \label{e:dkf_dt}
+ \frac{\text{d} {k_f} }{\text{d} T }_{i} = \frac{{k_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
+\end{equation}
+While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, rate of production, etc.---related to the last species to obtain the correct derivative, in this case using Eq.~\eqref{e:last_spec_conc}:
+\begin{equation}
+ {R_f} = \left(\left(- \sum_{k=1}^{-1 + \ns} [C]_{k} + \frac{P}{T \Ru}\right)^{\nu^{\prime}_{\ns,i}}\right) {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
+\end{equation}
+The derivative of a species concentration with respect to temperature is zero for both \conp~and \conv:
+\begin{align}
+ \frac{\partial [C]_{k}}{\partial T} &= \frac{\partial}{\partial T} \left(\frac{n_k}{V}\right), \quad \left\{k \ne \ns\right\} \nonumber \\
+				     &= 0
+\end{align}
+as the volume is either constant (\conp) or a state variable and a function of time only (\conv).
+Hence, the full derivative of the forward rate of progress is:
+\begin{equation}
+ \label{e:dropfdt_1}
+ \frac{\partial {R_f} }{\partial T }_{i} = \frac{\text{d} {k_f} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} - \frac{[C] \nu^{\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
+\end{equation}
+By defining a temporary variable (for species $l = \left\{j, \ns\right\}$) $S^{\prime}_{l}$:
+\begin{equation}
+ \label{e:s_temp}
+ S^{\prime}_{l} = \nu^{\prime}_{l,i} [C]_{l}^{\nu^{\prime}_{l,i} - 1} \prod_{\substack{1 \leq l \leq l - 1\\l + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
+\end{equation}
+and using~\eqref{e:dkf_dt}, Eq.~\eqref{e:dropfdt_1} can be simplified to:
+\begin{equation}
+ \label{e:dropf_dt}
+ \frac{\partial {R_f} }{\partial T }_{i} = - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i} + \frac{{R_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
+\end{equation}
+
+Starting from~\eqref{e:ropr} and applying the same expansion of the last species' concentration as previously, the temperature derivative of the reverse rate of progress is:
+\begin{equation}
+ \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
+\end{equation}
+Next, Eq.~\eqref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
+\begin{equation}
+ \frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \frac{1}{{K_c}_{i}} \frac{\text{d} {K_c} }{\text{d} T }_{i} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i}
+\end{equation}
+The temperature derivative of the equilibrium constant is:
+\begin{equation}
+ \frac{\text{d} {K_c} }{\text{d} T }_{i} = {K_c}_{i} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} \;,
+\end{equation}
+with:
+\begin{equation}
+ \frac{\text{d} B }{\text{d} T }_{k} = T \left(T \left(\frac{T a_{k,4}}{5} + \frac{a_{k,3}}{4}\right) + \frac{a_{k,2}}{3}\right) + \frac{a_{k,1}}{2} + \frac{1}{T} \left(a_{k,0} - 1 + \frac{a_{k,5}}{T}\right)
+\end{equation}
+giving:
+\begin{equation}
+\label{e:dkr_dt}
+\frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i} \;,
+\end{equation}
+and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to Eq.~\eqref{e:s_temp} for the reverse direction---we obtain:
+\begin{equation}
+\label{e:dropr_dt}
+\frac{\partial {R_r} }{\partial T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_r}_{i} - \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i}
+\end{equation}
+
+Finally, combining Eqs.~\eqref{e:dropf_dt} and~\eqref{e:dropr_dt} gives the total temperature derivative of the net rate of progress:
+\begin{align}
+ \label{e:drop_dt}
+ \frac{\partial R }{\partial T }_{i} =& \frac{{R_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right) - \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_r}_{i} \nonumber \\
+				      &\qquad + \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i} - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i}
+\end{align}
+\subsubsection{Molar derivative}
+The derivative of the forward rate of progress with respect to the amount of moles of a species $j$ is:
+\begin{equation}
+ \frac{d}{d n_{k}} {R_f} = \left(\frac{\partial}{\partial n_{j}} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}}\right) {k_f}_{i} \;.
+\end{equation}
+The derivative of a species concentration with respect to moles of a species $j$ is given as:
+\begin{equation}
+ \frac{\partial [C_k]}{\partial n_j} =
+ \begin{dcases}
+ \frac{\delta_{j k}}{V} & k \ne \ns \\
+ -\frac{1}{V} & k = \ns
+ \end{dcases}
+\end{equation}
+Or put succinctly:
+\begin{equation}
+\label{e:dck_dnj}
+\frac{\partial [C_k]}{\partial n_j} = \frac{\delta_{j k} - \delta_{\ns k}}{V} \;.
+\end{equation}
+Using~\eqref{e:dck_dnj} the molar derivative of the forward rate of progress is found as:
+\begin{equation}
+ \frac{\partial {R_f} }{\partial n[j] }_{i} = {k_f}_{i} \sum_{k=1}^{\ns} \left(- \frac{\delta_{\ns k}}{V} + \frac{\delta_{j k}}{V}\right) \nu^{\prime}_{k,i} [C]_{k}^{\nu^{\prime}_{k,i} - 1} \prod_{\substack{1 \leq l \leq k - 1\\k + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
+\end{equation}
+with the same temporary variables $S^{\prime}_{j}$ and $S^{\prime}_{\ns}$ as defined previously, this can be simplified to:
+\begin{equation}
+ \label{e:dropf_dnj}
+ \frac{\partial {R_f} }{\partial n[j] }_{i} = \frac{{k_f}_{i}}{V} \left(- S^{\prime}_{\ns} + S^{\prime}_{j}\right)
+\end{equation}
+and by the same process, the reverse rate of progress derivative is found to be:
+\begin{equation}
+ \label{e:dropr_dnj}
+ \frac{\partial {R_r} }{\partial n[j] }_{i} = \frac{{k_r}_{i}}{V} \left(- S^{\prime\prime}_{\ns} + S^{\prime\prime}_{j}\right)
+\end{equation}
+and the net rate of progress molar derivative:
+\begin{equation}
+ \frac{\partial R }{\partial n[j] }_{i} = - \frac{{k_r}_{i}}{V} \left(- S^{\prime\prime}_{\ns} + S^{\prime\prime}_{j}\right) + \frac{{k_f}_{i}}{V} \left(- S^{\prime}_{\ns} + S^{\prime}_{j}\right)
+\end{equation}
+
+\subsubsection{Parameter derivatives}
+The derivatives of the forward and reverse rates of progress with respect to the volume (\conp) or pressure (\conv) largely follow the same format of the previous sections.
+First, the derivative of the concentration of a species $k$ with respect to the parameter is:
+
+\begin{subequations}
+ % based on https://tex.stackexchange.com/a/239764/56227
+ % the idea is to take the longest case (1.b -- i.e., no hphantom) and use this
+ % to make a box around all cases such that the alignment works
+ \begin{align}
+ \frac{\partial [C] }{\partial V }_{k} &=
+ \begin{dcases}
+  \mathrlap{-\frac{[C]_{k}}{V}}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k \ne \ns \\
+  \frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k} & k = \ns
+ \end{dcases}&\dconp \\
+ \frac{\partial [C]_{k} }{\partial P } &=
+ \begin{dcases}
+  \mathrlap{\hphantom{0}0}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k \ne \ns \\
+  \mathrlap{\frac{1}{T \Ru}}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k = \ns
+ \end{dcases}&\dconv
+ \end{align}
+\end{subequations}
+
+
+\subsection{Final Jacobian entries}
+\label{s:jac_final}
 
 \printbibliography 
 
