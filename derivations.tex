@@ -1,17 +1,25 @@
 \documentclass[12pt]{article}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath, amssymb}
+\usepackage[english]{babel}
+\usepackage{csquotes}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[
     backend=biber,
     style=numeric,
-    citestyle=numeric
+    citestyle=numeric,
+    sorting=none
 ]{biblatex}
 \addbibresource{derivations.bib}
-\usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % dcases
 \usepackage{mathtools}
 % for text right arrow
 \usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
+% load after hyperref
+\usepackage[english,capitalise]{cleveref}
 
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
@@ -44,6 +52,7 @@ This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and 
 
 \section{Governing equations}
 \subsection{State variables}
+The state vector for this derivation consists of the temperature, a thermodynamic parameter (pressure or volume) and the amount of moles of all species except the last in the model:
 
 \begin{subequations}
 \begin{align}
@@ -54,67 +63,67 @@ This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and 
 where $T$ is the temperature, $P$ and $V$ the pressure and volume respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
 
 From the ideal gas law, the number of moles of the final species is determined as:
-\begin{subequations}
 \begin{align}
 n &= \frac{V P}{T \Ru} = \sum_{i=1}^{\ns}{n_i}, \label{e:source_moles}\\
 n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
 \end{align}
-\end{subequations}
 
 \subsection{Thermo-chemical source terms}
 The evolution of the thermo-chemical state variables of this system is described by a set of ordinary-differential equations:
 \begin{subequations}
 \label{e:source_terms}
 \begin{align}
-f &= \frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
-f &= \frac{\text{d} \Phi }{\text{d} t } &= \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
+f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
+f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
 \end{align}
 \end{subequations}
 For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \begin{equation}
-\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k}
-\label{source:spec}
+\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \label{e:spec}
 \end{equation}
 where $\dot{\omega}_k$ is the $kth$ species overall production rate, and the temperature production rates are~\cite{TurnsStephenR2012Aitc}:
 \begin{subequations}
-\label{source:temperature_incomplete}
+\label{e:temperature_incomplete}
 \begin{align}
 \frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{p, k}}}\dconp, \\
 \frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{v, k}}}\dconv
 \end{align}
 \end{subequations}
-where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure specific heat, constant-volume specific heat of species $k$ in molar units, while $[C]_{k}$ is the concentration.
+where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure specific heat, constant-volume specific heat of species $k$ in molar units, while $[C]_{k}$ is the concentration, given by:
+\begin{equation}
+ [C]_{k} = \frac{n_{k}}{V}
+\end{equation}
+
 
 From the ideal gas law, source terms for the volume and pressure variables may derived:
 \begin{subequations}
-\label{source:param_incomplete}
+\label{e:param_incomplete}
 \begin{align}
 \frac{\text{d} V }{\text{d} t } &= \frac{\Ru}{P} \left(T \frac{\text{d} n }{\text{d} t } + \frac{\text{d} T }{\text{d} t } n\right)\dconp, \\
 \frac{\text{d} P }{\text{d} t } &= \frac{\Ru}{V} \left(T \frac{\text{d} n }{\text{d} t } + \frac{\text{d} T }{\text{d} t } n\right)\dconv
 \end{align}
 \end{subequations}
 
-Finally, the conservation of mass is invoked:
-\begin{align*}
- \frac{\text{d} m }{\text{d} t } &= 0 \\
- &= \sum_{k=1}^{\ns}  W_{k} \frac{\text{d} n }{\text{d} t }_{k},
-\end{align*}
-to determine the source term of the last species:
+To determine $\frac{\text{d} n }{\text{d} t }$, conservation of mass is invoked:
+\begin{equation}
+ \frac{\text{d} m }{\text{d} t } = 0 = \sum_{k=1}^{\ns}  W_{k} \frac{\text{d} n }{\text{d} t }_{k},
+\end{equation}
+from which, the source term of the last species may be written in terms of the species included in the state vector:
 \begin{equation}
  \frac{\text{d} n }{\text{d} t }_{\ns} = - \frac{1}{W_{\ns}} \sum_{k=1}^{\ns - 1} W_{k} \frac{\text{d} n }{\text{d} t }_{k}
- \label{source:spec_ns}
+ \label{e:spec_ns}
 \end{equation}
 where $W_{k}$ is the molecular weight of the $k$th species.
-Using~\eqref{source:spec_ns}, the total molar rate of change can be determined:
+Using~\cref{e:spec_ns}, the total molar rate of change can be determined:
 \begin{align}
 \frac{\text{d} n }{\text{d} t } &= \sum_{k=1}^{\ns} \frac{\text{d} n }{\text{d} t }_{k}, \nonumber \\
 \frac{\text{d} n }{\text{d} t } &= \sum_{k=1}^{\ns - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \frac{\text{d} n }{\text{d} t }_{k}
-\label{source:total_molar}
+\label{e:total_molar}
 \end{align}
 
-Combining~\eqref{source:spec},\eqref{source:param_incomplete},\eqref{source:total_molar} gives the final form of the pressure and volume terms:
+Combining~\cref{e:spec,e:param_incomplete,e:total_molar} gives the final form of the pressure and volume terms:
 \begin{subequations}
-\label{source:param_complete}
+\label{e:param_complete}
 \begin{align}
 \frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)&\dconp, \\
 \frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\dconv
@@ -126,20 +135,20 @@ Additionally, the concentration and moles of the last species in the model (whic
  \label{e:last_spec_conc}
    [C]_{\ns} = [C] - \sum_{k=1}^{-1 + \ns} [C]_{k}
 \end{equation}
+where $[C]$ is the total concentration:
+\begin{equation}
+ [C] = \frac{P}{T \Ru}
+\end{equation}
 
-Using Eqs.~\eqref{e:last_spec_conc}, \eqref{source:spec} and \eqref{source:spec_ns}, the temperature source terms may be expanded to contain only state variables (i.e., by removal of the last species' source term and overall production rate):
+Using~\cref{e:last_spec_conc,e:spec,e:spec_ns}, the temperature source terms may be expanded to contain only state variables (i.e., by removal of the last species' source term and overall production rate):
 \begin{subequations}
-\label{source:temperature_complete}
+\label{e:temperature_complete}
 \begin{align}
 \frac{\text{d} T }{\text{d} t } = - \frac{\sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{p,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{p,\ns}} + {C_{p, k}}\right) [C]_{k}}\dconp,\\
 \frac{\text{d} T }{\text{d} t } = - \frac{\sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{v,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{v,\ns}} + {C_{v, k}}\right) [C]_{k}}\dconv
 \end{align}
 \end{subequations}
-where $[C]$ is the total concentration:
-\begin{equation}
- [C] = \frac{P}{T \Ru}
-\end{equation}
-This form is used for differentiation, but~\eqref{source:temperature_incomplete} will often be used as well due to its compactness.
+This form is used for differentiation, but~\cref{e:temperature_incomplete} will often be used as well due to its compactness.
 
 \subsection{Thermal properties}
 The standard-state thermodynamic properties (in molar units) for a gaseous species $k$ is defined using the standard seven-coefficient polynomial of Gordon and McBride~\cite{gordon1994computer}:
@@ -212,7 +221,7 @@ For reversible reactions without an explicit parameterization, the reverse rate 
 \end{align}
 where $P_{atm}$ is the pressure of one standard atmosphere in appropriate units.
 
-By combining~\eqref{e:kc}~and~\eqref{e:kp}, we obtain:
+By combining~\cref{e:kc,e:kp}, we obtain:
 \begin{equation}
  \label{e:kc_in_kp}
  {K_c}_{i} = \left(\left(\frac{P_{atm}}{\Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) \operatorname{exp}\left({\sum_{k=1}^{\ns} \nu_{k,i} B_{k}}\right)
@@ -224,7 +233,7 @@ where, $B_k$ is:
  B_{k} &= T \left(T \left(T \left(\frac{T a_{k,4}}{20} + \frac{a_{k,3}}{12}\right) + \frac{a_{k,2}}{6}\right) + \frac{a_{k,1}}{2}\right) \nonumber \\
        & \quad + \left(a_{k,0} - 1\right) \log{\left (T \right )} - a_{k,0} + a_{k,6} - \frac{a_{k,5}}{T}
 \end{align}
-from Eqs.~\eqref{e:hk} and~\eqref{e:sk}.
+from~\cref{e:hk,e:sk}.
 
 \subsection{Third-body effects}
 \label{s:thdbody}
@@ -263,14 +272,14 @@ will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if
 
 
 \subsection{Falloff reactions}
-Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure- ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using Eq.~\eqref{e:arrhenius}.
+Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure- ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using Eq.~\cref{e:arrhenius}.
 The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the third-body concentration (based on either the mixture as a whole including any efficiencies $\alpha_{k,i}$, or a specific species), define a reduced pressure $P_{r,i}$ given by
 \begin{equation}
  P_{r, i}=\frac{[X]_{i} k_{0, i}}{k_{\infty, i}}
 \end{equation}
-where $[X]_{i}$ is the appropriate third-body concentration as described in Sec.~\ref{s:thdbody}
+where $[X]_{i}$ is the appropriate third-body concentration as described in~\cref{s:thdbody}
 
-The falloff blending factor $F_i$ used in Eq.~\eqref{e:rxn_pressure} is determined based on one of three representations: the Lindemann~\cite{Lindemann:1922cz}, Troe~\cite{Gilbert:1983bb}, and SRI~\cite{Stewart:1989gj} falloff approaches
+The falloff blending factor $F_i$ used in Eq.~\cref{e:rxn_pressure} is determined based on one of three representations: the Lindemann~\cite{Lindemann:1922cz}, Troe~\cite{Gilbert:1983bb}, and SRI~\cite{Stewart:1989gj} falloff approaches
 \begin{equation}
 F_i = \begin{dcases}
 1 &\text{for Lindemann,} \\
@@ -297,7 +306,7 @@ The parameters $d$ and $e$ are optional; if not specified, $d = 1$ and $e = 0$.
 \subsection{Pressure-dependent reactions}
 
 In addition to the falloff approach given previously, two additional formulations can be used to describe the pressure dependence of reactions that do not follow the modification factor $c_i$ approach.
-The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using Eq.~\eqref{e:arrhenius}:
+The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using Eq.~\cref{e:arrhenius}:
 \begin{align}
 k_1 (T) &= A_1 T^{\beta_1} \exp \left( -\frac{T_{a, 1}}{T} \right) \text{ at } P_1 \text{ and} \label{e:plog_k1} \\
 k_2 (T) &= A_2 T^{\beta_2} \exp \left( -\frac{T_{a, 2}}{T} \right) \text{ at } P_2 \;, \label{e:plog_k2}
@@ -325,24 +334,27 @@ where $T_{\min} \leq T \leq T_{\max}$ and $p_{\min} \leq p \leq p_{\max}$ descri
 
 \section{Jacobian derivation}
 
-Let $\mathcal{J}$ denote the Jacobian matrix corresponding to the set of ODEs defined in~\eqref{e:source_terms}.
+Let $\mathcal{J}$ denote the Jacobian matrix corresponding to the set of ODEs defined in~\cref{e:source_terms}.
 $\mathcal{J}$ is filled with the partial derivatives $\partial f / \partial \Phi$, such that:
 \begin{equation}
  \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns - 1
 \end{equation}
-We will begin by deriving subcomponents of the Jacobian matrix in the subsequent sections before presenting the final form of the Jacobian matrix in Sec.~\ref{s:jac_final}.
+We will begin by deriving subcomponents of the Jacobian matrix in the subsequent sections before presenting the final form of the Jacobian matrix in~\cref{s:jac_final}.
 
 \subsection{Species rate of production derivatives}
-First, we evaluate the derivatives of the net species rate of production equation~\eqref{e:spec_rop}, with respect to temperature:
+First, we evaluate the derivatives of the net species rate of production equation~\cref{e:spec_rop}, with respect to temperature:
 \begin{equation}
+ \label{e:dwdot_dT}
  \frac{\partial \dot{\omega} }{\partial T }_{k} = \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right) \;,
 \end{equation}
 other species:
 \begin{equation}
- \frac{\partial q }{\partial n[k] }_{i} = R_{i} \frac{\partial c }{\partial n[j] }_{i} + \frac{\partial R }{\partial n[j] }_{i} c_{i}
+ \label{e:dwdot_dnj}
+ \frac{\partial \dot{\omega} }{\partial n[j] }_{k} = \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial n[j] }_{i} + \nu_{k,i} \frac{\partial R }{\partial n[j] }_{i} c_{i}\right)
 \end{equation}
 and the state parameter:
 \begin{subequations}
+ \label{e:dwdot_de}
  \begin{align}
   \frac{\partial \dot{\omega} }{\partial V }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial V }_{i} + \nu_{k,i} \frac{\partial R }{\partial V }_{i} c_{i}\right)\dconp,\\
   \frac{\partial \dot{\omega} }{\partial P }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial P }_{i} + \nu_{k,i} \frac{\partial R }{\partial P }_{i} c_{i}\right)\dconv
@@ -360,7 +372,7 @@ the derivative of the forward reaction rate coefficient is:
  \label{e:dkf_dt}
  \frac{\text{d} {k_f} }{\text{d} T }_{i} = \frac{{k_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
 \end{equation}
-While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, rate of production, etc.---related to the last species to obtain the correct derivative, in this case using Eq.~\eqref{e:last_spec_conc}:
+While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, rate of production, etc.---related to the last species to obtain the correct derivative, in this case using Eq.~\cref{e:last_spec_conc}:
 \begin{equation}
  {R_f} = \left(\left(- \sum_{k=1}^{-1 + \ns} [C]_{k} + \frac{P}{T \Ru}\right)^{\nu^{\prime}_{\ns,i}}\right) {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
 \end{equation}
@@ -380,17 +392,17 @@ By defining a temporary variable (for species $l = \left\{j, \ns\right\}$) $S^{\
  \label{e:s_temp}
  S^{\prime}_{l} = \nu^{\prime}_{l,i} [C]_{l}^{\nu^{\prime}_{l,i} - 1} \prod_{\substack{1 \leq l \leq l - 1\\l + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
 \end{equation}
-and using~\eqref{e:dkf_dt}, Eq.~\eqref{e:dropfdt_1} can be simplified to:
+and using~\cref{e:dkf_dt}, Eq.~\cref{e:dropfdt_1} can be simplified to:
 \begin{equation}
  \label{e:dropf_dt}
  \frac{\partial {R_f} }{\partial T }_{i} = - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i} + \frac{{R_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
 \end{equation}
 
-Starting from~\eqref{e:ropr} and applying the same expansion of the last species' concentration as previously, the temperature derivative of the reverse rate of progress is:
+Starting from~\cref{e:ropr} and applying the same expansion of the last species' concentration as previously, the temperature derivative of the reverse rate of progress is:
 \begin{equation}
  \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
 \end{equation}
-Next, Eq.~\eqref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
+Next, Eq.~\cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
 \begin{equation}
  \frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \frac{1}{{K_c}_{i}} \frac{\text{d} {K_c} }{\text{d} T }_{i} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i}
 \end{equation}
@@ -407,13 +419,13 @@ giving:
 \label{e:dkr_dt}
 \frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i} \;,
 \end{equation}
-and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to Eq.~\eqref{e:s_temp} for the reverse direction---we obtain:
+and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to Eq.~\cref{e:s_temp} for the reverse direction---we obtain:
 \begin{equation}
 \label{e:dropr_dt}
 \frac{\partial {R_r} }{\partial T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_r}_{i} - \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i}
 \end{equation}
 
-Finally, combining Eqs.~\eqref{e:dropf_dt} and~\eqref{e:dropr_dt} gives the total temperature derivative of the net rate of progress:
+Finally, combining~\cref{e:dropf_dt,e:dropr_dt} gives the total temperature derivative of the net rate of progress:
 \begin{align}
  \label{e:drop_dt}
  \frac{\partial R }{\partial T }_{i} =& \frac{{R_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right) - \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_r}_{i} \nonumber \\
@@ -438,7 +450,7 @@ Or put succinctly:
 \label{e:dck_dnj}
 \frac{\partial [C_k]}{\partial n_j} = \frac{\delta_{j k} - \delta_{\ns k}}{V} \;.
 \end{equation}
-Using~\eqref{e:dck_dnj} the molar derivative of the forward rate of progress is found as:
+Using~\cref{e:dck_dnj} the molar derivative of the forward rate of progress is found as:
 \begin{equation}
  \frac{\partial {R_f} }{\partial n[j] }_{i} = {k_f}_{i} \sum_{k=1}^{\ns} \left(- \frac{\delta_{\ns k}}{V} + \frac{\delta_{j k}}{V}\right) \nu^{\prime}_{k,i} [C]_{k}^{\nu^{\prime}_{k,i} - 1} \prod_{\substack{1 \leq l \leq k - 1\\k + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
 \end{equation}
@@ -479,7 +491,7 @@ First, the derivative of the concentration of a species $k$ with respect to the 
  \end{align}
 \end{subequations}
 
-Following the outline of Sec.~\ref{s:rop_molar}, the forward rate of progress derivatives are:
+Following the outline of~\cref{s:rop_molar}, the forward rate of progress derivatives are:
 \begin{subequations}
  \begin{align}
   \frac{\partial {R_f} }{\partial V }_{i} &= \frac{[C] S^{\prime}_{\ns}}{V} {k_f}_{i} - \frac{{R_f}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}&\dconp\\
@@ -505,7 +517,9 @@ giving finally:
  \end{align}
 \end{subequations}
 
-\subsection{Pressure-modification\slash Falloff function derivatives}
+\subsection{Pressure modification\slash Falloff function derivatives}
+
+
 
 
 \subsection{Final Jacobian entries}
