@@ -420,6 +420,7 @@ Finally, combining Eqs.~\eqref{e:dropf_dt} and~\eqref{e:dropr_dt} gives the tota
 				      &\qquad + \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i} - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i}
 \end{align}
 \subsubsection{Molar derivative}
+\label{s:rop_molar}
 The derivative of the forward rate of progress with respect to the amount of moles of a species $j$ is:
 \begin{equation}
  \frac{d}{d n_{k}} {R_f} = \left(\frac{\partial}{\partial n_{j}} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}}\right) {k_f}_{i} \;.
@@ -477,6 +478,34 @@ First, the derivative of the concentration of a species $k$ with respect to the 
  \end{dcases}&\dconv
  \end{align}
 \end{subequations}
+
+Following the outline of Sec.~\ref{s:rop_molar}, the forward rate of progress derivatives are:
+\begin{subequations}
+ \begin{align}
+  \frac{\partial {R_f} }{\partial V }_{i} &= \frac{[C] S^{\prime}_{\ns}}{V} {k_f}_{i} - \frac{{R_f}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}&\dconp\\
+  \frac{\partial {R_f} }{\partial P }_{i} &= \frac{S^{\prime}_{\ns} {k_f}_{i}}{T \Ru}&\dconv
+ \end{align}
+\end{subequations}
+and similarly, the reverse rate of progress derivatives:
+\begin{subequations}
+ \begin{align}
+  \frac{\partial {R_r} }{\partial V }_{i} &= \frac{[C] S^{\prime\prime}_{\ns}}{V} {k_r}_{i} - \frac{{R_r}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i}&\dconp\\
+  \frac{\partial {R_r} }{\partial P }_{i} &= \frac{S^{\prime\prime}_{\ns} {k_r}_{i}}{T \Ru}&\dconv
+ \end{align}
+\end{subequations}
+giving finally:
+\begin{subequations}
+ \label{e:dropi_de}
+ % linebreak and parenthesis sizing:
+ % https://tex.stackexchange.com/questions/49890/linebreak-between-left-and-right/49895
+ \begin{align}
+  \frac{\partial {R} }{\partial V }_{i} &= \frac{1}{V}\left(\vphantom{{R_r}_{i} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i}} [C]\left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right) + \right.& \nonumber\\
+  &\left. \quad\left({R_r}_{i} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i} - {R_f}_{i} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}\right) \right)&\dconp\\
+  \frac{\partial {R} }{\partial P }_{i} &= \frac{1}{T \Ru} \left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right)&\dconv
+ \end{align}
+\end{subequations}
+
+\subsection{Pressure-modification\slash Falloff function derivatives}
 
 
 \subsection{Final Jacobian entries}
