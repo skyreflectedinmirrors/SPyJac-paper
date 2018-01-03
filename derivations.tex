@@ -48,6 +48,16 @@
 \NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
 \NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
 
+% consistent multiline equation spacing
+\NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
+
+% bigger parenthesis
+% https://tex.stackexchange.com/questions/6794/about-big-parenthesis-larger-than-bigg
+\makeatletter
+\newcommand{\vast}{\bBigg@{4}}
+\newcommand{\Vast}{\bBigg@{5}}
+\makeatother
+
 % treat subequations as equation for cleverref
 % https://tex.stackexchange.com/a/308627/56227
 \crefalias{subequation}{equation}
@@ -752,7 +762,85 @@ with:
 \subsubsection{Falloff blending factor}
 \label{s:dfi}
 
-The falloff blending factor 
+The falloff blending factor for all but Lindemann falloff reactions relies upon the reduced pressure derivatives developed in~\cref{s:dpr}.
+First, the blending factor for each falloff reaction type will be differentiated along with any subcomponents (e.g., the $F_{cent}$ term for Troe falloff reactions).
+Next, the reduced pressured derivatives given by~\cref{e:dpr_dt,e:dpr_dnj,e:dpr_de} will be subsituted in, before finally deriving an analagous generalized form for the falloff blending factor derivatives.
+
+For Lindemann falloff reactions:
+\begin{align}
+ \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial T }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{,} \label{e:dfi_lind_dt} \\
+ \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial n_j }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{,} \label{e:dfi_lind_dnj}
+\end{align}
+and:
+\begin{subequations}
+ \label{e:dfi_lind_de}
+ \begin{align}
+  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconp} \\
+  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconv}
+ \end{align}
+\end{subequations}
+
+For Troe falloff reactions:
+\begin{align}
+ \lhs{dfi_troe}{\frac{\partial F_{i} }{\partial T }} &= \rhs{dfi_troe}{\frac{\partial F_{i} }{\partial F_{cent} } \frac{\text{d} F_{cent} }{\text{d} T } + \frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial T }} & \cond{dfi_troe}{,} \label{e:dfi_troe_dt} \\
+ \lhs{dfi_troe}{\frac{\partial F_{i} }{\partial n_j }} &= \rhs{dfi_troe}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial n_j }} & \cond{dfi_troe}{,} \label{e:dfi_troe_dnj}
+\end{align}
+and:
+\begin{subequations}
+ \label{e:dfi_troe_de}
+ \begin{align}
+ \lhs{dfi_troe}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_troe}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial V }} & \cond{dfi_troe}{\dconp} \\
+ \lhs{dfi_troe}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_troe}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial P }} & \cond{dfi_troe}{\dconv}
+ \end{align}
+\end{subequations}
+where:
+\begin{align}
+ \frac{\partial F_{i} }{\partial F_{cent} } &= \frac{F_{i}}{\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1} \left(\frac{2 A_{Troe} \log{\left (F_{cent} \right )}}{B_{Troe}^{2} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)} \left(\frac{A_{Troe}}{B_{Troe}} \frac{\partial B_{Troe} }{\partial F_{cent} } - \right. \right. & \nonumber \\
+ & \mathindent \left. \frac{\partial A_{Troe} }{\partial F_{cent} }\right) + \frac{1}{F_{cent}} \left. \vphantom{\frac{F_{i}}{\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1}} \right) & \text{,} \label{e:dfi_troe_dfcent_partial} \\
+\frac{\text{d} F_{cent} }{\text{d} T } &= \frac{a}{T^{*}} \operatorname{exp}\left({- \frac{T}{T^{*}}}\right) - \frac{\operatorname{exp}\left({- \frac{T}{T^{***}}}\right)}{T^{***}} \left(- a + 1\right) + & \nonumber \\
+ & \mathindent \frac{T^{**}}{T^{2}} \operatorname{exp}\left({- \frac{T^{**}}{T}}\right) & \text{,} \label{e:dfcent_dt} \\
+\intertext{and:}
+\frac{\partial F_{i} }{\partial P_{r, i} } &= \frac{2 F_{i} A_{Troe} \log{\left (F_{cent} \right )}}{B_{Troe}^{2} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)^{2}} \left(\frac{A_{Troe}}{B_{Troe}} \frac{\partial B_{Troe} }{\partial P_{r, i} } - \frac{\partial A_{Troe} }{\partial P_{r, i} }\right) \label{e:dfi_troe_dpr_partial}
+\end{align}
+where the derivatives of $A_{Troe}$ and $B_{Troe}$ are:
+\begin{align}
+ \frac{\partial A_{Troe} }{\partial F_{cent} } &= - \frac{0.67}{F_{cent} \log{\left (10 \right )}} & \text{,} \label{e:datroe_dfcent} \\
+\frac{\partial B_{Troe} }{\partial F_{cent} } &= - \frac{1.1762}{F_{cent} \log{\left (10 \right )}} & \text{,} \label{e:dbtroe_dfcent} \\
+\frac{\partial A_{Troe} }{\partial P_{r, i} } &= \frac{1}{P_{r, i} \log{\left (10 \right )}} & \text{,} \label{e:datroe_dpr} \\
+\intertext{and:}
+\frac{\partial B_{Troe} }{\partial P_{r, i} } &= - \frac{0.14}{P_{r, i} \log{\left (10 \right )}} & \text{.} \label{e:dbtroe_dpr} \\
+\end{align}
+
+Combining~\cref{e:datroe_dfcent,e:dbtroe_dfcent,e:datroe_dpr,e:dbtroe_dpr} with~\cref{e:dfi_troe_dfcent_partial,e:dfi_troe_dpr_partial} yields:
+\begin{align}
+\frac{\partial F_{i} }{\partial F_{cent} } &= - \frac{F_{i} B_{Troe}}{F_{cent} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \left(2 A_{Troe} \left( 1.1762 A_{Troe} - \right. \right . & \nonumber \\
+& \mathindent[s] \left. \left. 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\right) & \text{,} \label{e:dfi_troe_dfcent} \\
+\frac{\partial F_{i} }{\partial P_{r, i} } &= - \frac{2 F_{i} A_{Troe} \left(\frac{0.14 A_{Troe}}{B_{Troe}} + 1\right) \log{\left (F_{cent} \right )}}{B_{Troe}^{2} P_{r, i} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)^{2} \log{\left (10 \right )}} \label{e:dfi_troe_dpr} &
+\end{align}
+\Cref{e:dfcent_dt,e:dfi_troe_dfcent,e:dfi_troe_dpr} can then be substituted into~\cref{e:dfi_troe_dt,e:dfi_troe_dnj,e:dfi_troe_de} to obtain a final form for the Troe-falloff blending function derivatives, however this will be given as a generalized form at the end of this section.
+
+For SRI falloff reactions:
+\begin{align}
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial T }} &= F_{i} \vast(\frac{X \left(- \frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} + \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \nonumber \\
+ & \mathindent \frac{\partial P_{r, i} }{\partial T } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}+ \frac{e}{T} \vast) \; , \\
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial {n_j} }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} \; ,
+\end{align}
+and:
+% TODO: not satistified with this yet...
+\begin{subequations}
+ \begin{align}
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial V } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
+ % note: no alignment as this causes eqn # to go down a line
+ \cond{dfi_sri}{\dconp} \\
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial P } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
+ % note: no alignment as this causes eqn # to go down a line
+ \cond{dfi_sri}{\dconv}
+ \end{align}
+
+\end{subequations}
+
+
+
 
 
 
