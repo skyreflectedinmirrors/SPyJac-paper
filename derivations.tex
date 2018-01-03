@@ -34,13 +34,19 @@
 
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
-\newcommand{\ns}{\ensuremath{{N_{sp}}}}
-\newcommand{\nr}{\ensuremath{{N_{reac}}}}
+\newcommand{\ns}{N_{sp}}
+\newcommand{\nr}{N_{reac}}
 \newcommand{\conp}{CONP}
 \newcommand{\conv}{CONV}
 \newcommand{\dconp}{\ifmmode\text{for \conp,}\else for \conp,\fi}
 \newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv,\fi}
-\newcommand{\Ru}{\ensuremath{\mathcal{R}}}
+\newcommand{\Ru}{\mathcal{R}}
+
+% simple command for equal-sized eqmathbox's on the lhs / rhs and conditional
+% arguements are tag, text, alignment
+\NewDocumentCommand{\lhs}{mmO{r}}{\eqmathbox[LHS_#1][#3]{#2}}
+\NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
+\NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
 
 % treat subequations as equation for cleverref
 % https://tex.stackexchange.com/a/308627/56227
@@ -273,11 +279,15 @@ Expanding the concentration of the last species gives:
 \label{e:thd_mix}
  [X]_{i}=[C] \alpha_{\ns,i} + \sum_{k=1}^{-1 + \ns} \left(- \alpha_{\ns,i} + \alpha_{k,i}\right) [C]_{k}\;.
 \end{equation}
+This form will be denoted as the \textbf{mixture}-based third-body efficiency.
+
 If all species in the mixture contribute equally as third bodies, then $\alpha_{k,i} = 1$ for all species:
 \begin{equation}
 \label{e:thd_unity}
  [X]_{i} = [C] = \frac{P}{\Ru T} \;.
 \end{equation}
+This form will be called the \textbf{unity}-based third-body efficiency.
+
 In addition, a single species may act as the third body in which case
 \begin{equation}
  [X]_{i} = [C_m]
@@ -289,6 +299,7 @@ For evaluation of Jacobian entries, the expanded form:
  [X]_{i}=\left([C] - \sum_{k=1}^{-1 + \ns} [C]_{k}\right) \delta_{\ns m} + \left(- \delta_{\ns m} + 1\right) [C]_{m}
 \end{equation}
 will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if the third body species $m$ is the last species in the model.
+\Cref{e:thd_spec} will be referred to as the \textbf{species}-based third-body efficiency.
 
 
 \subsection{Falloff reactions}
@@ -542,15 +553,15 @@ giving finally:
 \subsubsection{Elementary reactions}
 For elementary reactions, all derivatives of the pressure-modification term are zero:
 \begin{align}
-\eqmathbox[LHS_dci_elem][r]{\frac{\partial c_{i} }{\partial T }} &= 0 & \eqmakebox[cond_dci_elem][r]{,} \label{e:dci_elem_dt} \\
-\eqmathbox[LHS_dci_elem][r]{\frac{\partial c_{i} }{\partial {n_j} }} &= 0 & \eqmakebox[cond_dci_elem][r]{,} \label{e:dci_elem_dnj} \\
+\lhs{dci_elem}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{,} \label{e:dci_elem_dt} \\
+\lhs{dci_elem}{\frac{\partial c_{i} }{\partial {n_j} }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{,} \label{e:dci_elem_dnj} \\
 \end{align}
 and:
 \begin{subequations}
  \label{e:dci_elem_de}
  \begin{align}
-  \eqmathbox[LHS_dci_elem][r]{\frac{\partial c_{i} }{\partial V }} &= 0 & \eqmakebox[cond_dci_elem][r]{\dconp} \\
-  \eqmathbox[LHS_dci_elem][r]{\frac{\partial c_{i} }{\partial P }} &= 0 & \eqmakebox[cond_dci_elem][r]{\dconv}
+  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconp} \\
+  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconv}
  \end{align}
 \end{subequations}
 
@@ -558,43 +569,43 @@ and:
 \subsubsection{Third-body enhanced reactions}
 For a third-body enhanced reaction~\cref{e:thd_mix} is differentiated to give:
 \begin{align}
- \eqmathbox[LHS_dci][r]{\frac{\partial [X]_i }{\partial T }} &= \eqmathbox[RHS_dci][l]{-\frac{[C] \alpha_{\ns,i}}{T}} & \eqmakebox[cond_dci_thd][r]{,} \label{e:dci_thd_dt} \\
- \eqmathbox[LHS_dci][r]{\frac{\partial [X]_i }{\partial n_{j}}} &= \eqmathbox[RHS_dci][l]{\frac{1}{V} \left(- \alpha_{\ns,i} + \alpha_{j,i}\right)} & \eqmakebox[cond_dci_thd][r]{,} \label{e:dci_thd_dnj}
+ \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial T }} &= \rhs{dci_thd_mix}{-\frac{[C] \alpha_{\ns,i}}{T}} & \cond{dci_thd_mix}{,} \label{e:dci_thd_dt} \\
+ \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial n_{j}}} &= \rhs{dci_thd_mix}{\frac{1}{V} \left(- \alpha_{\ns,i} + \alpha_{j,i}\right)} & \cond{dci_thd_mix}{,} \label{e:dci_thd_dnj}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dci_thd_de}
  \begin{align}
-  \eqmathbox[LHS_dci][r]{\frac{\partial [X]_i }{\partial V }} &= \eqmathbox[RHS_dci][l]{\frac{1}{V} \left([C] \alpha_{\ns,i} - [X]_{i}\right)} & \eqmakebox[cond_dci_thd][r]{\dconp}\\
-  \eqmathbox[LHS_dci][r]{\frac{\partial [X]_i }{\partial P }} &= \eqmathbox[RHS_dci][l]{\frac{\alpha_{\ns,i}}{T \Ru}} & \eqmakebox[cond_dci_thd][r]{\dconv}
+  \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial V }} &= \rhs{dci_thd_mix}{\frac{1}{V} \left([C] \alpha_{\ns,i} - [X]_{i}\right)} & \cond{dci_thd_mix}{\dconp}\\
+  \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial P }} &= \rhs{dci_thd_mix}{\frac{\alpha_{\ns,i}}{T \Ru}} & \cond{dci_thd_mix}{\dconv}
  \end{align}
 \end{subequations}
 
 If $\alpha_{j,i} = 1$ for all species $j$,~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} may be simplified to:
 \begin{align}
- \eqmathbox[lhs_dci_thd_unity][r]{\frac{\partial c_{i} }{\partial T }} &= \eqmathbox[rhs_dci_thd_unity][l]{- \frac{[C]}{T}}& \eqmakebox[cond_dci_thd_unity][r]{,} \label{e:dci_thd_unity_dt} \\
- \eqmathbox[lhs_dci_thd_unity][r]{\frac{\partial c_{i} }{\partial n_{j} }} &= \eqmathbox[rhs_dci_thd_unity][l]{0}& \eqmakebox[cond_dci_thd_unity][r]{,}
+ \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_thd_unity}{- \frac{[C]}{T}}& \cond{dci_thd_unity}{,} \label{e:dci_thd_unity_dt} \\
+ \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial n_{j} }} &= \rhs{dci_thd_unity}{0}& \cond{dci_thd_unity}{,}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dci_thd_unity_de}
  \begin{align}
-  \eqmathbox[lhs_dci_thd_unity][r]{\frac{\partial c_{i} }{\partial V }} &= \eqmathbox[rhs_dci_thd_unity][l]{0} & \eqmakebox[cond_dci_thd_unity][r]{\dconp} \\
-  \eqmathbox[lhs_dci_thd_unity][r]{\frac{\partial c_{i} }{\partial P }} &= \eqmathbox[rhs_dci_thd_unity][l]{\frac{1}{T \Ru}}&\eqmakebox[cond_dci_thd_unity][r]{\dconv}
+  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_unity}{0} & \cond{dci_thd_unity}{\dconp} \\
+  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_unity}{\frac{1}{T \Ru}}& \cond{dci_thd_unity}{\dconv}
  \end{align}
 \end{subequations}
  
 If the third-body is the $m$th species,~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} become:
 \begin{align}
- \eqmathbox[lhs_dci_thd_spec][r]{\frac{\partial c_{i} }{\partial T }} &= \eqmathbox[rhs_dci_thd_spec][l]{-\frac{\delta_{\ns m}}{T} [C]}&\eqmakebox[cond_dci_thd_spec][r]{,} \label{e:dci_thd_spec_dt} \\
- \eqmathbox[lhs_dci_thd_spec][r]{\frac{\partial c_{i} }{\partial n_j }} &= \eqmathbox[rhs_dci_thd_spec][l]{\frac{1}{V} \left(- \delta_{\ns m} + \delta_{j m}\right)}&\eqmakebox[cond_dci_thd_spec][r]{,} \label{e:dci_thd_spec_dnj} \\
+ \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_thd_spec}{-\frac{\delta_{\ns m}}{T} [C]}&\cond{dci_thd_spec}{,} \label{e:dci_thd_spec_dt} \\
+ \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial n_j }} &= \rhs{dci_thd_spec}{\frac{1}{V} \left(- \delta_{\ns m} + \delta_{j m}\right)}&\cond{dci_thd_spec}{,} \label{e:dci_thd_spec_dnj} \\
 \end{align}
 and:
 \begin{subequations}
 \label{e:dci_thd_spec_de}
 \begin{align}
-\eqmathbox[lhs_dci_thd_spec][r]{\frac{\partial c_{i} }{\partial V }} &= \eqmathbox[rhs_dci_thd_spec][l]{\frac{\delta_{\ns m}}{V} \left([C] - [C]_{\ns}\right) + \frac{[C]_{m}}{V} \left(\delta_{\ns m} - 1\right)} & \eqmakebox[cond_dci_thd_spec][r]{\dconp} \\
-\eqmathbox[lhs_dci_thd_spec][r]{\frac{\partial c_{i} }{\partial P }} &= \eqmathbox[rhs_dci_thd_spec][l]{\frac{\delta_{\ns m}}{T \Ru}} & \eqmakebox[cond_dci_thd_spec][r]{\dconv}
+\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns m}}{V} \left([C] - [C]_{\ns}\right) + \frac{[C]_{m}}{V} \left(\delta_{\ns m} - 1\right)} & \cond{dci_thd_spec}{\dconp} \\
+\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns m}}{T \Ru}} & \cond{dci_thd_spec}{\dconv}
 \end{align}
 \end{subequations}
 
@@ -606,15 +617,15 @@ Subsequently, the derivatives of the reduced pressure and falloff blending facto
 
 The derivatives of the unimolecular\slash~recombination fall-off reaction third-body pressure modification term are:
 \begin{align}
- \eqmathbox[lhs_dci_fall][r]{\frac{\partial c_{i} }{\partial T }} &= \eqmathbox[rhs_dci_fall][l]{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial T } + \frac{\partial P_{r, i} }{\partial T } \left(F_{i} - c_{i}\right)\right)} & \eqmakebox[cond_dci_fall][r]{,} \label{e:dci_fall_dt}\\
- \eqmathbox[lhs_dci_fall][r]{\frac{\partial c_{i} }{\partial n_j}} &= \eqmathbox[rhs_dci_fall][l]{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \eqmakebox[cond_dci_fall][r]{,} \label{e:dci_fall_dnj}
+ \lhs{dci_fall}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial T } + \frac{\partial P_{r, i} }{\partial T } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,} \label{e:dci_fall_dt}\\
+ \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,} \label{e:dci_fall_dnj}
 \end{align}
 and with respect to the thermodynamic parameter:
 \begin{subequations}
  \label{e:dci_fall_de}
  \begin{align}
-  \eqmathbox[lhs_dci_fall][r]{\frac{\partial c_i }{\partial V }} &= \eqmathbox[rhs_dci_fall][l]{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial V } + \frac{\partial P_{r, i} }{\partial V } \left(F_{i} - c_{i}\right)\right)} & \eqmakebox[cond_dci_fall][r]{\dconp} \\
-  \eqmathbox[lhs_dci_fall][r]{\frac{\partial c_i }{\partial P }} &= \eqmathbox[rhs_dci_fall][l]{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial P } + \frac{\partial P_{r, i} }{\partial P } \left(F_{i} - c_{i}\right)\right)} & \eqmakebox[cond_dci_fall][r]{\dconv}
+  \lhs{dci_fall}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial V } + \frac{\partial P_{r, i} }{\partial V } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconp} \\
+  \lhs{dci_fall}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial P } + \frac{\partial P_{r, i} }{\partial P } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconv}
  \end{align}
 \end{subequations}
 
@@ -624,16 +635,16 @@ and with respect to the thermodynamic parameter:
 Similarly, the chemically-activated bimolecular reactions are as follows:
 \begin{align}
  \label{e:dci_chem_dt}
- \eqmathbox[lhs_dci_chem][r]{\frac{\partial c_i }{\partial T }} &= \eqmathbox[rhs_dci_chem][l]{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial T } - \frac{\partial P_{r, i} }{\partial T } c_{i}\right)} & \eqmakebox[cond_dci_chem][r]{,} \\
+ \lhs{dci_chem}{\frac{\partial c_i }{\partial T }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial T } - \frac{\partial P_{r, i} }{\partial T } c_{i}\right)} & \cond{dci_chem}{,} \\
  \label{e:dci_chem_dnj}
- \eqmathbox[lhs_dci_chem][r]{\frac{\partial c_i }{\partial n_j }} &= \eqmathbox[rhs_dci_chem][l]{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial n_j } - \frac{\partial P_{r, i} }{\partial n_j } c_{i}\right)} & \eqmakebox[cond_dci_chem][r]{,}
+ \lhs{dci_chem}{\frac{\partial c_i }{\partial n_j }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial n_j } - \frac{\partial P_{r, i} }{\partial n_j } c_{i}\right)} & \cond{dci_chem}{,}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dci_chem_de}
  \begin{align}
-  \eqmathbox[lhs_dci_chem][r]{\frac{\partial c_i }{\partial V }} &= \eqmathbox[rhs_dci_chem][l]{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial V } - \frac{\partial P_{r, i} }{\partial V } c_{i}\right)} & \eqmakebox[cond_dci_chem][r]{\dconp} \\
-  \eqmathbox[lhs_dci_chem][r]{\frac{\partial c_i }{\partial P }} &= \eqmathbox[rhs_dci_chem][l]{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial P } - \frac{\partial P_{r, i} }{\partial P } c_{i}\right)} & \eqmakebox[cond_dci_chem][r]{\dconv}
+  \lhs{dci_chem}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial V } - \frac{\partial P_{r, i} }{\partial V } c_{i}\right)} & \cond{dci_chem}{\dconp} \\
+  \lhs{dci_chem}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial P } - \frac{\partial P_{r, i} }{\partial P } c_{i}\right)} & \cond{dci_chem}{\dconv}
  \end{align}
 \end{subequations}
 
@@ -643,57 +654,57 @@ and:
 Next the reduced pressure derivatives in~\crefrange{e:dci_fall_dt}{e:dci_chem_de} will be evaluated; these depend on the form of the third-body efficiency used in~\cref{e:pr}, thus we will first work out the derivatives for each third-body efficiency form, and then develop a generalized form for compact representation.
 For a third-body concentration based upon the entire mixture, (i.e.,~\cref{e:thd_mix}) the derivatives are:
 \begin{align}
- \eqmathbox[lhs_dpr_mix][r]{\frac{\partial P_{r, i} }{\partial T }} &= \eqmathbox[rhs_dpr_mix][l]{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) - \frac{[C] k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i}}} & \eqmakebox[cond_dpr_mix][r]{,} \label{e:dpr_mix_dt} \\
- \eqmathbox[lhs_dpr_mix][r]{\frac{\partial P_{r, i} }{\partial n_j }} &= \eqmathbox[rhs_dpr_mix][l]{\frac{k_{0, i} \left(- \alpha_{\ns,i} + \alpha_{j,i}\right)}{k_{\infty, i} V}} & \eqmakebox[cond_dpr_mix][r]{,} \label{e:dpr_mix_dnj}
+ \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial T }} &= \rhs{dpr_mix}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) - \frac{[C] k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i}}} & {,} \label{e:dpr_mix_dt} \\
+ \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial n_j }} &= \rhs{dpr_mix}{\frac{k_{0, i} \left(- \alpha_{\ns,i} + \alpha_{j,i}\right)}{k_{\infty, i} V}} & \cond{dpr_mix}{,} \label{e:dpr_mix_dnj}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dpr_mix_de}
  \begin{align}
-  \eqmathbox[lhs_dpr_mix][r]{\frac{\partial P_{r, i} }{\partial V }} &= \eqmathbox[rhs_dpr_mix][l]{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \alpha_{\ns,i}}{V k_{\infty, i}}} & \eqmakebox[cond_dpr_mix][r]{\dconp} \\
-  \eqmathbox[lhs_dpr_mix][r]{\frac{\partial P_{r, i} }{\partial P }} &= \eqmathbox[rhs_dpr_mix][l]{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \eqmakebox[cond_dpr_mix][r]{\dconv}
+  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_mix}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \alpha_{\ns,i}}{V k_{\infty, i}}} & \cond{dpr_mix}{\dconp} \\
+  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_mix}{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \cond{dpr_mix}{\dconv}
  \end{align}
 \end{subequations}
 
-For a third-body concentration where all $\alpha_{k,i}=1$:
+For a unity third-body concentration (i.e., all $\alpha_{k,i}=1$):
 \begin{align}
- \eqmathbox[lhs_dpr_unity][r]{\frac{\partial P_{r, i} }{\partial T }} &= \eqmathbox[rhs_dpr_unity][l]{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right)} & \eqmakebox[cond_dpr_unity][r]{,} \label{e:dpr_unity_dt} \\
- \eqmathbox[lhs_dpr_unity][r]{\frac{\partial P_{r, i} }{\partial n_j }} &= \eqmathbox[rhs_dpr_unity][l]{0} & \eqmakebox[cond_dpr_unity][r]{,} \label{e:dpr_unity_dnj}
+ \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial T }} &= \rhs{dpr_unity}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right)} & \cond{dpr_unity}{,} \label{e:dpr_unity_dt} \\
+ \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial n_j }} &= \rhs{dpr_unity}{0} & \cond{dpr_unity}{,} \label{e:dpr_unity_dnj}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dpr_unity_de}
  \begin{align}
-  \eqmathbox[lhs_dpr_unity][r]{\frac{\partial P_{r, i} }{\partial V }} &= \eqmathbox[rhs_dpr_unity][l]{0} & \eqmakebox[cond_dpr_unity][r]{\dconp}\\
-  \eqmathbox[lhs_dpr_unity][r]{\frac{\partial P_{r, i} }{\partial P }} &= \eqmathbox[rhs_dpr_unity][l]{\frac{k_{0, i}}{k_{\infty, i}} \frac{1}{\Ru T}} & \eqmakebox[cond_dpr_unity][r]{\dconv}
+  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_unity}{0} & \cond{dpr_unity}{\dconp}\\
+  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_unity}{\frac{k_{0, i}}{k_{\infty, i}} \frac{1}{\Ru T}} & \cond{dpr_unity}{\dconv}
  \end{align}
 \end{subequations}
 
-Finally, for species $m$ as the third-body:
+Finally, for species-based third-body (i.e., the species $m$ alone acts as the third body):
 \begin{align}
- \eqmathbox[lhs_dpr_spec][r]{\frac{\partial P_{r, i} }{\partial T }} &= \eqmathbox[rhs_dpr_spec][l]{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) - \frac{[C] k_{0, i} \delta_{\ns m}}{T k_{\infty, i}}} & \eqmakebox[cond_dpr_spec][r]{,} \label{e:dpr_spec_dt} \\
- \eqmathbox[lhs_dpr_spec][r]{\frac{\partial P_{r, i} }{\partial n_j }} &= \eqmathbox[rhs_dpr_spec][l]{\frac{k_{0, i}}{V k_{\infty, i}} \left(- \delta_{\ns m} + \delta_{j m}\right)} & \eqmakebox[cond_dpr_spec][r]{,} \label{e:dpr_spec_dnj}
+ \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial T }} &=\rhs{dpr_spec}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) - \frac{[C] k_{0, i} \delta_{\ns m}}{T k_{\infty, i}}} & \cond{dpr_spec}{,} \label{e:dpr_spec_dt} \\
+ \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial n_j }} &=\rhs{dpr_spec}{\frac{k_{0, i}}{V k_{\infty, i}} \left(- \delta_{\ns m} + \delta_{j m}\right)} & \cond{dpr_spec}{,} \label{e:dpr_spec_dnj}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dpr_spec_de}
  \begin{align}
-  \eqmathbox[lhs_dpr_spec][r]{\frac{\partial P_{r, i} }{\partial V }} &= \eqmathbox[rhs_dpr_unity][l]{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \delta_{\ns m}}{V k_{\infty, i}}} & \eqmakebox[cond_dpr_spec][r]{\dconp}\\
-  \eqmathbox[lhs_dpr_spec][r]{\frac{\partial P_{r, i} }{\partial P }} &= \eqmathbox[rhs_dpr_unity][l]{\frac{k_{0, i} \delta_{\ns m}}{T k_{\infty, i} \Ru}} & \eqmakebox[cond_dpr_spec][r]{\dconv}
+  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_spec}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \delta_{\ns m}}{V k_{\infty, i}}} & \cond{dpr_spec}{\dconp}\\
+  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_spec}{\frac{k_{0, i} \delta_{\ns m}}{T k_{\infty, i} \Ru}} & \cond{dpr_spec}{\dconv}
  \end{align}
 \end{subequations}
 
 \Crefrange{e:dpr_mix_dt}{e:dpr_spec_de} may be recast in a more generalized form using temporary variables $\Theta_{\partial P_{r, i}, \ldots}$ and $\bar{\theta}_{\partial P_{r, i}, \ldots}$ to replace terms in the derivative:
 \begin{align}
- \eqmathbox[lhs_dpr_gen][r]{\frac{\partial P_{r, i} }{\partial T } } &= \eqmathbox[rhs_dpr_gen][l]{P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}} & \eqmakebox[cond_dpr_gen][r]{,} \label{e:dpr_dt} \\
- \eqmathbox[lhs_dpr_gen][r]{\frac{\partial P_{r, i} }{\partial n_j}} &= \eqmathbox[rhs_dpr_gen][l]{\frac{\bar{\theta}_{P_{r, i}, \partial n_j}}{V k_{\infty, i}} k_{0, i}} & \eqmakebox[cond_dpr_gen][r]{,} \label{e:dpr_dnj}
+ \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial T } } &= \rhs{dpr_gen}{P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}} & \cond{dpr_gen}{,} \label{e:dpr_dt} \\
+ \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial n_j}} &= \rhs{dpr_gen}{\frac{\bar{\theta}_{P_{r, i}, \partial n_j}}{V k_{\infty, i}} k_{0, i}} & \cond{dpr_gen}{,} \label{e:dpr_dnj}
 \end{align}
 and:
 \begin{subequations}
  \label{e:dpr_de}
  \begin{align}
-  \eqmathbox[lhs_dpr_gen][r]{\frac{\partial P_{r, i} }{\partial V}} &= \eqmathbox[rhs_dpr_gen][l]{P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}} & \eqmakebox[cond_dpr_gen][r]{\dconp} \\
-  \eqmathbox[lhs_dpr_gen][r]{\frac{\partial P_{r, i} }{\partial P}} &= \eqmathbox[rhs_dpr_gen][l]{\bar{\theta}_{P_{r, i}, \partial P}} & \eqmakebox[cond_dpr_gen][r]{\dconv}
+  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial V}} &= \rhs{dpr_gen}{P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}} & \cond{dpr_gen}{\dconp} \\
+  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial P}} &= \rhs{dpr_gen}{\bar{\theta}_{P_{r, i}, \partial P}} & \cond{dpr_gen}{\dconv}
  \end{align}
 \end{subequations}
 with:
@@ -702,38 +713,38 @@ with:
  \Theta_{P_{r,i}, \partial T} &=
  \begin{dcases}
   \frac{1}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if mix,} \\
-  \frac{1}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \frac{1}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{for species $m$}
+  \frac{1}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if unity,} \\
+  \frac{1}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if species,}
  \end{dcases} \\
  \bar{\theta}_{P_{r, i}, \partial T} &=
  \begin{dcases}
-  \eqmathbox[theta_pr_bar_dt][l]{- \frac{[C] k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i}}} & \text{if mix,} \\
-  \eqmathbox[theta_pr_bar_dt][c]{0} & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \eqmathbox[theta_pr_bar_dt][l]{- \frac{[C] k_{0, i} \delta_{\ns m}}{T k_{\infty, i}}} & \text{for species $m$}
+  \rhs{theta_pr_bar_dt}{- \frac{[C] k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i}}} & \text{if mix,} \\
+  \rhs{theta_pr_bar_dt}{0}[c] & \text{if unity,} \\
+  \rhs{theta_pr_bar_dt}{- \frac{[C] k_{0, i} \delta_{\ns m}}{T k_{\infty, i}}} & \text{if species,}
  \end{dcases} \\
  \bar{\theta}_{P_{r, i}, \partial n_j} &=
  \begin{dcases}
-  \eqmathbox[theta_pr_bar_dnj][l]{- \alpha_{\ns,i} + \alpha_{j,i}} & \text{if mix,} \\
-  \eqmathbox[theta_pr_bar_dnj][c]{0} & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \eqmathbox[theta_pr_bar_dnj][l]{- \delta_{\ns m} + \delta_{j m}} & \text{for species $m$}
+  \rhs{theta_pr_bar_dnj}{- \alpha_{\ns,i} + \alpha_{j,i}} & \text{if mix,} \\
+  \rhs{theta_pr_bar_dnj}{0}[c] & \text{if unity,}  \\
+  \rhs{theta_pr_bar_dnj}{- \delta_{\ns m} + \delta_{j m}} & \text{if species,}
  \end{dcases} \\
  \Theta_{P_{r,i}, \partial V} &=
  \begin{dcases}
-  \eqmathbox[Theta_pr_bar_dv][l]{- \frac{1}{V}} & \text{if mix,} \\
-  \eqmathbox[Theta_pr_bar_dv][c]{0} & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \eqmathbox[Theta_pr_bar_dv][l]{- \frac{1}{V}} & \text{for species $m$}
+  \rhs{Theta_pr_bar_dv}{- \frac{1}{V}} & \text{if mix,} \\
+  \rhs{Theta_pr_bar_dv}{0}[c] & \text{if unity,}  \\
+  \rhs{Theta_pr_bar_dv}{- \frac{1}{V}} & \text{if species,}
  \end{dcases} \\
  \bar{\theta}_{P_{r, i}, \partial V} &=
  \begin{dcases}
-  \eqmathbox[theta_pr_bar_dv][l]{\frac{[C] k_{0, i} \alpha_{\ns,i}}{V k_{\infty, i}}} & \text{if mix,} \\
-  \eqmathbox[theta_pr_bar_dv][c]{0} & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \eqmathbox[theta_pr_bar_dv][l]{\frac{[C] k_{0, i} \delta_{\ns m}}{V k_{\infty, i}}} & \text{for species $m$}
+  \rhs{theta_pr_bar_dv}{\frac{[C] k_{0, i} \alpha_{\ns,i}}{V k_{\infty, i}}} & \text{if mix,} \\
+  \rhs{theta_pr_bar_dv}{0}[c] & \text{if unity,}  \\
+  \rhs{theta_pr_bar_dv}{\frac{[C] k_{0, i} \delta_{\ns m}}{V k_{\infty, i}}} & \text{if species,}
  \end{dcases} \\
  \bar{\theta}_{P_{r, i}, \partial P} &=
  \begin{dcases}
-  \eqmathbox[theta_pr_bar_dp][l]{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \text{if mix,} \\
-  \eqmathbox[theta_pr_bar_dp][l]{\frac{k_{0, i}}{T k_{\infty, i} \Ru}} & \text{if all $\alpha_{k,i}$ = 1,} \\
-  \eqmathbox[theta_pr_bar_dp][l]{\frac{k_{0, i} \delta_{\ns m}}{T k_{\infty, i} \Ru}} & \text{for species $m$}
+  \rhs{theta_pr_bar_dp}{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \text{if mix,} \\
+  \rhs{theta_pr_bar_dp}{\frac{k_{0, i}}{T k_{\infty, i} \Ru}} & \text{if unity,}  \\
+  \rhs{theta_pr_bar_dp}{\frac{k_{0, i} \delta_{\ns m}}{T k_{\infty, i} \Ru}} & \text{if species,}
  \end{dcases} \\
 \end{align}
 
