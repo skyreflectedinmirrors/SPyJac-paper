@@ -110,7 +110,7 @@ The evolution of the thermo-chemical state variables of this system is described
 \label{e:source_terms}
 \begin{align}
 f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconp, \\
-f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv 
+f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\}\dconv
 \end{align}
 \end{subequations}
 For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
@@ -313,7 +313,7 @@ will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if
 
 
 \subsection{Falloff reactions}
-Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure- ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using Eq.~\cref{e:arrhenius}.
+Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure- ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using \cref{e:arrhenius}.
 The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the third-body concentration (based on either the mixture as a whole including any efficiencies $\alpha_{k,i}$, or a specific species), define a reduced pressure $P_{r,i}$ given by
 \begin{equation}
  \label{e:pr}
@@ -321,7 +321,7 @@ The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the 
 \end{equation}
 where $[X]_{i}$ is the appropriate third-body concentration as described in~\cref{s:thdbody}
 
-The falloff blending factor $F_i$ used in Eq.~\cref{e:rxn_pressure} is determined based on one of three representations: the Lindemann~\cite{Lindemann:1922cz}, Troe~\cite{Gilbert:1983bb}, and SRI~\cite{Stewart:1989gj} falloff approaches
+The falloff blending factor $F_i$ used in \cref{e:rxn_pressure} is determined based on one of three representations: the Lindemann~\cite{Lindemann:1922cz}, Troe~\cite{Gilbert:1983bb}, and SRI~\cite{Stewart:1989gj} falloff approaches
 \begin{equation}
 F_i = \begin{dcases}
 1 &\text{for Lindemann,} \\
@@ -331,9 +331,9 @@ d T^e \left( a \cdot \exp \left( -\frac{b}{T} \right) + \exp \left( -\frac{T}{c}
 \end{equation}
 The Troe representation is described by the variables:
 \begin{align}
- F_{cent} &= a \operatorname{exp}\left({- \frac{T}{T^{*}}}\right) + \left(- a + 1\right) \operatorname{exp}\left({- \frac{T}{T^{***}}}\right) + \operatorname{exp}\left({- \frac{T^{**}}{T}}\right) \;, \\ 
+ F_{cent} &= a \operatorname{exp}\left({- \frac{T}{T^{*}}}\right) + \left(- a + 1\right) \operatorname{exp}\left({- \frac{T}{T^{***}}}\right) + \operatorname{exp}\left({- \frac{T^{**}}{T}}\right) \;, \\
  A_{Troe} &= - 0.67 \log_{10}{\left (F_{cent} \right )} + \log_{10}{\left (P_{r, i} \right )} - 0.4 \;\text{, and}\\
- B_{Troe} &= - 1.1762 \log_{10}{\left (F_{cent} \right )} - 0.14 \log_{10}{\left (P_{r, i} \right )} + 0.806 
+ B_{Troe} &= - 1.1762 \log_{10}{\left (F_{cent} \right )} - 0.14 \log_{10}{\left (P_{r, i} \right )} + 0.806
 \end{align}
 where $a$, $T^{***}$, $T^*$, and $T^{**}$ are specified parameters.
 The final parameter $T^{**}$ is optional, and, if it is not used, the final term of $F_{\text{cent}}$ is omitted.
@@ -348,7 +348,7 @@ The parameters $d$ and $e$ are optional; if not specified, $d = 1$ and $e = 0$.
 \subsection{Pressure-dependent reactions}
 
 In addition to the falloff approach given previously, two additional formulations can be used to describe the pressure dependence of reactions that do not follow the modification factor $c_i$ approach.
-The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using Eq.~\cref{e:arrhenius}:
+The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using \cref{e:arrhenius}:
 \begin{align}
 k_1 (T) &= A_1 T^{\beta_1} \exp \left( -\frac{T_{a, 1}}{T} \right) \text{ at } P_1 \text{ and} \label{e:plog_k1} \\
 k_2 (T) &= A_2 T^{\beta_2} \exp \left( -\frac{T_{a, 2}}{T} \right) \text{ at } P_2 \;, \label{e:plog_k2}
@@ -414,7 +414,7 @@ the derivative of the forward reaction rate coefficient is:
  \label{e:dkf_dt}
  \frac{\text{d} {k_f} }{\text{d} T }_{i} = \frac{{k_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
 \end{equation}
-While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, rate of production, etc.---related to the last species to obtain the correct derivative, in this case using Eq.~\cref{e:last_spec_conc}:
+While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, rate of production, etc.---related to the last species to obtain the correct derivative, in this case using \cref{e:last_spec_conc}:
 \begin{equation}
  {R_f} = \left(\left(- \sum_{k=1}^{-1 + \ns} [C]_{k} + \frac{P}{T \Ru}\right)^{\nu^{\prime}_{\ns,i}}\right) {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
 \end{equation}
@@ -434,7 +434,7 @@ By defining a temporary variable (for species $l = \left\{j, \ns\right\}$) $S^{\
  \label{e:s_temp}
  S^{\prime}_{l} = \nu^{\prime}_{l,i} [C]_{l}^{\nu^{\prime}_{l,i} - 1} \prod_{\substack{1 \leq l \leq l - 1\\l + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
 \end{equation}
-and using~\cref{e:dkf_dt}, Eq.~\cref{e:dropfdt_1} can be simplified to:
+and using~\cref{e:dkf_dt}, \cref{e:dropfdt_1} can be simplified to:
 \begin{equation}
  \label{e:dropf_dt}
  \frac{\partial {R_f} }{\partial T }_{i} = - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i} + \frac{{R_f}_{i}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)
@@ -444,7 +444,7 @@ Starting from~\cref{e:ropr} and applying the same expansion of the last species'
 \begin{equation}
  \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
 \end{equation}
-Next, Eq.~\cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
+Next, \cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
 \begin{equation}
  \frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \frac{1}{{K_c}_{i}} \frac{\text{d} {K_c} }{\text{d} T }_{i} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i}
 \end{equation}
@@ -461,7 +461,7 @@ giving:
 \label{e:dkr_dt}
 \frac{\text{d} {k_r} }{\text{d} T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_r}_{i} \;,
 \end{equation}
-and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to Eq.~\cref{e:s_temp} for the reverse direction---we obtain:
+and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to \cref{e:s_temp} for the reverse direction---we obtain:
 \begin{equation}
 \label{e:dropr_dt}
 \frac{\partial {R_r} }{\partial T }_{i} = \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_r}_{i} - \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i}
@@ -604,7 +604,7 @@ and:
   \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_unity}{\frac{1}{T \Ru}}& \cond{dci_thd_unity}{\dconv}
  \end{align}
 \end{subequations}
- 
+
 If the third-body is the $m$th species,~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} become:
 \begin{align}
  \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_thd_spec}{-\frac{\delta_{\ns m}}{T} [C]}&\cond{dci_thd_spec}{,} \label{e:dci_thd_spec_dt} \\
@@ -704,7 +704,7 @@ and:
  \end{align}
 \end{subequations}
 
-\Crefrange{e:dpr_mix_dt}{e:dpr_spec_de} may be recast in a more generalized form using temporary variables $\Theta_{\partial P_{r, i}, \ldots}$ and $\bar{\theta}_{\partial P_{r, i}, \ldots}$ to replace terms in the derivative:
+\Crefrange{e:dpr_mix_dt}{e:dpr_spec_de} may be recast in a more generalized form using temporary variables $\Theta_{P_{r, i}, \partial \ldots}$ and $\bar{\theta}_{P_{r, i}, \partial \ldots}$---where, for example, $\Theta_{P_{r,i}, \partial T}$ corresponds to part of the reduced-pressure derivative with respect to temperature---to replace terms in each individual form of the reduced-pressure derivatives:
 \begin{align}
  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial T } } &= \rhs{dpr_gen}{P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}} & \cond{dpr_gen}{,} \label{e:dpr_dt} \\
  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial n_j}} &= \rhs{dpr_gen}{\frac{\bar{\theta}_{P_{r, i}, \partial n_j}}{V k_{\infty, i}} k_{0, i}} & \cond{dpr_gen}{,} \label{e:dpr_dnj}
@@ -755,7 +755,7 @@ with:
   \rhs{theta_pr_bar_dp}{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \text{if mix,} \\
   \rhs{theta_pr_bar_dp}{\frac{k_{0, i}}{T k_{\infty, i} \Ru}} & \text{if unity,}  \\
   \rhs{theta_pr_bar_dp}{\frac{k_{0, i} \delta_{\ns m}}{T k_{\infty, i} \Ru}} & \text{if species,}
- \end{dcases} \\
+ \end{dcases}
 \end{align}
 
 
@@ -822,24 +822,51 @@ Combining~\cref{e:datroe_dfcent,e:dbtroe_dfcent,e:datroe_dpr,e:dbtroe_dpr} with~
 For SRI falloff reactions:
 \begin{align}
  \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial T }} &= F_{i} \vast(\frac{X \left(- \frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} + \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \nonumber \\
- & \mathindent \frac{\partial P_{r, i} }{\partial T } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}+ \frac{e}{T} \vast) \; , \\
- \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial {n_j} }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} \; ,
+ & \mathindent \frac{\partial P_{r, i} }{\partial T } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}+ \frac{e}{T} \vast) & , \label{e:dfi_sri_dt} \\
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial {n_j} }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & , \label{e:dfi_sri_dnj}
 \end{align}
 and:
-% TODO: not satistified with this yet...
+\begin{subequations}
+ \label{e:dfi_sri_de}
+ \begin{align}
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial V } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconp} \\
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial P } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconv}
+ \end{align}
+\end{subequations}
+where:
+\begin{align}
+ \frac{\text{d} X }{\text{d} P_{r, i} } &= - \frac{2 X^{2} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} &, \\
+ \frac{\partial X}{\partial n_j} &= \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} }
+\end{align}
+
+As with the reduced-pressure derivatives,~\cref{e:dfi_lind_dt,e:dfi_lind_dnj,e:dfi_lind_de,e:dfi_troe_dt,e:dfi_troe_dnj,e:dfi_troe_de,e:dfi_sri_dt,e:dfi_sri_dnj,e:dfi_sri_de} may be represented in a general form via introduction of temporary variables $\Theta_{F_i, \partial \ldots}$:
+\begin{align}
+\lhs{dfi_gen}{\frac{\partial F_{i} }{\partial T }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial T}} & \cond{dfi_gen}{,} \\
+\lhs{dfi_gen}{\frac{\partial F_{i} }{\partial {n_j}}} &= \rhs{dfi_gen}{\frac{F_{i} k_{0, i} \Theta_{F_i, \partial n_j}}{V k_{\infty, i}} \bar{\theta}_{P_{r, i}, \partial n_j}} & \cond{dfi_gen}{,}
+\end{align}
+and:
 \begin{subequations}
  \begin{align}
- \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial V } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
- % note: no alignment as this causes eqn # to go down a line
- \cond{dfi_sri}{\dconp} \\
- \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial P } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
- % note: no alignment as this causes eqn # to go down a line
- \cond{dfi_sri}{\dconv}
+  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial V}} & \cond{dfi_gen}{\dconp} \\
+  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial P}} & \cond{dfi_gen}{\dconv}
  \end{align}
-
 \end{subequations}
-
-
+where:
+\begin{align}
+\Theta_{F_i, \partial T} &=
+\begin{dcases}
+\rhs{dfi_dt}{0}[c] & \cond{dfi_dt}{if Lindemann}[l] \\
+\rhs{dfi_dt}{ - \frac{B_{Troe}}{F_{cent} P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}
+	     \Biggl(} & \cond{dfi_dt}{} \nonumber \\
+\rhs{dfi_dt}{\mathindent 2 A_{Troe} F_{cent} \left(0.14 A_{Troe} + B_{Troe}\right)
+	     \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right)
+	     \log{\left (F_{cent} \right )} + } & \cond{dfi_dt}{} \nonumber \\
+\rhs{dfi_dt}{\mathindent P_{r, i} \frac{\text{d} F_{cent} }{\text{d} T }
+	      \biggl( 2 A_{Troe} \left(1.1762 A_{Troe} - 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - } & \cond{dfi_dt}{} \nonumber \\
+\rhs{dfi_dt}{\mathindent[plussomeextrastu] B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\biggr)\Biggr)} & \cond{dfi_dt}{if Troe}[l] \\
+\rhs{dfi_dt}{- \frac{X \left(\frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} - \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \frac{e}{T} - \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right )}} & \cond{dfi_dt}{if SRI}[l] \\
+\end{dcases}
+\end{align}
 
 
 
@@ -847,6 +874,6 @@ and:
 \subsection{Final Jacobian entries}
 \label{s:jac_final}
 
-\printbibliography 
+\printbibliography
 
 \end{document}
