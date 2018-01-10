@@ -47,6 +47,7 @@
 \NewDocumentCommand{\lhs}{mmO{r}}{\eqmathbox[LHS_#1][#3]{#2}}
 \NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
 \NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
+\NewDocumentCommand{\mathcond}{mmO{r}}{\eqmathbox[COND_#1][#3]{#2}}
 
 % consistent multiline equation spacing
 \NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
@@ -385,21 +386,21 @@ We will begin by deriving subcomponents of the Jacobian matrix in the subsequent
 
 \subsection{Species rate of production derivatives}
 First, we evaluate the derivatives of the net species rate of production equation~\cref{e:spec_rop}, with respect to temperature:
-\begin{equation}
+\begin{align}
  \label{e:dwdot_dT}
- \frac{\partial \dot{\omega} }{\partial T }_{k} = \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right) \;,
-\end{equation}
+ \lhs{dwdot}{\frac{\partial \dot{\omega} }{\partial T }_{k}} &= \rhs{dwdot}{\sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right)} & \cond{dwdot}{,}
+\end{align}
 other species:
-\begin{equation}
+\begin{align}
  \label{e:dwdot_dnj}
- \frac{\partial \dot{\omega} }{\partial {n_j} }_{k} = \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial {n_j} }_{i} + \nu_{k,i} \frac{\partial R }{\partial {n_j} }_{i} c_{i}\right)
-\end{equation}
+ \lhs{dwdot}{\frac{\partial \dot{\omega} }{\partial {n_j} }_{k}} &= \rhs{dwdot}{\sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial {n_j} }_{i} + \nu_{k,i} \frac{\partial R }{\partial {n_j} }_{i} c_{i}\right)} & \cond{dwdot}{,}
+\end{align}
 and the state parameter:
 \begin{subequations}
  \label{e:dwdot_de}
  \begin{align}
-  \frac{\partial \dot{\omega} }{\partial V }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial V }_{i} + \nu_{k,i} \frac{\partial R }{\partial V }_{i} c_{i}\right)\dconp,\\
-  \frac{\partial \dot{\omega} }{\partial P }_{k} &= \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial P }_{i} + \nu_{k,i} \frac{\partial R }{\partial P }_{i} c_{i}\right)\dconv
+  \lhs{dwdot}{\frac{\partial \dot{\omega} }{\partial V }_{k}} &= \rhs{dwdot}{\sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial V }_{i} + \nu_{k,i} \frac{\partial R }{\partial V }_{i} c_{i}\right)} & \cond{dwdot}{\dconp}\\
+  \lhs{dwdot}{\frac{\partial \dot{\omega} }{\partial P }_{k}} &= \rhs{dwdot}{\sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial P }_{i} + \nu_{k,i} \frac{\partial R }{\partial P }_{i} c_{i}\right)} & \cond{dwdot}{\dconv}
  \end{align}
 \end{subequations}
 
@@ -516,35 +517,33 @@ The derivatives of the forward and reverse rates of progress with respect to the
 First, the derivative of the concentration of a species $k$ with respect to the parameter is:
 
 \begin{subequations}
- % based on https://tex.stackexchange.com/a/239764/56227
- % the idea is to take the longest case (1.b -- i.e., no hphantom) and use this
- % to make a box around all cases such that the alignment works
  \begin{align}
- \frac{\partial [C] }{\partial V }_{k} &=
- \begin{dcases}
-  \mathrlap{-\frac{[C]_{k}}{V}}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k \ne \ns \\
-  \frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k} & k = \ns
- \end{dcases}&\dconp \\
- \frac{\partial [C]_{k} }{\partial P } &=
- \begin{dcases}
-  \mathrlap{\hphantom{0}0}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k \ne \ns \\
-  \mathrlap{\frac{1}{T \Ru}}\hphantom{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & k = \ns
- \end{dcases}&\dconv
+ \lhs{dck}{\frac{\partial [C] }{\partial V }_{k}} &=
+  \begin{dcases}
+  \rhs{dck}{\frac{[C]_{k}}{V}} & \mathcond{dck}{k \ne \ns} \\
+  \rhs{dck}{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & \mathcond{dck}{k = \ns}
+ \end{dcases}&\cond{dck}{\dconp}
+ \lhs{dck}{\frac{\partial [C]_{k} }{\partial P }} &=
+ \begin{dcases} \\
+   \rhs{dck}{0} & \mathcond{dck}{k \ne \ns} \\
+   \rhs{dck}{\frac{1}{T \Ru}} & \mathcond{dck}{k = \ns}
+ \end{dcases}&\cond{dck}{\dconv}
  \end{align}
 \end{subequations}
+
 
 Following the outline of~\cref{s:rop_molar}, the forward rate of progress derivatives are:
 \begin{subequations}
  \begin{align}
-  \frac{\partial {R_f}_{i} }{\partial V } &= \frac{[C] S^{\prime}_{\ns}}{V} {k_f}_{i} - \frac{{R_f}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}&\dconp\\
-  \frac{\partial {R_f}_{i} }{\partial P } &= \frac{S^{\prime}_{\ns} {k_f}_{i}}{T \Ru}&\dconv
+  \lhs{dri_de}{\frac{\partial {R_f}_{i} }{\partial V }} &= \rhs{dri_de}{\frac{[C] S^{\prime}_{\ns}}{V} {k_f}_{i} - \frac{{R_f}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}}&\cond{dri_de}{\dconp}\\
+  \lhs{dri_de}{\frac{\partial {R_f}_{i} }{\partial P }} &= \rhs{dri_de}{\frac{S^{\prime}_{\ns} {k_f}_{i}}{T \Ru}}&\cond{dri_de}{\dconv}
  \end{align}
 \end{subequations}
 and similarly, the reverse rate of progress derivatives:
 \begin{subequations}
  \begin{align}
-  \frac{\partial {R_r}_{i} }{\partial V } &= \frac{[C] S^{\prime\prime}_{\ns}}{V} {k_r}_{i} - \frac{{R_r}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i}&\dconp\\
-  \frac{\partial {R_r}_{i} }{\partial P } &= \frac{S^{\prime\prime}_{\ns} {k_r}_{i}}{T \Ru}&\dconv
+  \lhs{dri_de}{\frac{\partial {R_r}_{i} }{\partial V }} &= \rhs{dri_de}{\frac{[C] S^{\prime\prime}_{\ns}}{V} {k_r}_{i} - \frac{{R_r}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i}}&\cond{dri_de}{\dconp}\\
+  \lhs{dri_de}{\frac{\partial {R_r}_{i} }{\partial P }} &= \rhs{dri_de}{\frac{S^{\prime\prime}_{\ns} {k_r}_{i}}{T \Ru}}&\cond{dri_de}{\dconv}
  \end{align}
 \end{subequations}
 giving finally:
@@ -719,37 +718,42 @@ and:
 \end{subequations}
 with:
 \begin{align}
- \label{e:dpr_theta}
+ \label{e:dpr_theta_dt}
  \Theta_{P_{r,i}, \partial T} &=
  \begin{dcases}
   \frac{1}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if mix,} \\
   \frac{1}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if unity,} \\
   \frac{1}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru} - \frac{E_{a, \infty}}{T \Ru}\right) & \text{if species,}
  \end{dcases} \\
+ \label{e:dpr_theta_bar_dt}
  \bar{\theta}_{P_{r, i}, \partial T} &=
  \begin{dcases}
   \rhs{theta_pr_bar_dt}{- \frac{[C] k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i}}} & \text{if mix,} \\
   \rhs{theta_pr_bar_dt}{0}[c] & \text{if unity,} \\
   \rhs{theta_pr_bar_dt}{- \frac{[C] k_{0, i} \delta_{\ns m}}{T k_{\infty, i}}} & \text{if species,}
  \end{dcases} \\
+ \label{e:dpr_theta_bar_dnj}
  \bar{\theta}_{P_{r, i}, \partial n_j} &=
  \begin{dcases}
   \rhs{theta_pr_bar_dnj}{- \alpha_{\ns,i} + \alpha_{j,i}} & \text{if mix,} \\
   \rhs{theta_pr_bar_dnj}{0}[c] & \text{if unity,}  \\
   \rhs{theta_pr_bar_dnj}{- \delta_{\ns m} + \delta_{j m}} & \text{if species,}
  \end{dcases} \\
+ \label{e:dpr_theta_dv}
  \Theta_{P_{r,i}, \partial V} &=
  \begin{dcases}
   \rhs{Theta_pr_bar_dv}{- \frac{1}{V}} & \text{if mix,} \\
   \rhs{Theta_pr_bar_dv}{0}[c] & \text{if unity,}  \\
   \rhs{Theta_pr_bar_dv}{- \frac{1}{V}} & \text{if species,}
  \end{dcases} \\
+ \label{e:dpr_theta_bar_dv}
  \bar{\theta}_{P_{r, i}, \partial V} &=
  \begin{dcases}
   \rhs{theta_pr_bar_dv}{\frac{[C] k_{0, i} \alpha_{\ns,i}}{V k_{\infty, i}}} & \text{if mix,} \\
   \rhs{theta_pr_bar_dv}{0}[c] & \text{if unity,}  \\
   \rhs{theta_pr_bar_dv}{\frac{[C] k_{0, i} \delta_{\ns m}}{V k_{\infty, i}}} & \text{if species,}
  \end{dcases} \\
+ \label{e:dpr_theta_dp}
  \bar{\theta}_{P_{r, i}, \partial P} &=
  \begin{dcases}
   \rhs{theta_pr_bar_dp}{\frac{k_{0, i} \alpha_{\ns,i}}{T k_{\infty, i} \Ru}} & \text{if mix,} \\
@@ -851,24 +855,56 @@ and:
   \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial P}} & \cond{dfi_gen}{\dconv}
  \end{align}
 \end{subequations}
-where:
+where for Lindemann falloff reactions:
 \begin{align}
-\Theta_{F_i, \partial T} &=
-\begin{dcases}
-\rhs{dfi_dt}{0}[c] & \cond{dfi_dt}{if Lindemann}[l] \\
-\rhs{dfi_dt}{ - \frac{B_{Troe}}{F_{cent} P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}
-	     \Biggl(} & \cond{dfi_dt}{} \nonumber \\
-\rhs{dfi_dt}{\mathindent 2 A_{Troe} F_{cent} \left(0.14 A_{Troe} + B_{Troe}\right)
-	     \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right)
-	     \log{\left (F_{cent} \right )} + } & \cond{dfi_dt}{} \nonumber \\
-\rhs{dfi_dt}{\mathindent P_{r, i} \frac{\text{d} F_{cent} }{\text{d} T }
-	      \biggl( 2 A_{Troe} \left(1.1762 A_{Troe} - 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - } & \cond{dfi_dt}{} \nonumber \\
-\rhs{dfi_dt}{\mathindent[plussomeextrastu] B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\biggr)\Biggr)} & \cond{dfi_dt}{if Troe}[l] \\
-\rhs{dfi_dt}{- \frac{X \left(\frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} - \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \frac{e}{T} - \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right )}} & \cond{dfi_dt}{if SRI}[l] \\
-\end{dcases}
+\lhs{dfi_lind}{\Theta_{F_i, \partial T}} &= \rhs{dfi_lind}{0} \\
+\lhs{dfi_lind}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_lind}{0}
 \end{align}
-
-
+and:
+\begin{subequations}
+ \begin{align}
+  \lhs{dfi_lind}{\Theta_{F_i, \partial V}} &= \rhs{dfi_lind}{0} \\
+  \lhs{dfi_lind}{\Theta_{F_i, \partial P}} &= \rhs{dfi_lind}{0}
+ \end{align}
+\end{subequations}
+For Troe falloff reactions:
+\begin{align}
+% troe
+\lhs{dfi_troe}{\Theta_{F_i, \partial T}} &= 
+\rhs{dfi_troe}{ - \frac{B_{Troe}}{F_{cent} P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \times \Biggl(} \nonumber \\
+&\rhs{dfi_troe}{ 2 A_{Troe} F_{cent} \left(0.14 A_{Troe} + B_{Troe}\right) \times } \nonumber \\
+&\rhs{dfi_troe}{\left( P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (F_{cent} \right )} + P_{r, i} \frac{\text{d} F_{cent} }{\text{d} T } \times \biggl(} \nonumber \\
+&\rhs{dfi_troe}{\mathindent 2 A_{Troe} \left(1.1762 A_{Troe} - 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - } \nonumber \\
+&\rhs{dfi_troe}{\mathindent B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\biggr)\Biggr)} \\
+\lhs{dfi_troe}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_troe}{- \frac{2 A_{Troe} B_{Troe} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}
+\end{align}
+and:
+\begin{subequations}
+ \begin{align}
+   \lhs{dfi_troe}{\Theta_{F_i, \partial V}} &= \rhs{dfi_troe}{- \frac{2 A_{Troe} B_{Troe} \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \times \bigl(} \nonumber \\
+					    & \rhs{dfi_troe}{\mathindent[alittlebit] 0.14 A_{Troe} + B_{Troe}\bigr) \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right)} \\
+   \lhs{dfi_troe}{\Theta_{F_i, \partial P}} &= \rhs{dfi_troe}{- \frac{2 A_{Troe} B_{Troe} \bar{\theta}_{P_{r, i}, \partial P} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}
+ \end{align}
+\end{subequations}
+where $\Theta_{P_{r,i}, \partial \ldots}$ and $\bar{\theta}_{P_{r, i}, \partial \ldots}$ are given by~\cref{e:dpr_theta_dt,e:dpr_theta_bar_dt,e:dpr_theta_bar_dnj,e:dpr_theta_dv,e:dpr_theta_bar_dv,e:dpr_theta_dp} respectively.
+Finally, for SRI falloff reactions:
+\begin{align}
+ \lhs{dfi_sri}{\Theta_{F_i, \partial T}} &= 
+ \rhs{dfi_sri}{- \frac{X \left(\frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} - \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \frac{e}{T} - \Biggl(} \nonumber \\
+ &\rhs{dfi_sri}{\mathindent \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \times } \nonumber \\
+ &\rhs{dfi_sri}{\mathindent \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right ) \Biggr)}} \\
+ \lhs{dfi_sri}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_sri}{- \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (P_{r, i} \right )}}
+\end{align}
+and:
+\begin{subequations}
+ \begin{align}
+  \lhs{dfi_sri}{\Theta_{F_i, \partial V}} &=
+  \rhs{dfi_sri}{- \frac{2 X^{2} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right) \log \Biggl(} \nonumber \\
+& \rhs{dfi_sri}{\mathindent \left( a \operatorname{exp}\left({\frac{T}{c}}\right) + \operatorname{exp}\left({\frac{b}{T}}\right)\right) \operatorname{exp}\left({- \frac{T}{c} - \frac{b}{T}}\right) \Biggr)} \\
+  \lhs{dfi_sri}{\Theta_{F_i, \partial P}} &=
+  \rhs{dfi_sri}{- \frac{2 X^{2} \bar{\theta}_{P_{r, i}, \partial P} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
+ \end{align}
+\end{subequations}
 
 
 \subsection{Final Jacobian entries}
