@@ -626,8 +626,10 @@ Subsequently, the derivatives of the reduced pressure and falloff blending facto
 
 The derivatives of the unimolecular\slash~recombination fall-off reaction third-body pressure modification term are:
 \begin{align}
- \lhs{dci_fall}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial T } + \frac{\partial P_{r, i} }{\partial T } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,} \label{e:dci_fall_dt}\\
- \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,} \label{e:dci_fall_dnj}
+ \label{e:dci_fall_dt}
+ \lhs{dci_fall}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial T } + \frac{\partial P_{r, i} }{\partial T } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,}\\
+ \label{e:dci_fall_dnj}
+ \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,}
 \end{align}
 and with respect to the thermodynamic parameter:
 \begin{subequations}
@@ -857,11 +859,14 @@ and:
 \end{subequations}
 where for Lindemann falloff reactions:
 \begin{align}
+\label{e:dfi_lind_dt_prod}
 \lhs{dfi_lind}{\Theta_{F_i, \partial T}} &= \rhs{dfi_lind}{0} \\
+\label{e:dfi_lind_dnj_prod}
 \lhs{dfi_lind}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_lind}{0}
 \end{align}
 and:
 \begin{subequations}
+ \label{e:dfi_lind_de_prod}
  \begin{align}
   \lhs{dfi_lind}{\Theta_{F_i, \partial V}} &= \rhs{dfi_lind}{0} \\
   \lhs{dfi_lind}{\Theta_{F_i, \partial P}} &= \rhs{dfi_lind}{0}
@@ -870,16 +875,19 @@ and:
 For Troe falloff reactions:
 \begin{align}
 % troe
+\label{e:dfi_troe_dt_prod}
 \lhs{dfi_troe}{\Theta_{F_i, \partial T}} &= 
 \rhs{dfi_troe}{ - \frac{B_{Troe}}{F_{cent} P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \times \Biggl(} \nonumber \\
 &\rhs{dfi_troe}{ 2 A_{Troe} F_{cent} \left(0.14 A_{Troe} + B_{Troe}\right) \times } \nonumber \\
 &\rhs{dfi_troe}{\left( P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (F_{cent} \right )} + P_{r, i} \frac{\text{d} F_{cent} }{\text{d} T } \times \biggl(} \nonumber \\
 &\rhs{dfi_troe}{\mathindent 2 A_{Troe} \left(1.1762 A_{Troe} - 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - } \nonumber \\
 &\rhs{dfi_troe}{\mathindent B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\biggr)\Biggr)} \\
+\label{e:dfi_troe_dnj_prod}
 \lhs{dfi_troe}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_troe}{- \frac{2 A_{Troe} B_{Troe} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}
 \end{align}
 and:
 \begin{subequations}
+ \label{e:dfi_troe_de_prod}
  \begin{align}
    \lhs{dfi_troe}{\Theta_{F_i, \partial V}} &= \rhs{dfi_troe}{- \frac{2 A_{Troe} B_{Troe} \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \times \bigl(} \nonumber \\
 					    & \rhs{dfi_troe}{\mathindent[alittlebit] 0.14 A_{Troe} + B_{Troe}\bigr) \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right)} \\
@@ -889,20 +897,54 @@ and:
 where $\Theta_{P_{r,i}, \partial \ldots}$ and $\bar{\theta}_{P_{r, i}, \partial \ldots}$ are given by~\cref{e:dpr_theta_dt,e:dpr_theta_bar_dt,e:dpr_theta_bar_dnj,e:dpr_theta_dv,e:dpr_theta_bar_dv,e:dpr_theta_dp} respectively.
 Finally, for SRI falloff reactions:
 \begin{align}
+ \label{e:dfi_sri_dt_prod}
  \lhs{dfi_sri}{\Theta_{F_i, \partial T}} &= 
  \rhs{dfi_sri}{- \frac{X \left(\frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} - \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \frac{e}{T} - \Biggl(} \nonumber \\
  &\rhs{dfi_sri}{\mathindent \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \times } \nonumber \\
  &\rhs{dfi_sri}{\mathindent \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right ) \Biggr)}} \\
+ \label{e:dfi_sri_dnj_prod}
  \lhs{dfi_sri}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_sri}{- \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (P_{r, i} \right )}}
 \end{align}
 and:
 \begin{subequations}
+ \label{e:dfi_sri_de_prod}
  \begin{align}
   \lhs{dfi_sri}{\Theta_{F_i, \partial V}} &=
   \rhs{dfi_sri}{- \frac{2 X^{2} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right) \log \Biggl(} \nonumber \\
 & \rhs{dfi_sri}{\mathindent \left( a \operatorname{exp}\left({\frac{T}{c}}\right) + \operatorname{exp}\left({\frac{b}{T}}\right)\right) \operatorname{exp}\left({- \frac{T}{c} - \frac{b}{T}}\right) \Biggr)} \\
   \lhs{dfi_sri}{\Theta_{F_i, \partial P}} &=
   \rhs{dfi_sri}{- \frac{2 X^{2} \bar{\theta}_{P_{r, i}, \partial P} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
+ \end{align}
+\end{subequations}
+
+\subsubsection{Unimolecular\slash~recombination fall-off reactions (temporary product form)}
+Using the temporary products developed in~\cref{s:dpr,s:dfi}, the fall-off reaction derivatives developed in~\cref{e:dci_fall_dt,e:dci_fall_dnj,e:dci_fall_de} may be simplified to:
+\begin{align}
+\lhs{dci_fall_complete}{\frac{\partial c }{\partial T }_{i}} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1} + \biggl(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial T}}{P_{r, i} + 1} + \Theta_{F_i, \partial T} + } & \nonumber \\
+							     &  \rhs{dci_fall_complete}{\mathindent[largerindentpleas] \Theta_{P_{r,i}, \partial T} - \frac{\bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1}\biggr) c_{i}} & \cond{dci_fall_complete}{,} \\
+\lhs{dci_fall_complete}{\frac{\partial c }{\partial {n_j} }_{i}} &= \rhs{dci_fall_complete}{\frac{k_{0, i} \bar{\theta}_{P_{r, i}, \partial n_j}}{V k_{\infty, i} \left(P_{r, i} + 1\right)} \left(F_{i} \left(P_{r, i} \Theta_{F_i, \partial n_j} + 1\right) - c_{i}\right)} & \cond{dci_fall_complete}{,}
+\end{align}
+and:
+\begin{subequations}
+ \begin{align}
+  \lhs{dci_fall_complete}{\frac{\partial c }{\partial V }_{i}} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1} + \biggl(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial V}}{P_{r, i} + 1} + \Theta_{F_i, \partial V} + } & \nonumber \\
+							       &  \rhs{dci_fall_complete}{\mathindent[largerindentpleas] \Theta_{P_{r,i}, \partial V} - \frac{\bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1} \biggr) c_{i}} & \cond{dci_fall_complete}{\dconp} \\
+  \lhs{dci_fall_complete}{\frac{\partial c }{\partial P }_{i}} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1} + \left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_fall_complete}{\dconv}
+ \end{align}
+\end{subequations}
+where the temporary products are given by~\cref{e:dpr_theta_dt,e:dpr_theta_bar_dt,e:dpr_theta_bar_dnj,e:dpr_theta_dv,e:dpr_theta_bar_dv,e:dpr_theta_dp}~and~\cref{e:dfi_lind_dt_prod,e:dfi_lind_dnj_prod,e:dfi_lind_de_prod,e:dfi_troe_dt_prod,e:dfi_troe_dnj_prod,e:dfi_troe_de_prod,e:dfi_sri_dt_prod,e:dfi_sri_dnj_prod,e:dfi_sri_de_prod}
+
+\subsubsection{Chemically-activated bimolecular reactions (temporary product form)}
+Similarly, the chemically-activated reaction derivatives in~\cref{e:dci_chem_dt,e:dci_chem_dnj,e:dci_chem_de} may be written as:
+\begin{align}
+\lhs{dci_chem_complete}{\frac{\partial c }{\partial T }_{i}} &= \rhs{dci_chem_complete}{\left(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial T}}{P_{r, i} + 1} + \Theta_{F_i, \partial T} - \frac{\bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{,} \\
+\lhs{dci_chem_complete}{\frac{\partial c }{\partial {n_j} }_{i}} &= \rhs{dci_chem_complete}{\frac{k_{0, i} \bar{\theta}_{P_{r, i}, \partial n_j} \left(F_{i} \Theta_{F_i, \partial n_j} - c_{i}\right)}{k_{\infty, i} V \left(P_{r, i} + 1\right)}} & \cond{dci_chem_complete}{,}
+\end{align}
+and:
+\begin{subequations}
+ \begin{align}
+  \lhs{dci_chem_complete}{\frac{\partial c }{\partial V }_{i}} &= \rhs{dci_fall_complete}{\left(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial V}}{P_{r, i} + 1} + \Theta_{F_i, \partial V} - \frac{\bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{\dconp} \\
+  \lhs{dci_chem_complete}{\frac{\partial c }{\partial P }_{i}} &= \rhs{dci_fall_complete}{\left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{\dconv}
  \end{align}
 \end{subequations}
 
