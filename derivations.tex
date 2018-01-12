@@ -89,7 +89,7 @@ This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and 
 
 \section{Governing equations}
 \subsection{State variables}
-The state vector for this derivation consists of the temperature, a thermodynamic parameter (pressure or volume) and the amount of moles of all species except the last in the model:
+The state vector for this derivation consists of the temperature, a thermodynamic state parameter (pressure or volume) and the amount of moles of all species except the last in the model:
 
 \begin{subequations}
 \begin{align}
@@ -347,9 +347,10 @@ where $a$, $b$, and $c$ are required parameters.
 The parameters $d$ and $e$ are optional; if not specified, $d = 1$ and $e = 0$.
 
 \subsection{Pressure-dependent reactions}
+\label{s:pdep}
 
 In addition to the falloff approach given previously, two additional formulations can be used to describe the pressure dependence of reactions that do not follow the modification factor $c_i$ approach.
-The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa}, each evaluated using \cref{e:arrhenius}:
+The first involves logarithmic interpolation between Arrhenius rates at two pressures~\cite{chemkin:2012,Goodwin:2015aa} (often termed P-Log reactions), each evaluated using~\cref{e:arrhenius}:
 \begin{align}
 k_1 (T) &= A_1 T^{\beta_1} \exp \left( -\frac{T_{a, 1}}{T} \right) \text{ at } P_1 \text{ and} \label{e:plog_k1} \\
 k_2 (T) &= A_2 T^{\beta_2} \exp \left( -\frac{T_{a, 2}}{T} \right) \text{ at } P_2 \;, \label{e:plog_k2}
@@ -357,12 +358,14 @@ k_2 (T) &= A_2 T^{\beta_2} \exp \left( -\frac{T_{a, 2}}{T} \right) \text{ at } P
 where the Arrhenius coefficients are given for each pressure $p_1$ and $p_2$.
 Then, the reaction rate coefficient at a particular pressure $p$ between $p_1$ and $p_2$ can be determined through logarithmic interpolation:
 \begin{equation}
+\label{e:kf_plog}
 \log{\left ({k_f}_{i} \right )} = \frac{\left(- \log{\left (k_{1} \right )} + \log{\left (k_{2} \right )}\right) \left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \log{\left (k_{1} \right )}
 \end{equation}
 
 In addition, the pressure dependence of a reaction can be expressed through a bivariate Chebyshev polynomial fit~\cite{Venkatesh:1997hv,Venkatesh:1997ik,Venkatesh:2000gj,chemkin:2012,Goodwin:2015aa}:
 \begin{equation}
-\log_{10} k_f (T, p) = \sum_{i = 1}^{N_T} \sum_{j = 1}^{N_p} \eta_{ij} \phi_i (\tilde{T}) \phi_j \left(\tilde{p}\right) \label{e:cheb} \;,
+\label{e:kf_cheb}
+\log_{10} k_f (T, p) = \sum_{i = 1}^{N_T} \sum_{j = 1}^{N_p} \eta_{ij} \phi_i (\tilde{T}) \phi_j \left(\tilde{p}\right) \;,
 \end{equation}
 where $\eta_{ij}$ is the coefficient corresponding to the grid points $i$ and $j$, $N_T$ and $N_p$ are the numbers of grid points for temperature and pressure, respectively, and $\phi_n$ is the Chebyshev polynomial of the first kind of degree $n - 1$ typically expressed as
 \begin{equation}
@@ -406,6 +409,7 @@ and the state parameter:
 
 \subsection{Rate of progress derivatives}
 \subsubsection{Temperature derivative}
+\label{s:dri_dt}
 Next, the rate of progress derivatives are evaluated, first with respect to temperature:
 \begin{equation}
  \frac{\partial R }{\partial T }_{i} = \frac{\partial}{\partial T}\left({k_f}_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}}\right)
@@ -430,7 +434,7 @@ Hence, the full derivative of the forward rate of progress is:
  \label{e:dropfdt_1}
  \frac{\partial {R_f} }{\partial T }_{i} = \frac{\text{d} {k_f} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} - \frac{[C] \nu^{\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
 \end{equation}
-By defining a temporary variable (for species $l = \left\{j, \ns\right\}$) $S^{\prime}_{l}$:
+By defining a temporary variable $S^{\prime}_{l}$ (for species $l = \left\{j, \ns\right\}$):
 \begin{equation}
  \label{e:s_temp}
  S^{\prime}_{l} = \nu^{\prime}_{l,i} [C]_{l}^{\nu^{\prime}_{l,i} - 1} \prod_{\substack{1 \leq l \leq l - 1\\l + 1 \leq l \leq \ns}} [C]_{l}^{\nu^{\prime}_{l,i}}
@@ -443,6 +447,7 @@ and using~\cref{e:dkf_dt}, \cref{e:dropfdt_1} can be simplified to:
 
 Starting from~\cref{e:ropr} and applying the same expansion of the last species' concentration as previously, the temperature derivative of the reverse rate of progress is:
 \begin{equation}
+ \label{e:droprdt_1}
  \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
 \end{equation}
 Next, \cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
@@ -475,7 +480,7 @@ Finally, combining~\cref{e:dropf_dt,e:dropr_dt} gives the total temperature deri
 				      &\qquad + \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_r}_{i} - \frac{[C] S^{\prime}_{\ns}}{T} {k_f}_{i}
 \end{align}
 \subsubsection{Molar derivative}
-\label{s:rop_molar}
+\label{s:dri_dnj}
 The derivative of the forward rate of progress with respect to the amount of moles of a species $j$ is:
 \begin{equation}
  \frac{d}{d n_{k}} {R_{f_i}} = \left(\frac{\partial}{\partial n_{j}} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}}\right) {k_f}_{i} \;.
@@ -512,9 +517,10 @@ and the net rate of progress molar derivative:
  \frac{\partial R_{i} }{\partial {n_j} } = - \frac{{k_r}_{i}}{V} \left(- S^{\prime\prime}_{\ns} + S^{\prime\prime}_{j}\right) + \frac{{k_f}_{i}}{V} \left(- S^{\prime}_{\ns} + S^{\prime}_{j}\right)
 \end{equation}
 
-\subsubsection{Parameter derivatives}
+\subsubsection{State parameter derivatives}
+\label{s:dri_de}
 The derivatives of the forward and reverse rates of progress with respect to the volume (\conp) or pressure (\conv) largely follow the same format of the previous sections.
-First, the derivative of the concentration of a species $k$ with respect to the parameter is:
+First, the derivative of the concentration of a species $k$ with respect to the state parameter is:
 
 \begin{subequations}
  \begin{align}
@@ -522,17 +528,17 @@ First, the derivative of the concentration of a species $k$ with respect to the 
   \begin{dcases}
   \rhs{dck}{\frac{[C]_{k}}{V}} & \mathcond{dck}{k \ne \ns} \\
   \rhs{dck}{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & \mathcond{dck}{k = \ns}
- \end{dcases}&\cond{dck}{\dconp}
+ \end{dcases}&\cond{dck}{\dconp} \\
  \lhs{dck}{\frac{\partial [C]_{k} }{\partial P }} &=
  \begin{dcases} \\
-   \rhs{dck}{0} & \mathcond{dck}{k \ne \ns} \\
+   \rhs{dck}{\mathindent[s]0} & \mathcond{dck}{k \ne \ns} \\
    \rhs{dck}{\frac{1}{T \Ru}} & \mathcond{dck}{k = \ns}
  \end{dcases}&\cond{dck}{\dconv}
  \end{align}
 \end{subequations}
 
 
-Following the outline of~\cref{s:rop_molar}, the forward rate of progress derivatives are:
+Following the outline of~\cref{s:dri_dnj}, the forward rate of progress derivatives are:
 \begin{subequations}
  \begin{align}
   \lhs{dri_de}{\frac{\partial {R_f}_{i} }{\partial V }} &= \rhs{dri_de}{\frac{[C] S^{\prime}_{\ns}}{V} {k_f}_{i} - \frac{{R_f}_{i}}{V} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}}&\cond{dri_de}{\dconp}\\
@@ -549,14 +555,87 @@ and similarly, the reverse rate of progress derivatives:
 giving finally:
 \begin{subequations}
  \label{e:dropi_de}
- % linebreak and parenthesis sizing:
- % https://tex.stackexchange.com/questions/49890/linebreak-between-left-and-right/49895
  \begin{align}
-  \frac{\partial {R}_{i} }{\partial V } &= \frac{1}{V}\left(\vphantom{{R_r}_{i} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i}} [C]\left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right) + \right.& \nonumber\\
-  &\left. \quad\left({R_r}_{i} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i} - {R_f}_{i} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}\right) \right)&\dconp\\
-  \frac{\partial {R}_{i} }{\partial P } &= \frac{1}{T \Ru} \left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right)&\dconv
+  \lhs{dri_de}{\frac{\partial {R}_{i} }{\partial V }} &= \rhs{dri_de}{\frac{1}{V}\Biggl( [C]\left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right) + } & \nonumber\\
+  & \rhs{dri_de}{\mathindent[farth] \left({R_r}_{i} \sum_{k=1}^{\ns} \nu^{\prime\prime}_{k,i} - {R_f}_{i} \sum_{k=1}^{\ns} \nu^{\prime}_{k,i}\right) \Biggr)}&\cond{dri_de}{\dconp}\\
+  \lhs{dri_de}{\frac{\partial {R}_{i} }{\partial P }} &= \rhs{dri_de}{\frac{1}{T \Ru} \left(S^{\prime}_{\ns} {k_f}_{i} - S^{\prime\prime}_{\ns} {k_r}_{i}\right)}&\cond{dri_de}{\dconv}
  \end{align}
 \end{subequations}
+
+\subsubsection{Pressure-dependent reactions}
+The P-Log and Chebyshev pressure-dependent reactions, described by~\cref{e:kf_plog,e:kf_cheb} require separate treatment from the derivatives of strictly Arrhenius-based reaction rate formulations examined in~\cref{s:dri_dt,s:dri_dnj,s:dri_de}.
+Beginning with P-Log reactions, the derivative of the forward rate coefficient with respect to temperature is:
+\begin{align}
+ \frac{\partial {k_f}_{i} }{\partial T } &= \biggl( \frac{1}{k_{1}} \frac{\text{d} k_1 }{\text{d} T } + \frac{1}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} \left(- \frac{1}{k_{1}} \frac{\text{d} k_1 }{\text{d} T } + \frac{1}{k_{2}} \frac{\text{d} k_2 }{\text{d} T }\right) \times  \Bigl( \nonumber \\
+					 & \mathindent - \log{\left (P_{1} \right )} + \log{\left (P \right )}\Bigr)\biggr) {k_f}_{i}
+\end{align}
+while the derivatives of $k_{1}$ and $k_{2}$ are given by~\cref{e:dkf_dt}---with the corresponding Arrhenius parameters (see~\cref{e:plog_k1,e:plog_k2}) substituted in.
+Simplifying gives:
+\begin{align}
+ \label{e:dkf_plog_dt}
+ \frac{\partial {k_f}_{i} }{\partial T } &= \frac{{k_f}_{i}}{T} \Biggl(\frac{\left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right) \left(- \beta_1 + \beta_2 - \frac{E_{a_1}}{T \Ru} + \frac{E_{a_2}}{T \Ru}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \nonumber \\
+					 & \mathindent[morespac] \beta_1 + \frac{E_{a_1}}{T \Ru}\Biggr)
+\end{align}
+Similar to~\cref{s:dri_dt},~\cref{e:dkf_plog_dt} may be substituted into~\cref{e:dropfdt_1,e:droprdt_1} to give:
+\begin{align}
+ \frac{\partial R }{\partial T }_{i} &= \left(\frac{\left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right) \left(- \beta_1 + \beta_2 - \frac{E_{a_1}}{T \Ru} + \frac{E_{a_2}}{T \Ru}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \beta_1 + \frac{E_{a_1}}{T \Ru} \right) \times \nonumber \\
+				     & \mathindent \left(\frac{{R_f}_{i} - {R_r}_{i}}{T}\right) + {R_r}_{i} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_r}_{i} - S^{\prime}_{\ns} {k_f}_{i}\right)
+\end{align}
+
+For \conv~problems, the P-Log forward rate coefficient is also a function of the pressure:
+\begin{equation}
+ \frac{\partial {k_f}_{i} }{\partial P } = \frac{\left(- \log{\left (k_{1} \right )} + \log{\left (k_{2} \right )}\right) {k_f}_{i}}{P \left(- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}\right)}
+\end{equation}
+substituting this into the net rate of progress derivative gives:
+\begin{align}
+ \frac{\partial R_{i} }{\partial P } &= \frac{1}{T \Ru} \left(- S^{\prime\prime}_{\ns} {k_r}_{i} + S^{\prime}_{\ns} {k_f}_{i}\right) + & \nonumber \\
+				     &  \frac{\left(- \log{\left (k_{1} \right )} + \log{\left (k_{2} \right )}\right) \left({R_f}_{i} - {R_r}_{i}\right)}{P \left(- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}\right)} & \text{\dconv}
+\end{align}
+
+Next, the temperature derivative of Chevbyshev reactions will be considered:
+\begin{align}
+ \frac{\partial {k_f}_{i} }{\partial T } &= \log{\left (10 \right )} {k_f}_{i} \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \frac{\text{d} \tilde{T} }{\text{d} T } \left(j - 1\right) \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}
+\end{align}
+where $U_n$ is the Chebyshev polynomial of the second kind of degree n, expressed as:
+\begin{equation}
+ U_n \left(x\right) = \frac{\sin\left(\left(n + 1\right) \arccos x\right)}{\sin \left(\arccos x \right)}
+\end{equation}
+and:
+\begin{equation}
+ \frac{\text{d} \tilde{T}}{\text{d} T} = \frac{-2}{T^2 \left(-\frac{1}{T_{\text{min}}} + \frac{1}{T_{\text{max}}}\right)}
+\end{equation}
+giving:
+\begin{equation}
+ \frac{\partial {k_f}_{i} }{\partial T } = \log{\left (10 \right )} {k_f}_{i} \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} - \frac{2 \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}}{T^{2} \left(- \frac{1}{T_{\text{min}}} + \frac{1}{T_{\text{max}}}\right)} \left(j - 1\right)
+\end{equation}
+Following the same process for Arrhenius-based reactions, the derivative of the net rate of progress with respect to temperature is:
+\begin{align}
+ \frac{\partial R }{\partial T }_{i} &= \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \left[ - \frac{2 \log{\left (10 \right )} \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}}{T^{2} \left(- \frac{1}{T_{\text{min}}} + \frac{1}{T_{\text{max}}}\right)} \left(j - 1\right) \right] \left({R_f}_{i} - {R_r}_{i}\right) + \nonumber \\
+				     & \mathindent \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} {R_r}_{i} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_r}_{i} - S^{\prime}_{\ns} {k_f}_{i}\right)
+\end{align}
+
+For \conv~problems, we again must consider the derivative of the forward rate coefficient with respect to pressure:
+\begin{equation}
+ \frac{\partial {k_f}_{i} }{\partial P } = \log{\left (10 \right )} {k_f}_{i} \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \frac{\text{d} \tilde{P} }{\text{d} P } \left(l - 1\right) \mathcal{T}_{j - 1}\left(\tilde{T}\right) U_{l - 2}\left(\tilde{P}\right) \eta_{l,j}
+\end{equation}
+with:
+\begin{equation}
+ \frac{\text{d} \tilde{P} }{\text{d} P } = \frac{2}{P \left(\log{\left (P_{\text{max}} \right )} - \log{\left (P_{\text{min}} \right )}\right)}
+\end{equation}
+giving:
+\begin{equation}
+ \frac{\partial {k_f}_{i} }{\partial P } = \log{\left (10 \right )} {k_f}_{i} \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \frac{2 \left(l - 1\right) \mathcal{T}_{j - 1}\left(\tilde{T}\right) U_{l - 2}\left(\tilde{P}\right) \eta_{l,j}}{P \left(\log{\left (P_{\text{max}} \right )} - \log{\left (P_{\text{min}} \right )}\right)}
+\end{equation}
+and:
+\begin{align}
+ \frac{\partial R_{i} }{\partial P } &= \log{\left (10 \right )} \left({R_f}_{i} - {R_r}_{i}\right) \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \frac{2 \left(l - 1\right) \mathcal{T}_{j - 1}\left(\tilde{T}\right) U_{l - 2}\left(\tilde{P}\right) \eta_{l,j}}{P \left(\log{\left (P_{\text{max}} \right )} - \log{\left (P_{\text{min}} \right )}\right)} + \nonumber \\
+				     & \mathindent \frac{1}{T \Ru} \left(- S^{\prime\prime}_{\ns} {k_r}_{i} + S^{\prime}_{\ns} {k_f}_{i}\right)
+\end{align}
+
+
+
+
+
 
 \subsection{Pressure modification\slash Falloff function derivatives}
 \subsubsection{Elementary reactions}
@@ -631,7 +710,7 @@ The derivatives of the unimolecular\slash~recombination fall-off reaction third-
  \label{e:dci_fall_dnj}
  \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,}
 \end{align}
-and with respect to the thermodynamic parameter:
+and with respect to the state parameter:
 \begin{subequations}
  \label{e:dci_fall_de}
  \begin{align}
