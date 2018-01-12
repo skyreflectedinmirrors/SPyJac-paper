@@ -1930,7 +1930,7 @@ def _derivation(file, efile, conp=True, thermo_deriv=False):
     write_eq(diff(Pri_sym, nk[j]), dPri_unitydnj)
 
     dPri_unityde = diff(Pri_unity, extra_var)
-    write_eq(diff(Pri_sym, nk[j]), dPri_unityde)
+    write_eq(diff(Pri_sym, extra_var), dPri_unityde)
 
     latexfile.write('Simplifying:\n')
     dPri_unitydT, dPri_unitydT_prifac, dPri_unitydT_prifac_sym,\
