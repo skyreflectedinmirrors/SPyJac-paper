@@ -1,4 +1,6 @@
-from sympy import symbols, log, exp, limit, KroneckerDelta, diff
+from __future__ import print_function
+from sympy import symbols, log, exp, limit, KroneckerDelta, diff, \
+    Product, factor, Pow, Symbol, simplify, Limit
 from optionloop import OptionLoop
 
 
@@ -94,7 +96,7 @@ def __get_dci(fall_type='chem', blend_type='troe', pr_type='mix', var='E'):
                     Pr * Theta_Pr + theta_Pr) * log(Fcent) + Pr * diff(Fcent, T) * (
                         2 * Atroe * (1.1762 * Atroe - 0.67 * Btroe) * log(Fcent) -
                         Btroe * (Atroe**2 + Btroe**2) * log(10))
-                )
+            )
         elif var == 'nj':
             Theta_Fi = -2 * Atroe * Btroe * (0.14 * Atroe + Btroe) * log(Fcent) / (
                 Pr * (Atroe**2 + Btroe**2)**2 * log(10))
@@ -111,14 +113,17 @@ def __get_dci(fall_type='chem', blend_type='troe', pr_type='mix', var='E'):
                 a * exp(-b / T) + exp(-T / c)) + e / T - ((
                     2 * X**2 * log(a * exp(-b / T) + exp(-T / c))) / (Pr * log(10)**2) * (
                     (Theta_Pr * Pr + theta_Pr) * log(Pr))
-                )
+            )
         elif var == 'nj':
-            Theta_Fi = -2 * X**2 * log(a * exp(-b / T) + exp(-T / c)) * log(Pr) / (Pr * log(10)**2)
+            Theta_Fi = -2 * X**2 * \
+                log(a * exp(-b / T) + exp(-T / c)) * \
+                log(Pr) / (Pr * log(10)**2)
         elif var == 'V':
             Theta_Fi = (-2 * X**2 * log(Pr) / (Pr * log(10)**2)) * (Theta_Pr * Pr + theta_Pr) * log(
                 (a * exp(T / c) + exp(b / T)) * exp(-T / c - b / T))
         elif var == 'P':
-            Theta_Pr = (-2 * X**2 * theta_Pr * log(Pr) / (Pr * log(10)**2)) * log(a * exp(-b / T) + exp(-T / c))
+            Theta_Pr = (-2 * X**2 * theta_Pr * log(Pr) /
+                        (Pr * log(10)**2)) * log(a * exp(-b / T) + exp(-T / c))
 
     # and finally give dci
     if var == 'T':
@@ -126,21 +131,25 @@ def __get_dci(fall_type='chem', blend_type='troe', pr_type='mix', var='E'):
             dci = Fi * theta_Pr / (Pr + 1) + (-Pr * Theta_Pr / (Pr + 1) + Theta_Fi +
                                               Theta_Pr - theta_Pr / (Pr + 1)) * ci
         elif fall_type == 'chem':
-            dci = (-Pr * Theta_Fi / (Pr + 1) + Theta_Fi - theta_Pr / (Pr + 1)) * ci
+            dci = (-Pr * Theta_Fi / (Pr + 1) +
+                   Theta_Fi - theta_Pr / (Pr + 1)) * ci
     elif var == 'nj':
         if fall_type == 'fall':
-            dci = (kf * theta_Pr / (V * kinf * (Pr + 1))) * (Fi * (Pr * Theta_Fi + 1) - ci)
+            dci = (kf * theta_Pr / (V * kinf * (Pr + 1))) * \
+                (Fi * (Pr * Theta_Fi + 1) - ci)
         elif fall_type == 'chem':
             dci = kf * theta_Pr * (Fi * Theta_Fi - ci) / (kinf * V * (Pr + 1))
     elif var == 'V':
         if fall_type == 'fall':
             dci = Fi * theta_Pr / (Pr + 1) + (-Pr * Theta_Pr / (Pr + 1) + Theta_Fi +
-                                              Theta_Pr - theta_Pr /(Pr + 1)) * ci
+                                              Theta_Pr - theta_Pr / (Pr + 1)) * ci
         elif fall_type == 'chem':
-            dci = (-Pr * Theta_Pr / (Pr + 1) + Theta_Fi - theta_Pr / (Pr + 1)) * ci
+            dci = (-Pr * Theta_Pr / (Pr + 1) +
+                   Theta_Fi - theta_Pr / (Pr + 1)) * ci
     elif var == 'P':
         if fall_type == 'fall':
-            dci = Fi * theta_Pr / (Pr + 1) + (Theta_Fi - theta_Pr / (Pr + 1)) * ci
+            dci = Fi * theta_Pr / (Pr + 1) + \
+                (Theta_Fi - theta_Pr / (Pr + 1)) * ci
         elif fall_type == 'chem':
             dci = (Theta_Fi - theta_Pr / (Pr + 1)) * ci
     return Xi, dci
@@ -150,6 +159,45 @@ oploop = OptionLoop({'fall_type': ['chem', 'fall'],
                      'blend_type': ['lind', 'troe', 'sri'],
                      'pr_type': ['mix', 'unity', 'spec'],
                      'var': ['T', 'nj', 'V', 'P']})
-for state in oploop:
+
+for i, state in enumerate(oploop):
+    term_dict = {}
     Xi, dci = __get_dci(**state)
-    print(state, limit(dci, Xi, 0))
+
+    def __rec_subs(term, depth=0):
+        if term.has(Xi):
+            ttype = type(term)
+
+            def __separate(args):
+                has = []
+                hasnt = []
+                for a in args:
+                    (has if a.has(Xi) else hasnt).append(a)
+                return has, hasnt
+
+            def __apply():
+                has, hasnt = __separate(ttype.make_args(term))
+                return ttype(*[ttype(*[__rec_subs(h) for h in has]),
+                               __rec_subs(ttype(*hasnt))])
+
+            if ttype == Pow:
+                return Pow(__rec_subs(term.args[0]),
+                           __rec_subs(term.args[1]))
+            elif ttype == Symbol:
+                return term
+            elif ttype == log:
+                return log(__rec_subs(term.args[0]))
+            return __apply()
+        else:
+            term = simplify(term)
+        return term
+
+    dci = __rec_subs(dci)
+    print(state)
+    print('dci:', dci)
+    lim = Limit(dci, Xi, 0, '+').doit(deep=True)
+    print('lim:', lim)
+    for term, cse in term_dict.iteritems():
+        if lim.has(cse):
+            lim = lim.subs(cse, term)
+    print('lim:', lim)
