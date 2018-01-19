@@ -39,7 +39,7 @@
 \newcommand{\conp}{CONP}
 \newcommand{\conv}{CONV}
 \newcommand{\dconp}{\ifmmode\text{for \conp,}\else for \conp,\fi}
-\newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv,\fi}
+\newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv.\fi}
 \newcommand{\Ru}{\mathcal{R}}
 
 % simple command for equal-sized eqmathbox's on the lhs / rhs and conditional
@@ -117,7 +117,7 @@ For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \begin{equation}
 \frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \label{e:spec}
 \end{equation}
-where $\dot{\omega}_k$ is the $kth$ species overall production rate, and the temperature production rates are~\cite{TurnsStephenR2012Aitc}:
+where $\dot{\omega}_k$ is the $kth$ species overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
 \begin{subequations}
 \label{e:temperature_incomplete}
 \begin{align}
@@ -129,7 +129,6 @@ where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, 
 \begin{equation}
  [C]_{k} = \frac{n_{k}}{V}
 \end{equation}
-
 
 From the ideal gas law, source terms for the volume and pressure variables may derived:
 \begin{subequations}
@@ -162,15 +161,15 @@ Combining~\cref{e:spec,e:param_incomplete,e:total_molar} gives the final form of
 \begin{subequations}
 \label{e:param_complete}
 \begin{align}
-\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
-\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\text{\dconv}
+\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
+\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\text{\dconv}
 \end{align}
 \end{subequations}
 
 Additionally, the concentration and moles of the last species in the model (which is not a state variable) may be expanded in terms of the state variables of the system:
 \begin{equation}
  \label{e:last_spec_conc}
-   [C]_{\ns} = [C] - \sum_{k=1}^{-1 + \ns} [C]_{k}
+   [C]_{\ns} = [C] - \sum_{k=1}^{\ns  - 1} [C]_{k}
 \end{equation}
 where $[C]$ is the total concentration:
 \begin{equation}
@@ -181,8 +180,8 @@ Using~\cref{e:last_spec_conc,e:spec,e:spec_ns}, the temperature source terms may
 \begin{subequations}
 \label{e:temperature_complete}
 \begin{align}
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{p,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{p,\ns}} + {C_{p, k}}\right) [C]_{k}} &\text{\dconp}\\
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{v,\ns}} + \sum_{k=1}^{-1 + \ns} \left(- {C_{v,\ns}} + {C_{v, k}}\right) [C]_{k}} &\text{\dconv}
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns  - 1} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{p,\ns}} + \sum_{k=1}^{\ns  - 1} \left(- {C_{p,\ns}} + {C_{p, k}}\right) [C]_{k}} &\text{\dconp}\\
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns  - 1} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}}{[C] {C_{v,\ns}} + \sum_{k=1}^{\ns  - 1} \left(- {C_{v,\ns}} + {C_{v, k}}\right) [C]_{k}} &\text{\dconv}
 \end{align}
 \end{subequations}
 This form is used for differentiation, but~\cref{e:temperature_incomplete} will often be used as well due to its compactness.
@@ -288,7 +287,7 @@ where only species with non-default third-body efficiencies must be stored in th
 Expanding the concentration of the last species gives:
 \begin{equation}
 \label{e:thd_mix}
- [X]_{i}=[C] \alpha_{\ns,i} + \sum_{k=1}^{-1 + \ns} \left(- \alpha_{\ns,i} + \alpha_{k,i}\right) [C]_{k}\;.
+ [X]_{i}=[C] \alpha_{\ns,i} + \sum_{k=1}^{\ns  - 1} \left(- \alpha_{\ns,i} + \alpha_{k,i}\right) [C]_{k}\;.
 \end{equation}
 This form will be denoted as the mixture-based (or \textbf{mix} for short) third-body efficiency.
 
@@ -307,7 +306,7 @@ where the $m$th species is the third body.
 For evaluation of Jacobian entries, the expanded form:
 \begin{equation}
 \label{e:thd_spec}
- [X]_{i}=\left([C] - \sum_{k=1}^{-1 + \ns} [C]_{k}\right) \delta_{\ns m} + \left(- \delta_{\ns m} + 1\right) [C]_{m}
+ [X]_{i}=\left([C] - \sum_{k=1}^{\ns  - 1} [C]_{k}\right) \delta_{\ns m} + \left(- \delta_{\ns m} + 1\right) [C]_{m}
 \end{equation}
 will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if the third body species $m$ is the last species in the model.
 \Cref{e:thd_spec} will be referred to as the \textbf{species}-based third-body efficiency.
@@ -383,9 +382,57 @@ where $T_{\min} \leq T \leq T_{\max}$ and $p_{\min} \leq p \leq p_{\max}$ descri
 Let $\mathcal{J}$ denote the Jacobian matrix corresponding to the set of ODEs defined in~\cref{e:source_terms}.
 $\mathcal{J}$ is filled with the partial derivatives $\partial f / \partial \Phi$, such that:
 \begin{equation}
+ \label{e:jac_general}
  \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns - 1
 \end{equation}
-We will begin by deriving subcomponents of the Jacobian matrix in the subsequent sections before presenting the final form of the Jacobian matrix in~\cref{s:jac_final}.
+The Jacobian entries resulting from~\cref{e:jac_general} are derived in~\cref{s:energy_derivs}, while various subcomponents of the Jacobian are derived in~\cref{s:dri_dt,s:dri_dnj,s:dri_de,s:dri_pdep,s:dpmod_fall} and the final form of the Jacobian matrix is presented in~\cref{s:jac_final}.
+
+We note that some parts of the Jacobian derivation---in particular derivatives of the energy equation---are quite complicated.
+The aim of this document is to provide the reader with an overview of the derivation process; some intermediate steps are left out due to brevity and typesetting constraints.
+For a complete derivation, the reader is directed to the output of the \href{https://github.com/arghdos/SPyJac-paper/blob/master/derivations/scripts/derivations.py}{derivations.py} script, from which this document was compiled.
+
+\subsection{Energy equation derivatives}
+\label{s:energy_derivs}
+\subsubsection{Temperature derivative}
+In this section, we will more closely follow the \conp~energy equation derivative with respect to temperature as the process is largely identical between \conp~and \conv.
+
+First, the derivative of full form of the energy source term~\cref{e:temperature_complete} with respect to temperature will be considered.
+To make the result more managable, the denominator of~\cref{e:temperature_complete} is first collapsed back into the form of~\cref{e:temperature_incomplete}, yielding for~\conp:
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= - \frac{\left(- [C] \frac{\text{d} {C_p} }{\text{d} T }_{\ns} - \sum_{k=1}^{-1 + \ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{\ns} + \frac{\text{d} {C_p} }{\text{d} T }_{k}\right) [C]_{k} + \frac{[C] {C_p}_{\ns}}{T}\right)}{\left(\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}\right)^{2}} \times \nonumber \\
+				     & \mathindent[largerindent] \sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k} - \nonumber \\
+				     & \mathindent \frac{\sum_{k=1}^{-1 + \ns} \left(\left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + \left(\frac{\text{d} H }{\text{d} T }_{k} - \frac{W_{k}}{W_{\ns}} \frac{\text{d} H }{\text{d} T }_{\ns}\right) \dot{\omega}_{k}\right)}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}}
+\end{align}
+Next, we may recognize that~\cref{e:temperature_incomplete} may be factored out of the first terms, yielding:
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \times \nonumber \\
+				     & \left( - [C] \frac{\text{d} {C_p} }{\text{d} T }_{\ns} - \sum_{k=1}^{-1 + \ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{\ns} + \frac{\text{d} {C_p} }{\text{d} T }_{k}\right) [C]_{k} + \frac{[C] {C_p}_{\ns}}{T} \right) - \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \left(\left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + \left(\frac{\text{d} H }{\text{d} T }_{k} - \frac{W_{k}}{W_{\ns}} \frac{\text{d} H }{\text{d} T }_{\ns}\right) \dot{\omega}_{k}\right) \Biggr]
+\end{align}
+Now, we invoke the identity:
+\begin{equation}
+ [C] = \sum_{k=1}^{\ns} [C]_{k}
+\end{equation}
+to simplify the specific heat terms:
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + \nonumber \\
+				     & \mathindent[larger] \left(- \frac{\text{d} H }{\text{d} T }_{k} + \frac{W_{k}}{W_{\ns}} \frac{\text{d} H }{\text{d} T }_{\ns}\right) \dot{\omega}_{k}\biggr)\Biggr]
+\end{align}
+and finally, we may substitute in the specific heat for the temperature derivative of enthalpy, giving:
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
+\intertext{and similarly:}
+\frac{\partial\dot{T}}{\partial{T}}  &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv}
+\end{align}
+\subsubsection{Molar derivative}
+The molar derivative of the energy equation is somewhat easier to work with, 
+
+
 
 \subsection{Species production rate derivatives}
 First, we evaluate the derivatives of the net species production rate equation~\cref{e:spec_rop}, with respect to temperature:
@@ -421,7 +468,7 @@ The derivative of the forward reaction rate coefficient is:
 \end{equation}
 While evaluating derivatives for the Jacobian, it is important to expand terms---e.g., concentration, production rate, etc.---related to the last species to obtain the correct derivative, in this case using \cref{e:last_spec_conc}:
 \begin{equation}
- {R_f} = \left(\left(- \sum_{k=1}^{-1 + \ns} [C]_{k} + \frac{P}{T \Ru}\right)^{\nu^{\prime}_{\ns,i}}\right) {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
+ {R_f} = \left(\left(- \sum_{k=1}^{\ns  - 1} [C]_{k} + \frac{P}{T \Ru}\right)^{\nu^{\prime}_{\ns,i}}\right) {k_f}_{i} \prod_{k=1}^{\ns  - 1} [C]_{k}^{\nu^{\prime}_{k,i}}
 \end{equation}
 The derivative of a species concentration with respect to temperature is zero for both \conp~and \conv:
 \begin{align}
@@ -432,7 +479,7 @@ as the volume is either constant (\conp) or a state variable and a function of t
 Hence, the full derivative of the forward rate of progress is:
 \begin{equation}
  \label{e:dropfdt_1}
- \frac{\partial {R_f} }{\partial T }_{i} = \frac{\text{d} {k_f} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} - \frac{[C] \nu^{\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime}_{k,i}}
+ \frac{\partial {R_f} }{\partial T }_{i} = \frac{\text{d} {k_f} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime}_{k,i}} - \frac{[C] \nu^{\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{\ns  - 1} [C]_{k}^{\nu^{\prime}_{k,i}}
 \end{equation}
 By defining a temporary variable $S^{\prime}_{l}$ (for species $l = \left\{j, \ns\right\}$):
 \begin{equation}
@@ -448,7 +495,7 @@ and using~\cref{e:dkf_dt}, \cref{e:dropfdt_1} can be simplified to:
 Starting from~\cref{e:ropr} and applying the same expansion of the last species' concentration as previously, the temperature derivative of the reverse rate of progress is:
 \begin{equation}
  \label{e:droprdt_1}
- \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{-1 + \ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
+ \frac{\partial {R_r} }{\partial T }_{i} = \frac{\text{d} {k_r} }{\text{d} T }_{i} \prod_{k=1}^{\ns} [C]_{k}^{\nu^{\prime\prime}_{k,i}} - \frac{[C] \nu^{\prime\prime}_{\ns,i}}{T} [C]_{\ns}^{\nu^{\prime\prime}_{\ns,i} - 1} {k_f}_{i} \prod_{k=1}^{\ns  - 1} [C]_{k}^{\nu^{\prime\prime}_{k,i}}
 \end{equation}
 Next, \cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
 \begin{align}
@@ -529,7 +576,7 @@ First, the derivative of the concentration of a species $k$ with respect to the 
  \lhs{dck}{\frac{\partial [C] }{\partial V }_{k}} &=
   \begin{dcases}
   \rhs{dck}{-\frac{[C]_{k}}{V}} & \mathcond{dck}{k \ne \ns} \\
-  \rhs{dck}{\frac{1}{V} \sum_{k=1}^{-1 + \ns} [C]_{k}} & \mathcond{dck}{k = \ns}
+  \rhs{dck}{\frac{1}{V} \sum_{k=1}^{\ns  - 1} [C]_{k}} & \mathcond{dck}{k = \ns}
  \end{dcases}&\cond{dck}{\dconp} \\
  \lhs{dck}{\frac{\partial [C]_{k} }{\partial P }} &=
  \begin{dcases} \\
@@ -565,6 +612,7 @@ giving finally:
 \end{subequations}
 
 \subsubsection{Pressure-dependent reactions}
+\label{s:dri_pdep}
 The P-Log and Chebyshev pressure-dependent reactions, described by~\cref{e:kf_plog,e:kf_cheb} require separate treatment from the derivatives of strictly Arrhenius-based reaction rate formulations examined in~\cref{s:dri_dt,s:dri_dnj,s:dri_de}.
 Beginning with P-Log reactions, the derivative of the forward rate coefficient with respect to temperature is:
 \begin{align}
@@ -637,6 +685,7 @@ and:
 
 
 \subsection{Pressure modification\slash Falloff function derivatives}
+\label{s:dpmod_fall}
 \subsubsection{Elementary reactions}
 For elementary reactions, all derivatives of the pressure-modification term are zero:
 \begin{align}
