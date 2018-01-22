@@ -247,20 +247,20 @@ As given by Lu and Law~\cite{Lu:2009gh}, depending on the value of the Arrhenius
 where $\mathbb{Z}$ is the set of integers; the extent of this specialization can be controlled when generating code via \texttt{pyjac}.
 
 \subsection{Reverse rate coefficient}
-By definition, the reverse rate coefficient---${k_{r, i}}$---of irreversible reactions is zero, while reversible reactions may have non-zero ${k_{r, i}}$.
+By definition, the reverse rate coefficient, ${k_{r, i}}$, of irreversible reactions is zero, while reversible reactions may have non-zero ${k_{r, i}}$.
 Note that in \texttt{pyJac}, reversible reactions with explicit reverse Arrhenius parameters are split into two irreversible reactions; this simplifies calculation inside the generated code, and eases comparison to Cantera~\cite{Goodwin:2015aa} which applies the same transformation.
 For reversible reactions without an explicit parameterization, the reverse rate coefficient is calculated from ratio of the forward rate coefficient and the equilibrium constant:
 \begin{align}
- {k_{r, i}} &= \frac{{k_{f, i}}}{{K_c}_{i}}\; , \label{e:kr}\\
- {K_c}_{i} &= \left(\left(\frac{P_{atm}}{T \Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) {K_p}_{i}\; ,\text{ and} \label{e:kc}\\
- {K_p}_{i} &= \text{exp}\left(\frac{\Delta S^{\circ}_k}{\Ru} - \frac{\Delta H^{\circ}_k}{\Ru T}\right) = \text{exp}\left(\sum_{k=1}^{\ns}\nu_{ki}\left(\frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T}\right)\right) \label{e:kp}
+ {k_{r, i}} &= \frac{{k_{f, i}}}{{K_{c, i}}}\; , \label{e:kr}\\
+ {K_{c, i}} &= {K_{p,i}}\left(\frac{P_{atm}}{T \Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}} \; ,\text{ and} \label{e:kc}\\
+ {K_{p,i}} &= \text{exp}\left(\frac{\Delta S^{\circ}_i}{\Ru} - \frac{\Delta H^{\circ}_i}{\Ru T}\right) = \text{exp}\left(\sum_{k=1}^{\ns}\nu_{ki}\left(\frac{S^{\circ}_k}{\Ru} - \frac{H^{\circ}_k}{\Ru T}\right)\right) \label{e:kp}
 \end{align}
 where $P_{atm}$ is the pressure of one standard atmosphere in appropriate units.
 
 By combining~\cref{e:kc,e:kp}, we obtain:
 \begin{equation}
  \label{e:kc_in_kp}
- {K_c}_{i} = \left(\left(\frac{P_{atm}}{\Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) \operatorname{exp}\left({\sum_{k=1}^{\ns} \nu_{k,i} B_{k}}\right)
+ {K_{c, i}} = \left(\left(\frac{P_{atm}}{\Ru}\right)^{\sum_{k=1}^{\ns} \nu_{k,i}}\right) \operatorname{exp}\left({\sum_{k=1}^{\ns} \nu_{k,i} B_{k}}\right)
 \end{equation}
 where, $B_k$ is:
 \begin{align}
@@ -654,12 +654,12 @@ Starting from~\cref{e:ropr} and applying the same expansion of the last species'
 \end{equation}
 Next, \cref{e:kr} is considered to obtain the temperature derivative of the non-explicit reversible reaction rate coefficient:
 \begin{align}
- \frac{\text{d} {k_r} }{\text{d} T }_{i} &= \left(- \frac{1}{{K_c}_{i}} \frac{\text{d} {K_c}_{i} }{\text{d} T } \frac{{k_f}_i}{{K_c}_i} + \frac{1}{{K_c}_{i}}\frac{\text{d} {k_{f, i}} }{\text{d} T } \right) \nonumber \\
-				         &= \left(- \frac{1}{{K_c}_{i}} \frac{\text{d} {K_c}_{i} }{\text{d} T } + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_{r, i}}
+ \frac{\text{d} {k_r} }{\text{d} T }_{i} &= \left(- \frac{1}{{K_{c, i}}} \frac{\text{d} {K_{c, i}} }{\text{d} T } \frac{{k_f}_i}{{K_c}_i} + \frac{1}{{K_{c, i}}}\frac{\text{d} {k_{f, i}} }{\text{d} T } \right) \nonumber \\
+				         &= \left(- \frac{1}{{K_{c, i}}} \frac{\text{d} {K_{c, i}} }{\text{d} T } + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {k_{r, i}}
 \end{align}
 The temperature derivative of the equilibrium constant is:
 \begin{equation}
- \frac{\text{d} {K_c}_{i} }{\text{d} T } = {K_c}_{i} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} \;,
+ \frac{\text{d} {K_{c, i}} }{\text{d} T } = {K_{c, i}} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} \;,
 \end{equation}
 with:
 \begin{equation}
