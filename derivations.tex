@@ -1,16 +1,9 @@
-\documentclass[12pt]{article}
+\documentclass[12pt,number,sort&compress]{elsarticle}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{csquotes}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage[
-    backend=biber,
-    style=numeric,
-    citestyle=numeric,
-    sorting=none
-]{biblatex}
-\addbibresource{derivations.bib}
 
 % dcases
 \usepackage{mathtools}
@@ -21,6 +14,7 @@
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % load after hyperref
 \usepackage[english,capitalise]{cleveref}
+\bibliographystyle{elsarticle-num}
 
 % https://tex.stackexchange.com/a/34412/5764
 \makeatletter
@@ -1199,6 +1193,6 @@ and:
  \end{align}
 \end{subequations}
 
-\printbibliography
+\bibliography{derivations}
 
 \end{document}
