@@ -111,7 +111,7 @@ For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \begin{equation}
 \frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns - 1, \label{e:spec}
 \end{equation}
-where $\dot{\omega}_k$ is the $kth$ species overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
+where $\dot{\omega}_k$ is the $kth$ species' overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
 \begin{subequations}
 \label{e:temperature_incomplete}
 \begin{align}
@@ -156,7 +156,7 @@ Combining~\cref{e:spec,e:param_incomplete,e:total_molar} gives the final form of
 \label{e:param_complete}
 \begin{align}
 \frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
-\frac{\text{d} P }{\text{d} t } &= \frac{P}{T} \frac{\text{d} T }{\text{d} t } + T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k}&\text{\dconv}
+\frac{\text{d} P }{\text{d} t } &= T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv}
 \end{align}
 \end{subequations}
 

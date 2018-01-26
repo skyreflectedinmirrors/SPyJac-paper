@@ -161,40 +161,68 @@ However, a deep vectorization requires both synchronization between SIMD-lanes\s
 
 \begin{figure}[htb]
   \centering
-  \label{F:vector_data}
   \begin{minipage}{\linewidth}
     \begin{subfigure}[t]{\textwidth}
 	\includegraphics[width=\textwidth]{row_major_split.pdf}
-	\caption{Row-major data ordering}
+	\caption{Row-major, wide-vectorized data ordering}
 	\label{F:row_major_split}
     \end{subfigure}
     \\
     \begin{subfigure}[t]{\textwidth}
 	\includegraphics[width=\textwidth]{column_major_split.pdf}
-	\caption{Column-major data ordering}
+	\caption{Column-major, deep-vectorized data ordering}
 	\label{F:column_major_split}
     \end{subfigure}
   \end{minipage}
+  \caption{Vectorized data ordering patterns}
+  \label{F:vector_data}
 \end{figure}
 
-Finally,~\cref{F:vector_data} shows a vectorized data-ordering that negates the disadvantages of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
-In Sec.~\ref{S:results} the effect of the data-ordering on the shallow-SIMD\slash SIMT vectorization performance will be studied.
+Finally,~\cref{F:vector_data} shows a vectorized data-ordering that improves the caching patters of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
+This is accomplished by splitting the slower-varying axis of the data array---rows for ``C''-ordering, and columns for ``F''-ordering---into chunks of size $L$ (the SIMD vector-width, or SIMT warp-size) and laying these data out contigously in memory.
+For example, using the data-ordering in~\cref{F:row_major_split}, the concentration of species $j$ for states $i\ldots i+L$, $[C]_{i, j} \ldots [C]_{i + L, j}$, are contiguous in memory and are followed by the concentration of species $j + 1$ for the same states, $[C]_{i, j + 1} \ldots [C]_{i + L, j + 1}$.
+This pattern, similar to OpenCL's native vector data-types---e.g., \texttt{double\num{8}} which treats \num{8} contiguous double precision floating point numbers as a single vector datum---ensures that any SIMD operation occurs on data that is contiguous in memory, greatly improving caching and SIMD-throughput.
+Conversely, the data-ordering in~\cref{F:column_major_split} is designed to enable coalesced memory accesses for ``F''-ordered, deep-SIMT vectorization on the GPU.
+The effects of these various data-ordering and vectorization patterns on performance will be studied in~\cref{S:results}.
 
-\subsection{Chemical Kinetics Equations}
-The current code evaluates the following thermo-chemical source terms:
+\subsection{Thermo-chemical Source Terms and Jacobian}
+This new version of \texttt{pyJac} is capable of evaluating the thermo-chemical source terms for using both the constant-pressure (\conp) or constant-volume (\conv) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
+In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to our complete derivations, attached as supplimental material to this document.
 
+The thermo-chemical state vector derivation consists of the temperature, the non-constant thermodynamic state parameter (volume or pressure) and the number of moles of all species except the last in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
+\begin{subequations}
+\begin{align}
+\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconp}\\
+\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconv}
+\end{align}
+\end{subequations}
+where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
+
+For both \conp~and \conv, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \begin{equation}
-\dot{\omega}_k = \sum_{i=1}^{N_{\text{reac}}} \nu_{ki} R_i c_i
+\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns - 1, \label{e:spec}
 \end{equation}
-where $\dot{\omega}_k$, $N_{\text{reac}}$, $\nu_{ki}$, ${R_i}$, $c_i$ are the time rate of change of the concentration of species $k$, the number of reactions in the model, the net stoichiometric coefficient of species $k$ in reaction $i$, the net rate of progress of reaction $i$, and the pressure modification of reaction $i$, respectively.
-For further detail on each term, the reader is referred to our previous work~\cite{Niemeyer:2016aa}; the code is capable of evaluating all modern reaction rate types (e.g. pressure-log, Chebyshev, etc.).
-
-In addition, the temperature rate of change using the constant-pressure assumption\footnote{Note: in this context, the ``constant-pressure assumption'' refers to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure reactive-flow simulation.} is evaluated as:
+where $\dot{\omega}_k$ is the $kth$ species' overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
+\begin{subequations}
+\label{e:temperature_incomplete}
+\begin{align}
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{p, k}}} & \text{\dconp} \\
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{v, k}}} & \text{\dconv}
+\end{align}
+\end{subequations}
+where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure and constant-volume specific heat of species $k$ in molar units respectively, while $[C]_{k}$ is the concentration, given by:
 \begin{equation}
-\frac{\partial T}{\partial t} = -\frac{\sum_{k=1}^{N_{\text{sp}}} H^{\degree}_k \dot{\omega}_k}{\sum_{k=1}^{N_{\text{sp}}} [C_k] c_{p_k}^{\degree}}
+ [C]_{k} = \frac{n_{k}}{V}
 \end{equation}
-where $H^{\degree}_k$ and $c_{p_k}^{\degree}$ are the molar specific enthalpy and specific heat, respectively.
-Although the code is equally capable of a evaluating the temperature rate using a constant-volume assumption, we omit this here for brevity.
+By differentiating the ideal gas law, the volume and pressure source terms can be found:
+\begin{subequations}
+\label{e:param_complete}
+\begin{align}
+\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
+\frac{\text{d} P }{\text{d} t } &= T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv}
+\end{align}
+\end{subequations}
+where $\mathcal{R}$ is the ideal gas-constant.
 
 \subsection{Code Generation}
 Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner_loopy_2014}, which translates user specified psuedo-code and data to OpenCL, allowing for unit testing and easy changes of program structure, e.g. data ordering, vectorization, threading patterns etc.
