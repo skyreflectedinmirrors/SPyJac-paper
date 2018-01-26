@@ -29,7 +29,18 @@
 % Add your bibliography file here, replace template.bib
 \bibliographystyle{elsarticle-num}
 
-\title{SIMD-vectorized Chemical Source Term Evaluation}
+\newcommand{\pluseq}{\mathrel{{+}{=}}}
+\newcommand{\minuseq}{\mathrel{{-}{=}}}
+\newcommand{\ns}{N_{sp}}
+\newcommand{\nr}{N_{reac}}
+\newcommand{\conp}{CONP}
+\newcommand{\conv}{CONV}
+\newcommand{\dconp}{\ifmmode\text{for \conp,}\else for \conp,\fi}
+\newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv.\fi}
+\newcommand{\Ru}{\mathcal{R}}
+
+
+\title{SIMD\slash SIMT-vectorized Thermo-chemical Source Term Evaluation}
 
 \author[1]{Nicholas Curtis\corref{corr}}
 \ead{nicholas.curtis@uconn.edu}
@@ -44,7 +55,7 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-A code generation platform for single-instruction, multiple-data (SIMD) vectorized chemical source term evaluation was developed and validated against Cantera for a wide range of chemical kinetic models.
+A code generation platform for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized thermo-chemical source term evaluation was developed and validated against Cantera for a wide range of chemical kinetic models.
 Speedups of up to \SIrange{1.90}{2.45}{$\times$} were observed over a baseline single-instruction, multiple-thread (SIMT) parallelized code.
 Additionally, use of a row-major data layout was found to increase both the SIMD and SIMT performance by up to \SIrange{2.00}{2.38}{$\times$} over a column-major data layout.
 Larger vector-widths were found to produce speedups up to \SI{1.8}{$\times$} as compared to a small vector-width for smaller models, e.g. GRI-Mech 3.0, but as the model size increased the performance of all vector-widths were similar.
@@ -66,59 +77,111 @@ Finally, the parallel scaling efficiency was found to be slightly better for lar
 
 Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processing are two important vector-processing paradigms used increasingly in scientific computing.
 Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however SIMD processors---as well as SIMT processors, e.g. in the form of graphics processing units (GPUs)---have gained recognition due to their increased floating operation throughput.
-The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector-processing based codes in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems (e.g. CPU, GPU, or Intel's Many Integrated Core architecture).
+The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector-processing based codes in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., the CPU, GPU, or Intel's Many Integrated Core architecture (MIC), etc.
+In this discussion, we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convient way to classify otherwise disparate processor type (e.g., CPUs and GPUs).
 
 \begin{figure}[htb]
   \centering
-  \begin{minipage}[t]{0.45\linewidth}
+  \begin{subfigure}[htp]{0.45\linewidth}
       \includegraphics[width=\textwidth]{SIMD.pdf}
-      \caption{Schematic of SIMD processing.  A single processing element (e.g. a CPU core) contains a vector unit with $N_v$ lanes ($\text{L}_0,\ldots \text{L}_{N_v}$).  The vector unit executes a single instruction concurrently on multiple data.}
+      \caption{Schematic of SIMD processing.  A single compute unit (e.g., a CPU core) contains a vector unit with $N_v$ processing elements, together called a vector-lane.  The vector unit executes a single instruction concurrently on multiple data.}
       \label{F:SIMD}
-  \end{minipage}
+  \end{subfigure}
   \hfill
-  \begin{minipage}[t]{0.45\linewidth}
-      \includegraphics[width=\textwidth]{mem_access.pdf}
-      \caption{Representation of an 2-D array with dimension $N \times K$ in CPU memory, with linear index marked.}
-      \label{F:mem}
-  \end{minipage}
+  \begin{subfigure}[htp]{0.45\linewidth}
+      \label{F:SIMT}
+      \includegraphics[width=\textwidth]{SIMT.pdf}
+      \caption{Schematic of SIMT processing. A single compute unit (e.g., a GPU streaming multiprocessor) contains many processing elements and hosts many threads, each with an instruction to execute (I1, I2).  Threads with the same instruction execute concurrently on multiple data while the others must wait (leading to thread divergence).}
+  \end{subfigure}
 \end{figure}
 
-A SIMD instruction utilizes specialized vector processing hardware to execute the same floating point operation (e.g. multiplication, division, etc.) on a several different data concurrently (Fig.~\ref{F:SIMD}); the number of concurrent operations is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}}.
-Nearly all modern CPUs have vector processing units capable of running SIMD instructions, typically capable of handling 2--4 concurrent double precision operations.
-Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor or multi integrated core architecture (MIC), have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also expected on forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
+A typical modern CPU has many compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions (\cref{F:SIMD}).
+A SIMD instruction utilizes the vector processor to execute the same floating point operation (e.g. multiplication, division, etc.) on a several different data concurrently; the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations. 
+Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor---also known as the multi integrated core architecture (MIC)---have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also expected on cutting-edge and forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
 
-\subsection{Data ordering and vectorization patterns}
-\label{S:data}
-When storing arrays for a chemical kinetic model, e.g. the concentration of species $k$ for the $j$-th of thermo-chemical state $[C_k]_j$---with $1 \le k \le N_{\text{sp}}$ the number of species in the model, and $1 \le j \le N_{\text{state}}$ the number of thermo-chemical states considered---there are two data-ordering choices.
-In the ``F'' (Fortran column-major) format, the concentrations of a single species $k$ over all thermo-chemical states are adjacent.
-In Fig.~\ref{F:mem} this would correspond to storing $[C_1]_1$ in index \num{0}, $[C_1]_2$ in index \num{1} and so on, with $N = N_{\text{state}}$, and $K = N_{\text{sp}}$.
-In the ``C'' (C row-major) format, the storage order is transposed with $[C_1]_1$ in index \num{0}, $[C_2]_1$ in index \num{1} etc., and $N = N_{\text{sp}}$, $K = N_{\text{state}}$.
-This ordering---along with the device (CPU, GPU, etc.) in question---have a large effect on the performance of SIMD\slash SIMT-vectorized algorithms.
-
-In a \textit{shallow}-SIMD vectorization, each SIMD-lane evaluates chemical source terms for a different thermo-chemical state.
-If the data is stored in ``F''-order, the SIMD-lanes accessing the concentration of species $k$ for e.g., states $1, 2,\ldots N_{v}$---the number of vector lanes---will load sequential locations in memory, however the $(k+1)$th species concentration will be $N_{\text{state}}$ memory locations away increasing the likelihood of cache-misses on the CPU.
-In a \textit{deep}-SIMD vectorization, a vector-unit cooperates to evaluate chemical source terms for a single thermo-chemical state, thus SIMD-lanes loading species concentrations $k, k+1\ldots k + N_v$ for e.g., state 1, will access sequential memory locations if the data is stored in ``C''-order.
-Further, in the ``C''-ordering the furthest difference between any two concentrations in a single thermo-chemical state is at most $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU.
-However, a deep vectorization may result in SIMD-\textit{waste}---similar to thread-divergence in GPU-processing---caused by different SIMD-lanes executing different instructions (e.g. from differing for-loop bounds).
-
-Finally, in a SIMT-vectorization, threads execute the same instruction over multiple data in lock-step without use of specialized vectorization instructions.
-This is the paradigm used in GPU-processing, a more thorough review of which can be found in our previous work~\cite{CurtisGPU:2017}; one key-exception in this case is that the algorithm executed to evaluate the chemical source terms is identical for all thermo-chemical states, thus there is no thread-divergence for a shallow SIMT-vectorization. 
-In Sec.~\ref{S:results} the effect of the data-ordering on the shallow-SIMD\slash SIMT vectorization performance will be studied.
+SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large groups of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
+A group of threads---typically \num{32} threads, known as a warp on NVIDIA GPUs----execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
+If some threads must execute a different instruction---e.g., due to if\slash then branching or predication---they are forced to wait and execute later.
+This phenomena, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
 \subsection{Previous works and goals of this study}
 Several recent works, e.g.~\cite{CurtisGPU:2017}, have investigated SIMT-based chemical kinetic integration on GPUs, however SIMD-based chemical kinetics have been less studied in comparison.
-\cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
+Stone et al., \cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
 The shallow-SIMD and SIMT-vectorization models were implemented in OpenCL and compared to an OpenMP baseline code that was deep SIMD-vectorized by simple compiler hints (a.k.a pragmas).
 The shallow-SIMD vectorization improved the integrator performance over the OpenMP baseline by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was \SIrange{1.4}{1.6}{$\times$} slower than the OpenMP baseline due to thread-divergence concerns.
 \cite{kroshko2013efficient} implemented a shallow-SIMD vectorized third order stiff Rosenbrock integrator for atmospheric chemistry on a Cell Broadband Engine---a specially designed vector processor---finding a speedup of \SI{1.89}{$\times$} over a serial version of the same code.
 
-This work will study the performance of chemical source term evaluation of automatically generated shallow-SIMD vectorized codes for a wide range chemical kinetic models on the CPU.
+This work will study the performance of thermo-chemical source term evaluation of automatically generated shallow-SIMD vectorized codes for a wide range chemical kinetic models on the CPU.
 The performance will be compared to a baseline shallow-SIMT vectorized code to determine the effective SIMD speedup.
 Finally future extensions to this work will be detailed.
 
 \section{Methodology}
+\subsection{Data ordering and vectorization patterns}
+\label{S:data}
+
+\begin{figure}[htb]
+  \centering
+  \begin{minipage}{0.45\linewidth}
+    \begin{subfigure}[t]{\textwidth}
+      \includegraphics[width=\textwidth]{data_layouts.pdf}
+      \caption{A simple data array with K rows and N columns.}
+      \label{F:mem}
+    \end{subfigure}
+  \end{minipage}
+  \hfil
+  \begin{minipage}{0.45\linewidth}
+    \begin{subfigure}[t]{\textwidth}
+	\includegraphics[width=\textwidth]{row_major.pdf}
+	\caption{Row-major data ordering}
+	\label{F:row_major}
+    \end{subfigure}
+    \\
+    \begin{subfigure}[t]{\textwidth}
+	\includegraphics[width=\textwidth]{column_major.pdf}
+	\caption{Column-major data ordering}
+	\label{F:column_major}
+    \end{subfigure}
+  \end{minipage}
+\end{figure}
+
+When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
+\Cref{F:mem} depicts an example data array with K-rows and N-columns and index (i, j) corresponding to the $i$th row and $j$th column.
+For example the concentration of species $j$ for the $i$-th thermo-chemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$, the number of thermo-chemical states considered, and $1 \le j \le \ns$, the number of species in the model.
+The stored concentrations would then have $K = N_{\text{state}}$ rows, and $N = N_{\text{sp}}$ columns.
+
+In the ``C'' (C row-major) format, the concentrations of all species $j$ for a single thermo-chemical condition $i$ would be stored sequentially in memory, i.e., with  $[C]_{1, 1}$ in index \num{0}, $[C]_{1, 2}$ in index \num{1} etc. as shown in \cref{F:row_major}.
+Conversely in the ``F'' (Fortran column-major) format, the concentrations of a single species $j$ over all thermo-chemical states are adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index \num{0}, $[C]_{2, 1}$ in index \num{1} and so on, as shown in \cref{F:column_major}.
+This ordering---along with the device (CPU, GPU, etc.) and vectorization pattern in question---have a large effect on the performance of SIMD\slash SIMT-vectorized algorithms.
+
+In a \textit{shallow}-SIMD\slash SIMT vectorization, each SIMD-lane (or SIMT-thread) in a compute-unit evaluates thermo-chemical source terms for a different thermo-chemical state.
+If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{L, j})$, the concentration of species $j$ for states $1, 2,\ldots L$---the size of the vector lane for SIMD or the number of threads in a SIMT warp---will load sequential locations in memory, however the first $(j+1)$th species concentration, $[C]_{1, j+1}$ will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{NVIDIA:2018}.
+In a \textit{deep}-SIMD\slash SIMT vectorization, a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermo-chemical source terms for a single thermo-chemical state, thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + L}$---the species concentrations for state 1, species $j \ldots j + L$---will access sequential memory locations if the data is stored in ``C''-order.
+Further, in the ``C''-ordering the furthest difference between any two species concentrations within the same thermo-chemical state is at most $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU, but leads to uncoalesced memory-accesses on the GPU.
+However, a deep vectorization requires both synchronization between SIMD-lanes\slash SIMT-threads, and may result in SIMD-waste\slash SIMT thread-divergence, caused by different SIMD-lanes\slash SIMT-threads executing different instructions (e.g. resulting from different if\slash then branches)
+
+\begin{figure}[htb]
+  \centering
+  \label{F:vector_data}
+  \begin{minipage}{\linewidth}
+    \begin{subfigure}[t]{\textwidth}
+	\includegraphics[width=\textwidth]{row_major_split.pdf}
+	\caption{Row-major data ordering}
+	\label{F:row_major_split}
+    \end{subfigure}
+    \\
+    \begin{subfigure}[t]{\textwidth}
+	\includegraphics[width=\textwidth]{column_major_split.pdf}
+	\caption{Column-major data ordering}
+	\label{F:column_major_split}
+    \end{subfigure}
+  \end{minipage}
+\end{figure}
+
+Finally,~\cref{F:vector_data} shows a vectorized data-ordering that negates the disadvantages of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
+In Sec.~\ref{S:results} the effect of the data-ordering on the shallow-SIMD\slash SIMT vectorization performance will be studied.
+
 \subsection{Chemical Kinetics Equations}
-The current code evaluates the following chemical source terms:
+The current code evaluates the following thermo-chemical source terms:
 
 \begin{equation}
 \dot{\omega}_k = \sum_{i=1}^{N_{\text{reac}}} \nu_{ki} R_i c_i
@@ -228,7 +291,7 @@ Finally, the strong parallel scaling efficiency is defined as:
 \begin{equation}
 S = \frac{t_1}{N t_N}
 \end{equation}
-where $t_1$ is the mean wall-clock runtime of chemical source terms evaluation on one core and $t_N$ the mean runtime on $N$ cores.
+where $t_1$ is the mean wall-clock runtime of thermo-chemical source terms evaluation on one core and $t_N$ the mean runtime on $N$ cores.
 Fig.~\ref{F:SIMDscale} examines the strong parallel scaling efficiency for all four models with a ``C''-ordered shallow SIMD-vectorization and vector-width of 16.
 Interestingly the efficiency of the hydrogen model decreases the fastest while the larger models have significantly larger scaling efficiencies for more than 4 cores.
 Additionally, it appears that for a fixed number of cores, the scaling efficiency increases with model size.
@@ -236,7 +299,7 @@ This suggests that evaluation of the chemical-source terms for a single thermo-c
 Additionally, OpenCL allows assigning of work to devices by shared memory resources, e.g., a L3 cache, which was not pursued in this study for simplicity; this should be investigated in future work to determine the effect on scaling efficiency.
 
 \section{Conclusions}
-In this work, automatically generated OpenCL codes for shallow SIMD-vectorized chemical source term evaluation were developed and validated against Cantera~\cite{Cantera} for a wide range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr}.
+In this work, automatically generated OpenCL codes for shallow SIMD-vectorized thermo-chemical source term evaluation were developed and validated against Cantera~\cite{Cantera} for a wide range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr}.
 Significant speedups of up to \SIrange{1.90}{2.45}{$\times$} over a baseline SIMT-vectorized code were observed.
 Two data-ordering schemes were investigated, showing a clear performance benefit for use of the ``C'' (row-major) ordering for the shallow vectorized code.
 Further, this study suggests that a deep SIMD-vectorized code---currently under development---may see even greater accelerations due to expected increases in cache-hit rates.
