@@ -1,0 +1,35 @@
+% Equations dictionary
+
+\documentclass[11pt]{article}
+
+\usepackage{amssymb,amsmath}
+
+% Begin document
+\begin{document}
+
+%<*eqstate>
+\begin{subequations}
+\begin{align}
+\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconp}\\
+\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconv}
+\end{align}
+\end{subequations}
+%</eqstate>
+
+%<*eqdTdotdT>
+\begin{subequations}
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
+\intertext{and similarly:}
+\frac{\partial\dot{T}}{\partial{T}}  &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv}
+\end{align}
+\end{subequations}
+%</eqdTdotdT>
+
+% A bunch of other equations...
+
+\end{document}

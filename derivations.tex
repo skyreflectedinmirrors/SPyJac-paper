@@ -5,6 +5,14 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
+% shared equations in separate file
+% https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
+\usepackage{catchfilebetweentags}
+
+\newcommand{\loadeq}[1]{%
+   \ExecuteMetaData[eqn_dict.tex]{eq#1}%
+}
+
 % dcases
 \usepackage{mathtools}
 % for text right arrow
@@ -84,12 +92,7 @@ This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and 
 \section{Governing equations}
 \subsection{State variables}
 The state vector for this derivation consists of the temperature, a thermodynamic state parameter (pressure or volume) and the number of moles of all species except the last in the model:
-\begin{subequations}
-\begin{align}
-\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconp}\\
-\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{state}
 where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
 
 From the ideal gas law, the number of moles of the final species is determined as:
@@ -380,7 +383,8 @@ $\mathcal{J}$ is filled with the partial derivatives $\partial f / \partial \Phi
  \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns - 1
 \end{equation}
 where $i$ and $j$ correspond to the row and column, respectively, of the entry in the Jacobian matrix.
-The Jacobian entries resulting from~\cref{e:jac_general} are derived in~\cref{s:energy_derivs,s:molar_source_derivatives,s:parameter_source_derivatives}, while various subcomponents of the Jacobian are derived in~\cref{s:dri_dt,s:dri_dnj,s:dri_de,s:dri_pdep,s:dpmod_fall}..
+The Jacobian entries resulting from~\cref{e:jac_general} are derived in~\cref{s:energy_derivs,s:molar_source_derivatives,s:parameter_source_derivatives}, while various subcomponents of the Jacobian are derived in~\cref{s:dri_dt,s:dri_dnj,s:dri_de,s:dri_pdep,s:dpmod_fall}.
+The final form of the Jacobian can be found in~\cref{s:jac_final}, which provides a useful summary for this document.
 
 We note that some parts of the Jacobian derivation---in particular derivatives of the energy equation---are quite complicated.
 The aim of this document is to provide the reader with an overview of the derivation process; some intermediate steps are left out due to brevity and typesetting constraints.
@@ -432,17 +436,7 @@ to simplify the specific heat terms:
 				     & \mathindent[larger] \left(- \frac{\text{d} H }{\text{d} T }_{k} + \frac{W_{k}}{W_{\ns}} \frac{\text{d} H }{\text{d} T }_{\ns}\right) \dot{\omega}_{k}\biggr)\Biggr]
 \end{align}
 and finally, we may substitute in the specific heat for the temperature derivative of enthalpy, giving:
-\begin{subequations}
-\begin{align}
- \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
-				     & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
-				     & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
-\intertext{and similarly:}
-\frac{\partial\dot{T}}{\partial{T}}  &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
-				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
-				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dTdotdT}
 The species production rate derivative with respect to temperature will be defined in~\cref{s:d_spec_prod}.
 
 \subsubsection{Molar derivative}
@@ -1192,6 +1186,9 @@ and:
   \lhs{dci_chem_complete}{\frac{\partial c }{\partial P }_{i}} &= \rhs{dci_fall_complete}{\left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{\dconv}
  \end{align}
 \end{subequations}
+
+\subsection{Final jacobian form}
+
 
 \bibliography{derivations}
 
