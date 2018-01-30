@@ -89,18 +89,18 @@ In this discussion, we will largely use OpenCL terminology to describe these pro
   \end{subfigure}
   \hfill
   \begin{subfigure}[htp]{0.45\linewidth}
-      \label{F:SIMT}
       \includegraphics[width=\textwidth]{SIMT.pdf}
       \caption{Schematic of SIMT processing. A single compute unit (e.g., a GPU streaming multiprocessor) contains many processing elements and hosts many threads, each with an instruction to execute (I1, I2).  Threads with the same instruction execute concurrently on multiple data while the others must wait (leading to thread divergence).}
+      \label{F:SIMT}
   \end{subfigure}
 \end{figure}
 
 A typical modern CPU has many compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions (\cref{F:SIMD}).
 A SIMD instruction utilizes the vector processor to execute the same floating point operation (e.g. multiplication, division, etc.) on a several different data concurrently; the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations. 
-Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor---also known as the multi integrated core architecture (MIC)---have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also expected on cutting-edge and forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
+Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor (MIC) have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also expected on cutting-edge and forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
 
 SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large groups of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
-A group of threads---typically \num{32} threads, known as a warp on NVIDIA GPUs----execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
+A group of threads---typically \num{32} threads, known as a warp on NVIDIA GPUs---execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
 If some threads must execute a different instruction---e.g., due to if\slash then branching or predication---they are forced to wait and execute later.
 This phenomena, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
@@ -124,7 +124,7 @@ Finally future extensions to this work will be detailed.
   \begin{minipage}{0.45\linewidth}
     \begin{subfigure}[t]{\textwidth}
       \includegraphics[width=\textwidth]{data_layouts.pdf}
-      \caption{A simple data array with K rows and N columns.}
+      \caption{A simple 2-D data array with K rows and N columns.}
       \label{F:mem}
     \end{subfigure}
   \end{minipage}
@@ -149,8 +149,8 @@ When storing arrays for a chemical kinetic model, the data-storage layout and ve
 For example the concentration of species $j$ for the $i$-th thermo-chemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$, the number of thermo-chemical states considered, and $1 \le j \le \ns$, the number of species in the model.
 The stored concentrations would then have $K = N_{\text{state}}$ rows, and $N = N_{\text{sp}}$ columns.
 
-In the ``C'' (C row-major) format, the concentrations of all species $j$ for a single thermo-chemical condition $i$ would be stored sequentially in memory, i.e., with  $[C]_{1, 1}$ in index \num{0}, $[C]_{1, 2}$ in index \num{1} etc. as shown in \cref{F:row_major}.
-Conversely in the ``F'' (Fortran column-major) format, the concentrations of a single species $j$ over all thermo-chemical states are adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index \num{0}, $[C]_{2, 1}$ in index \num{1} and so on, as shown in \cref{F:column_major}.
+In the ``C'' (C row-major) format, the concentrations of all species for a single thermo-chemical condition $i$ would be stored sequentially in memory, i.e., with  $[C]_{1, 1}$ in index \num{1}, $[C]_{1, 2}$ in index \num{2} etc. as shown in \cref{F:row_major}.
+Conversely in the ``F'' (Fortran column-major) format, the concentrations of a single species $j$ over all thermo-chemical states are adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index \num{1}, $[C]_{2, 1}$ in index \num{2} and so on, as shown in \cref{F:column_major}.
 This ordering---along with the device (CPU, GPU, etc.) and vectorization pattern in question---have a large effect on the performance of SIMD\slash SIMT-vectorized algorithms.
 
 In a \textit{shallow}-SIMD\slash SIMT vectorization, each SIMD-lane (or SIMT-thread) in a compute-unit evaluates thermo-chemical source terms for a different thermo-chemical state.
@@ -161,7 +161,7 @@ However, a deep vectorization requires both synchronization between SIMD-lanes\s
 
 \begin{figure}[htb]
   \centering
-  \begin{minipage}{\linewidth}
+  \begin{minipage}{0.6\linewidth}
     \begin{subfigure}[t]{\textwidth}
 	\includegraphics[width=\textwidth]{row_major_split.pdf}
 	\caption{Row-major, wide-vectorized data ordering}
@@ -178,7 +178,7 @@ However, a deep vectorization requires both synchronization between SIMD-lanes\s
   \label{F:vector_data}
 \end{figure}
 
-Finally,~\cref{F:vector_data} shows a vectorized data-ordering that improves the caching patters of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
+Finally,~\cref{F:vector_data} shows a vectorized data-ordering that improves the caching patterns of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
 This is accomplished by splitting the slower-varying axis of the data array---rows for ``C''-ordering, and columns for ``F''-ordering---into chunks of size $L$ (the SIMD vector-width, or SIMT warp-size) and laying these data out contigously in memory.
 For example, using the data-ordering in~\cref{F:row_major_split}, the concentration of species $j$ for states $i\ldots i+L$, $[C]_{i, j} \ldots [C]_{i + L, j}$, are contiguous in memory and are followed by the concentration of species $j + 1$ for the same states, $[C]_{i, j + 1} \ldots [C]_{i + L, j + 1}$.
 This pattern, similar to OpenCL's native vector data-types---e.g., \texttt{double\num{8}} which treats \num{8} contiguous double precision floating point numbers as a single vector datum---ensures that any SIMD operation occurs on data that is contiguous in memory, greatly improving caching and SIMD-throughput.
