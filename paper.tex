@@ -9,6 +9,16 @@
 \usepackage[version=3]{mhchem} % Formula subscripts using \ce{}, e.g., \ce{H2SO4}
 \usepackage{booktabs,multicol} %better tables
 \usepackage{subcaption} %subfigs
+
+% shared equations in separate file
+% https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
+\usepackage{catchfilebetweentags}
+
+\newcommand{\loadeq}[1]{%
+   \ExecuteMetaData[eqn_dict.tex]{eq#1}%
+}
+
+
 \sisetup{group-separator={,},
 	detect-all,
 	binary-units,
@@ -190,38 +200,19 @@ This new version of \texttt{pyJac} is capable of evaluating the thermo-chemical 
 In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to our complete derivations, attached as supplimental material to this document.
 
 The thermo-chemical state vector derivation consists of the temperature, the non-constant thermodynamic state parameter (volume or pressure) and the number of moles of all species except the last in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
-\begin{subequations}
-\begin{align}
-\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconp}\\
-\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns - 1}\right\}&\text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{state}
 where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
 
 For both \conp~and \conv, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
-\begin{equation}
-\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns - 1, \label{e:spec}
-\end{equation}
+\loadeq{dmolar}
 where $\dot{\omega}_k$ is the $kth$ species' overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
-\begin{subequations}
-\label{e:temperature_incomplete}
-\begin{align}
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{p, k}}} & \text{\dconp} \\
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{v, k}}} & \text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dtemp}
 where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure and constant-volume specific heat of species $k$ in molar units respectively, while $[C]_{k}$ is the concentration, given by:
 \begin{equation}
  [C]_{k} = \frac{n_{k}}{V}
 \end{equation}
 By differentiating the ideal gas law, the volume and pressure source terms can be found:
-\begin{subequations}
-\label{e:param_complete}
-\begin{align}
-\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
-\frac{\text{d} P }{\text{d} t } &= T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dparam}
 where $\mathcal{R}$ is the ideal gas-constant.
 
 \subsection{Code Generation}

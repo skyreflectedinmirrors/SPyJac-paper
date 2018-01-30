@@ -103,25 +103,12 @@ n_{\ns} &= \frac{V P}{T \Ru} - \sum_{i=1}^{\ns - 1}{n_i}
 
 \subsection{Thermo-chemical source terms}
 The evolution of the thermo-chemical state variables of this system is described by a set of ordinary-differential equations:
-\begin{subequations}
-\label{e:source_terms}
-\begin{align}
-f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\} & \text{\dconp} \\
-f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns - 1} }{\text{d} t }\right\} & \text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dstate}
+
 For both, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
-\begin{equation}
-\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns - 1, \label{e:spec}
-\end{equation}
+\loadeq{dmolar}
 where $\dot{\omega}_k$ is the $kth$ species' overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
-\begin{subequations}
-\label{e:temperature_incomplete}
-\begin{align}
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{p, k}}} & \text{\dconp} \\
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns} [C]_{k} {C_{v, k}}} & \text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dtemp}
 where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure and constant-volume specific heat of species $k$ in molar units respectively, while $[C]_{k}$ is the concentration, given by:
 \begin{equation}
  [C]_{k} = \frac{n_{k}}{V}
@@ -155,13 +142,7 @@ Using~\cref{e:spec_ns}, the total molar rate of change can be determined:
 \end{align}
 
 Combining~\cref{e:spec,e:param_incomplete,e:total_molar} gives the final form of the pressure and volume terms:
-\begin{subequations}
-\label{e:param_complete}
-\begin{align}
-\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru}{P} \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp} \\
-\frac{\text{d} P }{\text{d} t } &= T \Ru \sum_{k=1}^{\ns  - 1} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dparam}
 
 Additionally, the concentration and moles of the last species in the model (which is not a state variable) may be expanded in terms of the state variables of the system:
 \begin{equation}
@@ -1188,6 +1169,7 @@ and:
 \end{subequations}
 
 \subsection{Final jacobian form}
+\label{s:jac_final}
 
 
 \bibliography{derivations}
