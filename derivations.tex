@@ -417,7 +417,18 @@ to simplify the specific heat terms:
 				     & \mathindent[larger] \left(- \frac{\text{d} H }{\text{d} T }_{k} + \frac{W_{k}}{W_{\ns}} \frac{\text{d} H }{\text{d} T }_{\ns}\right) \dot{\omega}_{k}\biggr)\Biggr]
 \end{align}
 and finally, we may substitute in the specific heat for the temperature derivative of enthalpy, giving:
-\loadeq{dTdotdT}
+\begin{subequations}
+\label{e:dTdotdT_nojac}
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
+\intertext{and similarly:}
+\frac{\partial\dot{T}}{\partial{T}}  &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv}
+\end{align}
+\end{subequations}
 The species production rate derivative with respect to temperature will be defined in~\cref{s:d_spec_prod}.
 
 \subsubsection{Molar derivative}
@@ -482,14 +493,7 @@ First, the derivative of the concentration of a species $k$ with respect to the 
 \end{subequations}
 while the specific heat and enthalpy\slash internal-energy are independent of the state parameter for both \conp~and \conv.
 Following the now familiar collapsing of the specific-heat\slash concentration sum, and substituting in the energy source term gives:
-\begin{subequations}
-\begin{align}
- \frac{\partial\dot{T}}{\partial{V}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ - \sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial V }_{k} + & \nonumber \\
-				     & \mathindent[largerindentand] \frac{1}{V} \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{-1 + \ns} \left(- {C_p}_{\ns} + {C_p}_{k}\right) [C]_{k}\Biggr] & \text{\dconp} \\
- \frac{\partial\dot{T}}{\partial{P}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[- \sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial P }_{k} - & \nonumber \\
-				     & \mathindent[largerindentand] \frac{{C_v}_{\ns}}{T \Ru} \frac{\text{d} T }{\text{d} t } \Biggr] & \text{\dconv}
-\end{align}
-\end{subequations}
+\loadeq{dTdParam}
 Finally, the species production rate derivative with respect to the state parameter will be computed in~\cref{s:d_spec_prod}.
 
 \subsection{Molar source term derivatives}
@@ -498,9 +502,10 @@ Finally, the species production rate derivative with respect to the state parame
 
 The derivative of the net molar rate of production of a species $k$ with respect to temperature is:
 \begin{align}
+ \label{e:dnkdotdT_compact}
  \mathcal{J}_{k + 2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} n_{k}}{\text{d} t} = \frac{\partial \dot{n}_k }{\partial T } \nonumber \\
  \intertext{or:}
-   \mathcal{J}_{k + 2, 1} & = V \frac{\partial \dot{\omega}_{k} }{\partial T }
+ \mathcal{J}_{k + 2, 1} & = V \frac{\partial \dot{\omega}_{k} }{\partial T }
 \end{align}
 
 \subsubsection{Molar derivative}
@@ -515,6 +520,7 @@ Similarly, the derivative of the net molar rate of production of a species $k$ w
 \subsubsection{State parameter derivatives}
 
 Finally, the derivative of the net molar rate of production of a species $k$ with respect to the state parameter is:
+\begin{subequations}
 \begin{align}
   \mathcal{J}_{k + 2, 2} &= \frac{\partial }{\partial V } \frac{\text{d} n_{k}}{\text{d} t} = \frac{\partial \dot{n}_k }{\partial V } & \nonumber \\
 			 &= V \frac{\partial \dot{\omega}_{k} }{\partial V } + \dot{\omega}_{k} & \text{\dconp}
@@ -522,12 +528,15 @@ Finally, the derivative of the net molar rate of production of a species $k$ wit
   \mathcal{J}_{k + 2, 2} &= \frac{\partial }{\partial P } \frac{\text{d} n_{k}}{\text{d} t} = \frac{\partial \dot{n}_k }{\partial P } & \nonumber \\
 			 &=V \frac{\partial \dot{\omega}_{k} }{\partial P } & \text{\dconv}
 \end{align}
+\end{subequations}
 
 \subsection{State parameter source term derivatives}
 \label{s:parameter_source_derivatives}
 \subsubsection{Temperature derivative}
 
 The derivatives of the thermodynamic state parameter source terms with respect to temperature are given by differentiating~\cref{e:param_complete}:
+\begin{subequations}
+\label{e:dEdotdT_nojac}
 \begin{align}
  \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial T} & \nonumber \\
 		    &= \frac{V}{[C]} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(\frac{\partial \dot{\omega} }{\partial T }_{k} + \frac{\dot{\omega}_{k}}{T}\right) \nonumber \\
@@ -537,6 +546,7 @@ The derivatives of the thermodynamic state parameter source terms with respect t
 		    &= \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(T \frac{\partial \dot{\omega} }{\partial T }_{k} + \dot{\omega}_{k}\right) & \nonumber \\
 		    & \mathindent + \frac{P}{T} \left(\frac{\text{d} \dot{T} }{\text{d} T } - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconv}
 \end{align}
+\end{subequations}
 
 \subsubsection{Molar derivative}
 Similarly, the derivatives of the thermodynamic state parameter source terms with respect to the moles of species $j$ are:
@@ -646,11 +656,7 @@ and using an temporary value $S^{\prime\prime}_{\ns}$---defined analagously to \
 \end{equation}
 
 Finally, combining~\cref{e:dropf_dt,e:dropr_dt} gives the total temperature derivative of the net rate of progress:
-\begin{align}
- \label{e:drop_dt}
- \frac{\partial R }{\partial T }_{i} =& \frac{{R_{f, i}}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right) - \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_{r, i}} \nonumber \\
-				      &\qquad + \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_{r, i}} - \frac{[C] S^{\prime}_{\ns}}{T} {k_{f, i}}
-\end{align}
+\loadeq{dropdT}
 \subsubsection{Molar derivative}
 \label{s:dri_dnj}
 The derivative of the forward rate of progress with respect to the amount of moles of a species $j$ is:
@@ -720,10 +726,7 @@ Simplifying gives:
 					 & \mathindent[morespac] \beta_1 + \frac{E_{a_1}}{T \Ru}\Biggr)
 \end{align}
 Similar to~\cref{s:dri_dt},~\cref{e:dkf_plog_dt} may be substituted into~\cref{e:dropfdt_1,e:droprdt_1} to give:
-\begin{align}
- \frac{\partial R_{i} }{\partial T } &= \left(\frac{\left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right) \left(- \beta_1 + \beta_2 - \frac{E_{a_1}}{T \Ru} + \frac{E_{a_2}}{T \Ru}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \beta_1 + \frac{E_{a_1}}{T \Ru} \right) \times \nonumber \\
-				     & \mathindent \left(\frac{{R_{f, i}} - {R_{r, i}}}{T}\right) + {R_{r, i}} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_{r, i}} - S^{\prime}_{\ns} {k_{f, i}}\right)
-\end{align}
+\loadeq{dropplogdT}
 
 For \conv~problems, the P-Log forward rate coefficient is also a function of the pressure:
 \begin{equation}
@@ -752,10 +755,7 @@ giving:
  \frac{\partial {k_{f, i}} }{\partial T } = \log{\left (10 \right )} {k_{f, i}} \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} - \frac{2 \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}}{T^{2} \left(- \frac{1}{T_{\min}} + \frac{1}{T_{\max}}\right)} \left(j - 1\right)
 \end{equation}
 Following the same process for Arrhenius-based reactions (see~\cref{s:dri_dt}), the derivative of the net rate of progress with respect to temperature is:
-\begin{align}
- \frac{\partial R }{\partial T }_{i} &= \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \left[ - \frac{2 \log{\left (10 \right )} \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}}{T^{2} \left(- \frac{1}{T_{\min}} + \frac{1}{T_{\max}}\right)} \left(j - 1\right) \right] \left({R_{f, i}} - {R_{r, i}}\right) + \nonumber \\
-				     & \mathindent \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} {R_{r, i}} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_{r, i}} - S^{\prime}_{\ns} {k_{f, i}}\right)
-\end{align}
+\loadeq{dropchebdT}
 
 For \conv~problems, we again must consider the derivative of the forward rate coefficient with respect to pressure:
 \begin{equation}
@@ -1168,8 +1168,36 @@ and:
  \end{align}
 \end{subequations}
 
-\subsection{Final jacobian form}
+\section{Final jacobian form}
 \label{s:jac_final}
+
+Here we give a summary of the Jacobian derivations in the previous sections, as a complete reference guide to the equations evaluated by \texttt{pyJac}.
+
+\subsection{Temperature derivatives}
+In this section, the derivatives of all source terms with respect to the temperature are considered.
+
+\subsubsection{Temperature source term derivatives}
+Starting from~\cref{e:dTdotdT_nojac},~\cref{e:dnkdotdT_compact} is substituted in to yield:
+\loadeq{dTdotdT}
+
+\subsubsection{State parameter source term derivatives}
+Similarly,~\cref{e:dnkdotdT_compact} is substituted into~\cref{e:dEdotdT_nojac}, giving:
+\loadeq{dEdotdT}
+
+\subsubsection{Molar source term derivatives}
+From~\cref{e:dnkdotdT_compact} and~\cref{e:dwdot_dT}, a general form for the molar source term derivative with respect to temperature is obtained:
+\loadeq{dnkdotdT}
+As \texttt{pyJac} evaluates these derivative entries by looping over the reactions $i$ in the model, we convert~\cref{e:dnkdotdT} to an update form:
+\begin{align}
+ \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}} &\pluseq  \rhs{dnkdotdT}{V \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right)} & \mathcond{dnkdotdT}{k = 1, \ldots, \ns}
+\end{align}
+the rate of progress temperature derivative for all reaction types---excluding Chebyshev and P-Log---is:
+\loadeq{dropdT}
+while for P-Log reactions:
+\loadeq{dropplogdT}
+and for Chebyshev reactions:
+\loadeq{dropchebdT}
+
 
 
 \bibliography{derivations}

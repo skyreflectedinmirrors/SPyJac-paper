@@ -8,6 +8,16 @@
 \usepackage{amssymb}
 \usepackage{amsmath,eqparbox,xparse}
 
+% https://tex.stackexchange.com/a/34412/5764
+\makeatletter
+\NewDocumentCommand{\eqmathbox}{o O{c} m}{%
+  \IfValueTF{#1}
+    {\def\eqmathbox@##1##2{\eqmakebox[#1][#2]{$##1##2$}}}
+    {\def\eqmathbox@##1##2{\eqmakebox{$##1##2$}}}
+  \mathpalette\eqmathbox@{#3}
+}
+\makeatother
+
 \newcommand{\pluseq}{\mathrel{{+}{=}}}
 \newcommand{\minuseq}{\mathrel{{-}{=}}}
 \newcommand{\ns}{N_{sp}}
@@ -24,6 +34,7 @@
 \NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
 \NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
 \NewDocumentCommand{\mathcond}{mmO{r}}{\eqmathbox[COND_#1][#3]{#2}}
+
 
 % consistent multiline equation spacing
 \NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
@@ -59,13 +70,14 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 
 %<*eqdTdotdT>
 \begin{subequations}
+\label{e:dTdotdT}
 \begin{align}
- \frac{\partial\dot{T}}{\partial{T}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
-				     & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
-				     & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
+\mathcal{J}_{1, 1} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				    & \sum_{k=1}^{-1 + \ns} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\mathcal{J}_{k + 2, 1}}{V} + & \nonumber \\
+				    & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp} \\
 \intertext{and similarly:}
-\frac{\partial\dot{T}}{\partial{T}}  &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
-				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial T }_{k} + & \nonumber \\
+\mathcal{J}_{1, 1} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns}}{T}\right) [C]_{k} + & \nonumber \\
+				     & \sum_{k=1}^{-1 + \ns} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\mathcal{J}_{k + 2, 1}}{V} + & \nonumber \\
 				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns}}{W_{\ns}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv}
 \end{align}
 \end{subequations}
@@ -90,6 +102,58 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \end{align}
 \end{subequations}
 %</eqdparam>
+
+%<*eqdTdParam>
+\begin{subequations}
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{V}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[ - \sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial V }_{k} + & \nonumber \\
+				     & \mathindent[largerindentand] \frac{1}{V} \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{-1 + \ns} \left(- {C_p}_{\ns} + {C_p}_{k}\right) [C]_{k}\Biggr] & \text{\dconp} \\
+ \frac{\partial\dot{T}}{\partial{P}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[- \sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega} }{\partial P }_{k} - & \nonumber \\
+				     & \mathindent[largerindentand] \frac{{C_v}_{\ns}}{T \Ru} \frac{\text{d} T }{\text{d} t } \Biggr] & \text{\dconv}
+\end{align}
+\end{subequations}
+%</eqdTdParam>
+
+%<*eqdEdotdT>
+\begin{align}
+ \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial T} & \nonumber \\
+		    &= \frac{V}{[C]} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(\frac{\mathcal{J}_{k + 2, 1}}{V} + \frac{\dot{\omega}_{k}}{T}\right) \nonumber \\
+		    &  \mathindent + \frac{V}{T} \left(\frac{\text{d} \dot{T} }{\text{d} T } - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconp}
+\intertext{and:}
+ \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{P} }{\partial T} & \nonumber \\
+		    &= \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(T \frac{\mathcal{J}_{k + 2, 1}}{V} + \dot{\omega}_{k}\right) & \nonumber \\
+		    & \mathindent + \frac{P}{T} \left(\frac{\text{d} \dot{T} }{\text{d} T } - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconv}
+\end{align}
+%</eqdEdotdT>
+
+%<*eqdnkdotdT>
+\begin{align}
+ \label{e:dnkdotdT}
+ \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}}  &= \rhs{dnkdotdT}{V \sum_{i=1}^{\nr} \left(\nu_{k,i} R_{i} \frac{\partial c }{\partial T }_{i} + \nu_{k,i} \frac{\partial R }{\partial T }_{i} c_{i}\right)} & \cond{dnkdotdT}{}
+\end{align}
+%</eqdnkdotdT>
+
+%<*eqdropdT>
+\begin{align}
+ \frac{\partial R }{\partial T }_{i} =& \frac{{R_{f, i}}}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right) - \left(- \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{1}{T} \left(\beta_{i} + \frac{{E_{a}}_{i}}{T \Ru}\right)\right) {R_{r, i}} \nonumber \\
+				      &\qquad + \frac{[C] S^{\prime\prime}_{\ns}}{T} {k_{r, i}} - \frac{[C] S^{\prime}_{\ns}}{T} {k_{f, i}}
+\end{align}
+%</eqdropdT>
+
+%<*eqdropplogdT>
+\begin{align}
+ \frac{\partial R_{i} }{\partial T } &= \left(\frac{\left(- \log{\left (P_{1} \right )} + \log{\left (P \right )}\right) \left(- \beta_1 + \beta_2 - \frac{E_{a_1}}{T \Ru} + \frac{E_{a_2}}{T \Ru}\right)}{- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}} + \beta_1 + \frac{E_{a_1}}{T \Ru} \right) \times \nonumber \\
+				     & \mathindent \left(\frac{{R_{f, i}} - {R_{r, i}}}{T}\right) + {R_{r, i}} \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_{r, i}} - S^{\prime}_{\ns} {k_{f, i}}\right)
+\end{align}
+%</eqdropplogdT>
+
+%<*eqdropchebdT>
+\begin{align}
+ \frac{\partial R }{\partial T }_{i} &= \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \left[ - \frac{2 \log{\left (10 \right )} \mathcal{T}_{l - 1}\left(\tilde{P}\right) U_{j - 2}\left(\tilde{T}\right) \eta_{l,j}}{T^{2} \left(- \frac{1}{T_{\min}} + \frac{1}{T_{\max}}\right)} \left(j - 1\right) \right] \left({R_{f, i}} - {R_{r, i}}\right) + \nonumber \\
+				     & \mathindent \sum_{k=1}^{\ns} \nu_{k,i} \frac{\text{d} B }{\text{d} T }_{k} {R_{r, i}} + \frac{[C]}{T} \left(S^{\prime\prime}_{\ns} {k_{r, i}} - S^{\prime}_{\ns} {k_{f, i}}\right)
+\end{align}
+%</eqdropchebdT>
+
 
 % A bunch of other equations...
 
