@@ -473,7 +473,8 @@ The derivative of the species production rate with respect to the state paramete
 \subsubsection{Molar derivative}
 Finally, the molar derivative of the temperature source term is:
 \begin{align}
- \mathcal{J}_{1,j} = \frac{\partial\dot{T}}{\partial{n_j}}
+ \label{e:dTdotdnj_init}
+ \mathcal{J}_{1,j + 2} = \frac{\partial\dot{T}}{\partial{n_j}}
 \end{align}
 
 First, the derivative of a species concentration with respect to the moles of species $j$ is computed:
@@ -495,6 +496,7 @@ Similar to~\cref{s:denergy_dt} the derivative of the energy equation with respec
 \end{align}
 Next, the Kronecker delta summation is simplified, and the compact form of the energy equation factored out yielding:
 \begin{subequations}
+\label{e:dTdotdnj_nojac}
 \begin{align}
  \frac{\partial\dot{T}}{\partial{n_j}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_p}_{k}} \Biggl[- \sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \frac{\partial \dot{\omega}_{k} }{\partial {n_j} } & \nonumber \\
 				       &  \mathindent[largerindentand] - \frac{1}{V} \frac{\text{d} T }{\text{d} t } \left(- {C_p}_{\ns} + {C_p}_{j}\right)\Biggr] & \text{\dconp} \\
@@ -525,6 +527,8 @@ The derivatives of the thermodynamic state parameter source terms with respect t
 
 \subsubsection{State parameter derivative}
 Similarly, the derivative of the thermodynamic state parameter source terms with respect to themselves are:
+\begin{subequations}
+\label{e:dEdotdE_nojac}
 \begin{align}
  \mathcal{J}_{2, 2} &= \frac{\partial }{\partial V } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial V} & \nonumber \\
 		    &= \frac{1}{[C]} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(V \frac{\partial \dot{\omega}_{k} }{\partial V } + \dot{\omega}_{k}\right) \nonumber \\
@@ -534,9 +538,12 @@ Similarly, the derivative of the thermodynamic state parameter source terms with
 		    &= T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \frac{\partial \dot{\omega}_{k} }{\partial P } & \nonumber \\
 		    & \mathindent + \frac{1}{T} \left(P \frac{\text{d} \dot{T} }{\text{d} P } + \dot{T}\right) & \text{\dconv}
 \end{align}
+\end{subequations}
 
 \subsubsection{Molar derivative}
 Finally, the derivatives of the thermodynamic state parameter source terms with respect to the moles of species $j$ are:
+\begin{subequations}
+\label{e:dEdotdnj_nojac}
 \begin{align}
  \mathcal{J}_{2, j + 2} &= \frac{\partial }{\partial n_j } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial n_j} & \nonumber \\
 		    &= V \left(\frac{1}{[C]} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \frac{\partial \dot{\omega}_{k} }{\partial {n_j} } + \frac{1}{T} \frac{\text{d} \dot{T} }{\text{d} {n_j} }\right) & \text{\dconp}
@@ -544,6 +551,7 @@ Finally, the derivatives of the thermodynamic state parameter source terms with 
  \mathcal{J}_{2, j + 2} &= \frac{\partial }{\partial n_j } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{P} }{\partial n_j} & \nonumber \\
 		    &=  \frac{P}{T} \frac{\text{d} \dot{T} }{\text{d} {n_j} } + T \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \frac{\partial \dot{\omega}_{k} }{\partial {n_j} } & \text{\dconv}
 \end{align}
+\end{subequations}
 
 \subsection{Molar source term derivatives}
 \label{s:molar_source_derivatives}
@@ -577,6 +585,7 @@ Finally, the derivative of the net molar rate of production of a species $k$ wit
 \begin{align}
  \mathcal{J}_{k + 2, j + 2} &= \frac{\partial }{\partial n_j } \frac{\text{d} n_{k}}{\text{d} t} = \frac{\partial \dot{n}_k }{\partial n_j } \nonumber \\
   \intertext{or:}
+ \label{e:dnkdotdj_nojac}
  \mathcal{J}_{k + 2, j + 2} & = V \frac{\partial \dot{\omega}_{k} }{\partial {n_j} }
 \end{align}
 
@@ -751,6 +760,7 @@ For \conv~problems, the P-Log forward rate coefficient is also a function of the
 \end{equation}
 substituting this into the net rate of progress derivative gives:
 \begin{align}
+ \label{e:dropi_plog_de}
  \frac{\partial R_{i} }{\partial P } &= \frac{1}{T \Ru} \left(- S^{\prime\prime}_{\ns} {k_{r, i}} + S^{\prime}_{\ns} {k_{f, i}}\right) + & \nonumber \\
 				     &  \frac{\left(- \log{\left (k_{1} \right )} + \log{\left (k_{2} \right )}\right) \left({R_{f, i}} - {R_{r, i}}\right)}{P \left(- \log{\left (P_{1} \right )} + \log{\left (P_{2} \right )}\right)} & \text{\dconv}
 \end{align}
@@ -792,6 +802,7 @@ giving:
 \end{equation}
 and:
 \begin{align}
+ \label{e:dropi_cheb_de}
  \frac{\partial R_{i} }{\partial P } &= \log{\left (10 \right )} \left({R_{f, i}} - {R_{r, i}}\right) \sum_{\substack{1 \leq l \leq N_{P}\\1 \leq j \leq N_{T}}} \frac{2 \left(l - 1\right) \mathcal{T}_{j - 1}\left(\tilde{T}\right) U_{l - 2}\left(\tilde{P}\right) \eta_{l,j}}{P \left(\log{\left (P_{\max} \right )} - \log{\left (P_{\min} \right )}\right)} + \nonumber \\
 				     & \mathindent \frac{1}{T \Ru} \left(- S^{\prime\prime}_{\ns} {k_{r, i}} + S^{\prime}_{\ns} {k_{f, i}}\right)
 \end{align}
@@ -1256,6 +1267,7 @@ Similarly, the chemically-activated reaction derivatives in~\cref{e:dci_chem_dt,
 \end{align}
 and the state paramter derivative:
 \begin{subequations}
+ \label{e:dci_chem_de_final}
  \begin{align}
   \lhs{dci_chem_complete}{\frac{\partial c_{i}}{\partial V }} &= \rhs{dci_fall_complete}{\left(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial V}}{P_{r, i} + 1} + \Theta_{F_i, \partial V} - \frac{\bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{\dconp} \\
   \lhs{dci_chem_complete}{\frac{\partial c_{i}}{\partial P }} &= \rhs{dci_fall_complete}{\left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{\dconv}
@@ -1286,11 +1298,12 @@ Similarly,~\cref{e:dnkdotdT_compact} is substituted into~\cref{e:dEdotdT_nojac},
 \loadeq{dEdotdT}
 
 \subsubsection{Molar source term derivatives}
+\label{s:dtdotdnj}
 From~\cref{e:dnkdotdT_compact} and~\cref{e:dwdot_dT}, a general form for the molar source term derivative with respect to temperature is obtained:
 \loadeq{dnkdotdT}
 As \texttt{pyJac} evaluates these derivative entries by looping over the reactions $i$ in the model, we convert~\cref{e:dnkdotdT} to an update form:
 \begin{align}
- \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}} &\pluseq  \rhs{dnkdotdT}{V \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial T } + \nu_{k,i} \frac{\partial R_{i}}{\partial T } c_{i}\right)} & \mathcond{dnkdotdT}{k = 1, \ldots, \ns}
+ \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}} &\pluseq  \rhs{dnkdotdT}{V \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial T } + \nu_{k,i} \frac{\partial R_{i}}{\partial T } c_{i}\right)} & \mathcond{dnkdotdT}{k = 1, \ldots, \ns - 1}
 \end{align}
 where the rate of progress derivatives are given by~\cref{e:drop_dT,e:drop_plog_dT,e:drop_cheb_dT} for arrhenius-based---i.e., elementary, third-body and falloff\slash chemically-activated---reactions, P-Log reactions and Chebyshev reactions respectively.
 The temperature derivatives of the pressure modification term are found in~\cref{e:dci_thd_dt,e:dci_thd_unity_dt,e:dci_thd_spec_dt} for third-body reactions, and~\cref{e:dci_fall_dt_final,e:dci_chem_dt_final} for falloff \slash chemically-activated reactions respectively.
@@ -1299,8 +1312,42 @@ The temperature derivatives of the pressure modification term are found in~\cref
 In this section, the derivatives of all source terms with respect to the state parameter are considered.
 
 \subsubsection{Temperature source term derivatives}
-Similarly to~\cref{s:dtdotdt_final},~\cref{e:dnkdotdE_compact} is substituted into~\cref{e:dTdotdE_nojac} to yield:
+Similar to~\cref{s:dtdotdt_final},~\cref{e:dnkdotdE_compact} is substituted into~\cref{e:dTdotdE_nojac} to yield:
 \loadeq{dTdotdE}
+
+\subsubsection{State parameter source term derivatives}
+Next,~\cref{e:dEdotdE_nojac} is simplified via~\cref{e:dnkdotdE_compact,e:dTdotdE_initial} to give:
+\loadeq{dEdotdE}
+
+\subsubsection{Molar source term derivatives}
+To obtain a final form for the molar source term derivative with respect to the state paramter,~\cref{e:dnkdotdE_compact,e:dwdot_de} are combined:
+\loadeq{dnkdotdE}
+
+The derivative of the net rate of progress with respect to the state paramter is given by~\cref{e:dropi_de} for arrhenius-based reactions,~\cref{e:dropi_plog_de,e:dropi_cheb_de} for P-Log and Chebyshev reactions for a \conv~system, and~\cref{e:dropi_de} for a \conp~system.
+The pressure modification term derivatives are given by~\cref{e:dci_thd_de,e:dci_thd_unity_de,e:dci_thd_spec_de} for third-body enhanced reactions, and~\cref{e:dci_fall_de_final,e:dci_chem_de_final} for falloff\slash chemically-activated reactions respectively.
+
+\subsection{Molar derivatives}
+Finally, this section details the Jacobian entries corresponding to derivatives with respect to the species moles.
+
+\subsubsection{Temperature source term derivatives}
+The temperature source term derivative with respect to the moles of species $j$, \cref{e:dTdotdnj_nojac}, is combined with~\cref{e:dnkdotdj_nojac}, giving:
+\loadeq{dTdotdnj}
+
+\subsubsection{State parameter derivatives}
+From~\cref{e:dEdotdnj_nojac,e:dTdotdnj_init,e:dnkdotdj_nojac}, the final form of the state parameter source term derivative with respect to the moles of species $j$ is:
+\loadeq{dEdotdnj}
+
+\subsubsection{Molar source term derivatives}
+Finally,~\cref{e:dnkdotdj_nojac,e:dwdot_dnj} are combined yielding:
+\loadeq{dnkdotdnj}
+As in~\cref{s:dtdotdnj}, this is converted to an form that may be updated per-reaction $i$:
+\begin{align}
+ \lhs{dnkdotdnj}{\mathcal{J}_{k + 2, j + 2}} &\pluseq \rhs{dnkdotdnj}{V \left(\nu_{k,i} R_{i} \frac{\partial c_{i} }{\partial {n_j} } + \nu_{k,i} \frac{\partial R_{i} }{\partial {n_j} } c_{i}\right)} & \mathcond{dnkdotdnj}{k = 1, \ldots, \ns - 1}
+\end{align}
+
+
+\pagebreak
+\section{References}
 
 \bibliography{derivations}
 
