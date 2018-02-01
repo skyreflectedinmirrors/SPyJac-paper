@@ -104,6 +104,7 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 %</eqdparam>
 
 %<*eqdEdotdT>
+\begin{subequations}
 \begin{align}
  \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial T} & \nonumber \\
 		    &= \frac{V}{[C]} \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(\frac{\mathcal{J}_{k + 2, 1}}{V} + \frac{\dot{\omega}_{k}}{T}\right) \nonumber \\
@@ -113,6 +114,7 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 		    &= \Ru \sum_{k=1}^{-1 + \ns} \left(1 - \frac{W_{k}}{W_{\ns}}\right) \left(T \frac{\mathcal{J}_{k + 2, 1}}{V} + \dot{\omega}_{k}\right) & \nonumber \\
 		    & \mathindent + \frac{P}{T} \left(\frac{\text{d} \dot{T} }{\text{d} T } - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconv}
 \end{align}
+\end{subequations}
 %</eqdEdotdT>
 
 %<*eqdnkdotdT>
@@ -122,6 +124,16 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \end{align}
 %</eqdnkdotdT>
 
-% A bunch of other equations...
+%<*eqdTdotdE>
+\begin{subequations}
+\label{e:dTdotdE}
+\begin{align}
+ \frac{\partial\dot{T}}{\partial{V}} &= \frac{1}{\sum_{k=1}^{\ns} V [C]_{k} {C_p}_{k}} \Biggl[ - \sum_{k=1}^{-1 + \ns} \left(H_{k} - \frac{W_{k} H_{\ns}}{W_{\ns}}\right) \left(\mathcal{J}_{k + 2, 2} - \dot{\omega}_{k}\right) + & \nonumber \\
+				     & \mathindent[largerindentand] \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{-1 + \ns} \left(- {C_p}_{\ns} + {C_p}_{k}\right) [C]_{k}\Biggr] & \text{\dconp} \\
+ \frac{\partial\dot{T}}{\partial{P}} &= \frac{1}{\sum_{k=1}^{\ns} [C]_{k} {C_v}_{k}} \Biggl[- \sum_{k=1}^{-1 + \ns} \left(U_{k} - \frac{W_{k} U_{\ns}}{W_{\ns}}\right) \frac{\mathcal{J}_{k + 2, 2}}{V} - & \nonumber \\
+				     & \mathindent[largerindentand] \frac{{C_v}_{\ns}}{T \Ru} \frac{\text{d} T }{\text{d} t } \Biggr] & \text{\dconv}
+\end{align}
+\end{subequations}
+%</eqdTdotdE>
 
 \end{document}
