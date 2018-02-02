@@ -290,8 +290,9 @@ will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if
 \Cref{e:thd_spec} will be referred to as the \textbf{species}-based third-body efficiency.
 
 
-\subsection{Falloff reactions}
-Unlike elementary and third-body reactions, falloff reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using \cref{e:arrhenius}.
+\subsection{Falloff and chemically-activated reactions}
+Unlike elementary and third-body reactions, falloff\slash chemically-activated reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using \cref{e:arrhenius}.
+It is noted that when the forward rate coefficient is used---e.g., as in~\cref{e:ropf}---$k_{f, i}$ is taken to be the high-pressure reaction coefficient ($k_{\infty,i}$) for falloff reactions and the low-pressure reaction coefficent ($k_{0,i}$) for chemically-activated reactions.
 The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the third-body concentration, define a reduced pressure $P_{r,i}$ given by
 \begin{equation}
  \label{e:pr}
@@ -729,6 +730,7 @@ and by the same process, the reverse rate of progress derivative is found to be:
 \end{equation}
 and the net rate of progress molar derivative:
 \begin{equation}
+ \label{e:dropi_dnj}
  \frac{\partial R_{i} }{\partial {n_j} } = - \frac{{k_{r, i}}}{V} \left(- S^{\prime\prime}_{\ns} + S^{\prime\prime}_{j}\right) + \frac{{k_{f, i}}}{V} \left(- S^{\prime}_{\ns} + S^{\prime}_{j}\right)
 \end{equation}
 
@@ -865,6 +867,7 @@ and for the state parameter:
 \end{subequations}
 and finally for the moles of species $j$:
 \begin{align}
+  \label{e:dci_thd_unity_dnj}
   \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial n_{j} }} &= \rhs{dci_thd_unity}{0}[c] & \cond{dci_thd_unity}{,}
 \end{align}
 
@@ -1275,6 +1278,7 @@ and the state paramter derivative:
 \end{subequations}
 and the molar derivative:
 \begin{align}
+\label{e:dci_chem_dnj_final}
 \lhs{dci_chem_complete}{\frac{\partial c_{i} }{\partial {n_j} }} &= \rhs{dci_chem_complete}{\frac{k_{0, i} \bar{\theta}_{P_{r, i}, \partial n_j} \left(F_{i} \Theta_{F_i, \partial n_j} - c_{i}\right)}{k_{\infty, i} V \left(P_{r, i} + 1\right)}} & \cond{dci_chem_complete}{.}
 \end{align}
 The temporary products are the same as those detailed in~\cref{s:dfall_final}.
@@ -1301,10 +1305,6 @@ Similarly,~\cref{e:dnkdotdT_compact} is substituted into~\cref{e:dEdotdT_nojac},
 \label{s:dtdotdnj}
 From~\cref{e:dnkdotdT_compact} and~\cref{e:dwdot_dT}, a general form for the molar source term derivative with respect to temperature is obtained:
 \loadeq{dnkdotdT}
-As \texttt{pyJac} evaluates these derivative entries by looping over the reactions $i$ in the model, we convert~\cref{e:dnkdotdT} to an update form:
-\begin{align}
- \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}} &\pluseq  \rhs{dnkdotdT}{V \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial T } + \nu_{k,i} \frac{\partial R_{i}}{\partial T } c_{i}\right)} & \mathcond{dnkdotdT}{k = 1, \ldots, \ns - 1}
-\end{align}
 where the rate of progress derivatives are given by~\cref{e:drop_dT,e:drop_plog_dT,e:drop_cheb_dT} for arrhenius-based---i.e., elementary, third-body and falloff\slash chemically-activated---reactions, P-Log reactions and Chebyshev reactions respectively.
 The temperature derivatives of the pressure modification term are found in~\cref{e:dci_thd_dt,e:dci_thd_unity_dt,e:dci_thd_spec_dt} for third-body reactions, and~\cref{e:dci_fall_dt_final,e:dci_chem_dt_final} for falloff \slash chemically-activated reactions respectively.
 
@@ -1340,10 +1340,11 @@ From~\cref{e:dEdotdnj_nojac,e:dTdotdnj_init,e:dnkdotdj_nojac}, the final form of
 \subsubsection{Molar source term derivatives}
 Finally,~\cref{e:dnkdotdj_nojac,e:dwdot_dnj} are combined yielding:
 \loadeq{dnkdotdnj}
-As in~\cref{s:dtdotdnj}, this is converted to an form that may be updated per-reaction $i$:
+As \texttt{pyJac} evaluates these derivative entries by looping over the reactions $i$ in the model, \cref{e:dnkdotdnj} is converted to an update form:
 \begin{align}
  \lhs{dnkdotdnj}{\mathcal{J}_{k + 2, j + 2}} &\pluseq \rhs{dnkdotdnj}{V \left(\nu_{k,i} R_{i} \frac{\partial c_{i} }{\partial {n_j} } + \nu_{k,i} \frac{\partial R_{i} }{\partial {n_j} } c_{i}\right)} & \mathcond{dnkdotdnj}{k = 1, \ldots, \ns - 1}
 \end{align}
+The molar derivatives of the net rate of progress are given by~\cref{e:dropi_dnj}, and the pressure modification term by~\cref{e:dci_thd_dnj,e:dci_thd_spec_dnj,e:dci_thd_unity_dnj} for third-body enhanced reactions, and~\cref{e:dci_fall_dnj_final,e:dci_chem_dnj_final} for falloff\slash chemically-activated reactions, respectively.
 
 
 \pagebreak
