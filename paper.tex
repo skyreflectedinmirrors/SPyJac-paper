@@ -5,7 +5,6 @@
 \usepackage{graphicx}
 \usepackage[binary-units]{siunitx}
 \usepackage{gensymb}
-\usepackage{amsmath}
 \usepackage[version=3]{mhchem} % Formula subscripts using \ce{}, e.g., \ce{H2SO4}
 \usepackage{booktabs,multicol} %better tables
 \usepackage{subcaption} %subfigs
@@ -17,6 +16,31 @@
 \newcommand{\loadeq}[1]{%
    \ExecuteMetaData[eqn_dict.tex]{eq#1}%
 }
+
+% external references https://tex.stackexchange.com/a/14365/56227
+\usepackage{xr-hyper}
+
+\usepackage{amsmath,eqparbox,xparse}
+
+\usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
+% load after hyperref
+\usepackage[english,capitalise]{cleveref}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Custom Commands     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% https://tex.stackexchange.com/a/34412/5764
+\makeatletter
+\NewDocumentCommand{\eqmathbox}{o O{c} m}{%
+  \IfValueTF{#1}
+    {\def\eqmathbox@##1##2{\eqmakebox[#1][#2]{$##1##2$}}}
+    {\def\eqmathbox@##1##2{\eqmakebox{$##1##2$}}}
+  \mathpalette\eqmathbox@{#3}
+}
+\makeatother
 
 
 \sisetup{group-separator={,},
@@ -31,9 +55,9 @@
 	list-final-separator = {, and }
 	%    scientific-notation = fixed
 }
-\usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
-% load after hyperref
-\usepackage[english,capitalise]{cleveref}
+
+% load external document after hyperref https://tex.stackexchange.com/a/281417/56227
+\externaldocument[deriv-]{derivations}
 
 %======================================================================
 % Add your bibliography file here, replace template.bib
@@ -48,6 +72,16 @@
 \newcommand{\dconp}{\ifmmode\text{for \conp,}\else for \conp,\fi}
 \newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv.\fi}
 \newcommand{\Ru}{\mathcal{R}}
+
+% simple command for equal-sized eqmathbox's on the lhs / rhs and conditional
+% arguements are tag, text, alignment
+\NewDocumentCommand{\lhs}{mmO{r}}{\eqmathbox[LHS_#1][#3]{#2}}
+\NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
+\NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
+\NewDocumentCommand{\mathcond}{mmO{r}}{\eqmathbox[COND_#1][#3]{#2}}
+
+% consistent multiline equation spacing
+\NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
 
 
 \title{SIMD\slash SIMT-vectorized Thermo-chemical Source Term Evaluation}
@@ -155,7 +189,7 @@ Finally future extensions to this work will be detailed.
 \end{figure}
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
-\Cref{F:mem} depicts an example data array with K-rows and N-columns and index (i, j) corresponding to the $i$th row and $j$th column.
+\Cref{F:mem} depicts an example data array with K-rows and N-columns and index ($i$, $j$) corresponding to the $i$th row and $j$th column.
 For example the concentration of species $j$ for the $i$-th thermo-chemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$, the number of thermo-chemical states considered, and $1 \le j \le \ns$, the number of species in the model.
 The stored concentrations would then have $K = N_{\text{state}}$ rows, and $N = N_{\text{sp}}$ columns.
 
@@ -202,10 +236,18 @@ In this section, we will only outline a brief summary of the system evaluated by
 The thermo-chemical state vector derivation consists of the temperature, the non-constant thermodynamic state parameter (volume or pressure) and the number of moles of all species except the last in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
 \loadeq{state}
 where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
+The evolution of the thermo-chemical state vector is described by a set of chemical kinetic ordinary differential equations:
+\loadeq{dstate}
 
 For both \conp~and \conv, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \loadeq{dmolar}
-where $\dot{\omega}_k$ is the $kth$ species' overall production rate, and the temperature production rate~\cite{TurnsStephenR2012Aitc} is:
+where $\dot{\omega}_k$ is the $kth$ species' overall production rate:
+\begin{equation}
+ \dot{\omega}_{k} = \sum_{i=1}^{\nr} \nu_{k, i} R_{i} c_{i}
+\end{equation}
+where $\nu_{k, i}$ is the net stoichiometic coefficient of species $k$ in reaction $i$, $R_{i}$ the net rate of progress of reaction $i$ (described in~\cref{deriv-s:rop_net} of the supplimentary material), and $c_{i}$ the pressure modification term i.e., for third-body (see~\cref{deriv-s:thdbody} of the supplimental), or fall-off\slash chemically-activated reactions (\cref{deriv-s:falloff} of the same).
+
+The temperature source term~\cite{TurnsStephenR2012Aitc} is:
 \loadeq{dtemp}
 where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure and constant-volume specific heat of species $k$ in molar units respectively, while $[C]_{k}$ is the concentration, given by:
 \begin{equation}
@@ -215,11 +257,42 @@ By differentiating the ideal gas law, the volume and pressure source terms can b
 \loadeq{dparam}
 where $\mathcal{R}$ is the ideal gas-constant.
 
-\subsection{Code Generation}
-Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner_loopy_2014}, which translates user specified psuedo-code and data to OpenCL, allowing for unit testing and easy changes of program structure, e.g. data ordering, vectorization, threading patterns etc.
+The Jacobian entries computed by \texttt{pyJac} are arranged such that entry ($i$, $j$) corresponds to the partial derivative of the $i$-th source term in~\cref{e:source_terms} by the $j$-th state variable in~\cref{e:state}:
+\loadeq{jacgeneral}
+
+The derivative of the temperature source term with respect to itself is:
+\loadeq{dTdotdT}
+and with respect to the thermodynamic state parameter (the volume \slash pressure for \conp\slash\conv~respectively):
+\loadeq{dTdotdE}
+and the moles of species $j$:
+\loadeq{dTdotdnj}
+
+The derivative of the thermodynamic state parameter with respect to the temperature is:
+\loadeq{dEdotdT}
+and with respect to itself:
+\loadeq{dEdotdE}
+and finally, by the moles of species $j$:
+\loadeq{dEdotdnj}
+
+The molar source terms are more complicated due to the derivatives of the net rate of progress---see~\cref{deriv-s:dropi}---and pressure modification terms---\cref{deriv-s:dci}---for the reactions.
+The reader is again encouraged to read the supplimental material covering the exact derivations and forms of the reactions solved by \texttt{pyJac}.
+The derivative of the molar source term with respect to temperature is:
+\loadeq{dnkdotdT}
+while, similarly the derivative with respect to the state parameter is:
+\loadeq{dnkdotdE}
+and the moles of species $j$:
+\loadeq{dnkdotdnj}
+
+\subsection{Code Generation and Testing Infrastructure}
+Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner_loopy_2014}, which translates user specified psuedo-code and data to OpenCL\slash C-code.
+This allows for easy changes of program structure, e.g. data ordering, vectorization, threading patterns and easy switching of target-languages (and simpler extension to additional languages, e.g., CUDA).
+Additionally, \texttt{loo.py} can execute developed subroutines from python (natively for C-code, and via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL-code), enabling unit-testing\slash validation for each component of the Jacobian or source terms.
+The source-terms and subcomponents thereof (e.g., rates of progress, pressure-modification terms, etc.) are directly compared to Cantera~\cite{Cantera}, while the autodifferentiation code Adept~\cite{adept-v11} is used to obtain reference answers for Jacobian subcomponents.
+Validation of the complete source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
 
 \section{Results and Discussion}
-\subsection{Comparison to Cantera}
+\subsection{Source term validation}
+\label{s:validation}
 The reaction rates of progress (ROP), species and temperature rates in this study are validated by comparison with Cantera~\cite{Cantera}, however special care must be taken due floating point arithmetic issues.
 
 For a direct comparison, a relative error norm of a quantity $X_{ij}$ over all states $j$, and reactions (or species) $i$ was computed using the $L^{\infty}$ norm:

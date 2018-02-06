@@ -19,6 +19,7 @@
 \usepackage{textcomp}
 \usepackage{amssymb}
 \usepackage{amsmath,eqparbox,xparse}
+
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % load after hyperref
 \usepackage[english,capitalise]{cleveref}
@@ -174,6 +175,7 @@ The standard-state thermodynamic properties (in molar units) for a gaseous speci
 where $C_{p,k}$ and $H_k$ are as described previously, $S_k$ is the entropy in molar units, and the ${}^{\circ}$ indicates a standard-state property at one atmosphere (equivalent to the property at any pressure for calorically perfect gases).
 
 \subsection{Reaction rate expressions}
+\label{s:rop_net}
 The net species production rate for species $k$ is defined as:
 \begin{equation}
  \label{e:spec_rop}
@@ -291,8 +293,9 @@ will be used, where the Kronecker delta $\delta_{\ns m}$ is unity if and only if
 
 
 \subsection{Falloff and chemically-activated reactions}
+\label{s:falloff}
 Unlike elementary and third-body reactions, falloff\slash chemically-activated reactions exhibit a pressure dependence described as a blending of rates at low- and high-pressure limits; thus, the rate coefficients depend on a mixture of low-pressure ($k_{0, i}$) and high-pressure-limit ($k_{\infty,i}$) coefficients, each with corresponding Arrhenius parameters and expressed using \cref{e:arrhenius}.
-It is noted that when the forward rate coefficient is used---e.g., as in~\cref{e:ropf}---$k_{f, i}$ is taken to be the high-pressure reaction coefficient ($k_{\infty,i}$) for falloff reactions and the low-pressure reaction coefficent ($k_{0,i}$) for chemically-activated reactions.
+It is noted that when the forward rate coefficient is used---e.g., as in~\cref{e:ropf}---$k_{f, i}$ is taken to be the high-pressure reaction coefficient ($k_{\infty,i}$) for falloff reactions and the low-pressure reaction coefficent ($k_{0,i}$) for chemically-activated reactions~\cite{Goodwin:2015aa}.
 The ratio of the coefficients $k_{0, i}$ and $k_{\infty, i}$, combined with the third-body concentration, define a reduced pressure $P_{r,i}$ given by
 \begin{equation}
  \label{e:pr}
@@ -360,12 +363,9 @@ where $T_{\min} \leq T \leq T_{\max}$ and $p_{\min} \leq p \leq p_{\max}$ descri
 
 Let $\mathcal{J}$ denote the Jacobian matrix corresponding to the set of ODEs defined in~\cref{e:source_terms}.
 $\mathcal{J}$ is filled with the partial derivatives $\partial f / \partial \Phi$, such that:
-\begin{equation}
- \label{e:jac_general}
- \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns - 1
-\end{equation}
+\loadeq{jacgeneral}
 where $i$ and $j$ correspond to the row and column, respectively, of the entry in the Jacobian matrix.
-The Jacobian entries resulting from~\cref{e:jac_general} are derived in~\cref{s:energy_derivs,s:molar_source_derivatives,s:parameter_source_derivatives}, while various subcomponents of the Jacobian are derived in~\cref{s:dri_dt,s:dri_dnj,s:dri_de,s:dri_pdep,s:dpmod_fall}.
+The Jacobian entries resulting from~\cref{e:jac_general} are derived in~\cref{s:energy_derivs,s:molar_source_derivatives,s:parameter_source_derivatives}, while various subcomponents of the Jacobian are derived in~\cref{s:dri_dt,s:dri_dnj,s:dri_de,s:dri_pdep,s:dci}.
 The final form of the Jacobian can be found in~\cref{s:jac_final}, which provides a useful summary for this document.
 
 We note that some parts of the Jacobian derivation---in particular derivatives of the energy equation---are quite complicated.
@@ -380,6 +380,7 @@ First, we will derive the term:
 \begin{align}
  \mathcal{J}_{1,1} &= \frac{\partial}{\partial T} \frac{\text{d} T}{\text{d} t} \nonumber \\
  \intertext{or more simply:}
+ \label{e:dTdotdT_initial}
  \mathcal{J}_{1,1} &= \frac{\partial\dot{T}}{\partial{T}}
 \end{align}
 To do so, we will more closely follow the \conp~energy equation derivative with respect to temperature as the process is largely identical between \conp~and \conv.
@@ -612,6 +613,7 @@ and other species:
 \end{align}
 
 \subsection{Rate of progress derivatives}
+\label{s:dropi}
 \subsubsection{Temperature derivative}
 \label{s:dri_dt}
 Next, the rate of progress derivatives are evaluated, first with respect to temperature:
@@ -812,7 +814,7 @@ and:
 
 
 \subsection{Pressure modification\slash Falloff function derivatives}
-\label{s:dpmod_fall}
+\label{s:dci}
 \subsubsection{Elementary reactions}
 For elementary reactions, the derivative of the pressure-modification term with respect to temperature is:
 \begin{align}
@@ -1298,7 +1300,7 @@ Starting from~\cref{e:dTdotdT_nojac},~\cref{e:dnkdotdT_compact} is substituted i
 \loadeq{dTdotdT}
 
 \subsubsection{State parameter source term derivatives}
-Similarly,~\cref{e:dnkdotdT_compact} is substituted into~\cref{e:dEdotdT_nojac}, giving:
+Similarly,~\cref{e:dnkdotdT_compact,e:dTdotdT_initial} are substituted into~\cref{e:dEdotdT_nojac}, giving:
 \loadeq{dEdotdT}
 
 \subsubsection{Molar source term derivatives}
