@@ -333,6 +333,7 @@ This estimate allows for direct comparison of the error in forward or reverse RO
 \end{tabular}
 \caption{Summary of rate of progress, species and temperature rate correctness.
 Error statistics are based on the infinity-norm of the relative error detailed in Eq.~\eqref{e:rel_err} for each quantity.
+The ``S'' in $E_{\frac{\text{d} S}{\text{d} t}}$ refers to the thermodynamic state parameter, either $V$ or $P$ for \conp~and \conv~respectively.
 }
 \label{T:error}
 \end{table}
@@ -340,12 +341,44 @@ Error statistics are based on the infinity-norm of the relative error detailed i
 In Table~\ref{T:error}, we see the results of this code as compared to Cantera~\cite{Cantera} on a library of partially stirred reaction conditions (PaSR) described in our previous works~\cite{CurtisGPU:2017,Niemeyer:2016aa}.
 Very close agreement is observed for the forward and reverse ROP for all models, however the net ROP error norm is \numrange{7}{9} orders of magnitude larger.
 We see here that $E_{\varepsilon}$ is very similar in magnitude to $E_R$ in all cases, indicating that this large increase in error is caused by the accumulation of floating point error from the forward and reverse ROPs, as previously discussed.
-The species rate error norm is similar in magnitude to that of the net ROP, however the temperature rate error again increases as the error in species rates is amplified by multiplication with thermodynamic properties.
+The molar species production rate error norm is similar in magnitude to that of the net ROP, however the temperature and state parameter rate errors again increases as the error in species rates is amplified by multiplication with thermodynamic properties.
 We note that the above discussion does not imply that computation of the net ROP will cause large error in chemical kinetic integration---either in this code or Cantera~\cite{Cantera}---as this loss of accuracy only occurs when the forward and reverse ROP are nearly equal, implying the reaction is in near-equilibrium.
 
 \subsection{Performance}
 \label{S:results}
-The performance studies in this work were run on four ten-core \SI{2.2}{\giga\hertz} Intel Xeon E5-4640 v2 CPUs with \SI{20}{\mega\byte} of L3 cache memory, installed on an Ace Powerworks PW8027R-TRF+ with a Supermicro X9QR7-TF+/X9QRi-F+ baseboard.
+The performance studies in this work were run on a variety of different machines:
+
+%16.1.1 & 1.0 \slash 5.0.0 \\
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{@{}l l l l l@{}}
+\toprule
+Model & Instruction Set & Vector Width & Cores & Identifier \\
+\midrule
+Intel Xeon X5650 & SSE4.2 & \SI{128}{\bit} & $2 \times 6$ & \texttt{sse} \\
+Intel E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{haswell} \\
+\bottomrule
+\end{tabular}
+\label{t:cpus}
+\caption{The CPU configurations used in this study.}
+\end{table}
+\begin{table}
+\centering
+\begin{tabular}{@{}l l l l l@{}}
+\toprule
+Model & CUDA Version & CUDA Cores & Identifier \\
+\midrule
+Tesla C2075 & 9.0.176 & \num{448} & \texttt{C2075} \\
+Tesla K40m & 8.0.61 & 2880 & \texttt{K40m} \\
+\bottomrule
+\end{tabular}
+\label{t:gpus}
+\caption{The GPU configurations used in this study.}
+\end{table}
+
+
+four ten-core \SI{2.2}{\giga\hertz} Intel Xeon E5-4640 v2 CPUs with \SI{20}{\mega\byte} of L3 cache memory, installed on an Ace Powerworks PW8027R-TRF+ with a Supermicro X9QR7-TF+/X9QRi-F+ baseboard.
 Runtimes in each case were averaged over ten runs, each using the same set of PaSR conditions utilized in validation.
 All code was compiled with \texttt{gcc 4.8.5} and ``\texttt{-O3}'' optimization, running on \texttt{v16.1.1} of the Intel OpenCL runtime supporting OpenCL \texttt{v1.2}.
 
