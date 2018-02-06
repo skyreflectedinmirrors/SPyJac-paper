@@ -43,6 +43,9 @@ for mech in mechs:
             errs = arrs[name]
             values = arrs[name + '_value']
             errs = errs / (atol + rtol * np.abs(values))
+            if 'IC5H11OH' in file and 'rop_fwd' in name and np.any(errs > 1e-4):
+                from time import ctime
+                print(os.path.basename(file), ctime(os.path.getmtime(file)))
 
             precs = None
             if 'rop_net' in name:

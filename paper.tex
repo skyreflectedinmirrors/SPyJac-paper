@@ -314,17 +314,21 @@ E_{\varepsilon} = \frac{\max(\varepsilon^{\prime}_{i^{*}j^{*}}\text{, }\varepsil
 \end{equation}
 This estimate allows for direct comparison of the error in forward or reverse ROPs to the value of the net ROP itself, if they are of similar magnitude the error in net ROP will be large.
 
+\todo[inline]{update species error with new data -- in particular the \num{e-4} for i-pentanol are all from november. preliminary data on the GPU shows ~\num{4e-8}}
 \begin{table}[htb]
 \sisetup{retain-zero-exponent=true}
 \centering
-\begin{tabular}{@{}S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] @{}}
+\begin{tabular}{@{}l S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1]@{}}
 \toprule
-\multicolumn{1}{l}{Model} & \multicolumn{1}{c}{$E_{R^{\prime}}$} & \multicolumn{1}{c}{$E_{R^{\prime\prime}}$} &\multicolumn{1}{c}{$E_{R}$} & \multicolumn{1}{c}{$E_{\varepsilon}$} & \multicolumn{1}{c}{$E_{\dot{\omega}}$} & \multicolumn{1}{c}{$E_{\frac{\partial T}{\partial t}}$} \\
+\multicolumn{1}{l}{Model} & \multicolumn{1}{l}{\ce{H2}\slash~\ce{CO}\cite{Burke:2011fh}} & \multicolumn{1}{l}{GRI-Mech.~3.0\cite{smith_gri-mech_30}} & \multicolumn{1}{l}{USC-Mech II\cite{Wang:2007}} & \multicolumn{1}{l}{\ce{iC5H11OH}\cite{Sarathy:2013jr}} \\
 \midrule
-\multicolumn{1}{l}{\ce{H2}\slash~\ce{CO}\cite{Burke:2011fh}} & 1.20e-8 & 6.33e-8 & 1.32e1 & 1.32e1 & 2.37e1 & 2.12e5 \\
-\multicolumn{1}{l}{GRI-Mech.~3.0\cite{smith_gri-mech_30}}  & 3.11e-8 & 5.90e-8 & 1.21e0 & 1.29e0 & 2.84e0 & 2.64e4 \\
-\multicolumn{1}{l}{USC-Mech II\cite{Wang:2007}}  & 1.07e-7 & 1.37e-7 & 2.39e0 & 2.27e0 & 7.92e0 & 3.22e03 \\
-\multicolumn{1}{l}{\ce{iC5H11OH}\cite{Sarathy:2013jr}} & 6.80e-8 &  1.48e-7 & 5.26e-1 & 4.87e-1 & 2.26e00 & 6.10e+01 \\
+\multicolumn{1}{c}{$E_{R^{\prime}}$} & 1.61e-8 & 2.95e-8 & 1.04e-7 & 4.86e-4 \\
+\multicolumn{1}{c}{$E_{R^{\prime\prime}}$} & 6.93e-8 & 6.43e-8 & 1.20e-7 & 5.07e-4 \\
+\multicolumn{1}{c}{$E_{R}$}  & 1.49e1 & 1.17e0 & 2.79e0 & 5.07e-1 \\
+\multicolumn{1}{c}{$E_{\varepsilon}$} & 1.52e1 & 1.09e0 & 2.91e0 & 4.43e-1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1 & 2.64e0 & 7.44e0 & 1.58e1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5 & 3.58e8 & 3.95e6 & 7.11e7 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} S}{\text{d} t}}$} & 3.52e12 & 3.46e12 & 3.44e12 & 3.38e12 \\
 \bottomrule
 \end{tabular}
 \caption{Summary of rate of progress, species and temperature rate correctness.
