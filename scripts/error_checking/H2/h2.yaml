@@ -1,0 +1,8 @@
+mech:
+  h2.cti
+n_species:
+  13
+n_reactions:
+  27
+n_reversible:
+  27

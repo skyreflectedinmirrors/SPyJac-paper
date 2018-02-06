@@ -272,3 +272,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+
+# data files -- these will be stored separately e.g., on figshare
+*.npz
+*.txt
