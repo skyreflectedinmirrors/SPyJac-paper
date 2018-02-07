@@ -12,8 +12,7 @@ def update(err_dict, err, filename=None, **kwargs):
             continue
         if err[name] > 1e20:
             from time import ctime
-            print(os.path.basename(filename), ctime(os.path.getmtime(filename)))
-            print('Bad data detected...')
+            print(filename, ctime(os.path.getmtime(filename)))
             continue
         err_dict[name] = np.maximum(err_dict[name], err[name])
 

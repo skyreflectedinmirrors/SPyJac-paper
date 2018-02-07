@@ -7,20 +7,21 @@ import plot_styles as ps
 
 font_size = 'large'
 
+
 def process_data(plotdata, plot, reacs_as_x=True,
-    plot_cores=False):
+                 plot_cores=False):
     """
     Process the data into an easily usable form
     """
     if reacs_as_x:
-        plotdata = sorted(plotdata, key=lambda x: x.mechdata.num_reactions)
-        x_vals = [x.mechdata.num_reactions for x in plotdata]
+        plotdata = sorted(plotdata, key=lambda x: x.mechdata.n_reactions)
+        x_vals = [x.mechdata.n_reactions for x in plotdata]
     elif plot_cores:
         plotdata = sorted(plotdata, key=lambda x: float(x.cores))
         x_vals = [float(x.cores) for x in plotdata]
     else:
-        plotdata = sorted(plotdata, key=lambda x: x.mechdata.num_species)
-        x_vals = [x.mechdata.num_species for x in plotdata]
+        plotdata = sorted(plotdata, key=lambda x: x.mechdata.n_species)
+        x_vals = [x.mechdata.n_species for x in plotdata]
 
     y_vals = []
     err_vals = []
@@ -28,15 +29,16 @@ def process_data(plotdata, plot, reacs_as_x=True,
         ys = np.array([getattr(data, plot) for data in run.rundata])
         zs = np.std(ys)
         if plot == 'runtime':
-            ys = np.array([getattr(data, plot) / data.num_conditions for data in run.rundata])
+            ys = np.array(
+                [getattr(data, plot) / data.num_conditions for data in run.rundata])
             zs /= run.rundata[0].num_conditions
         err_vals.append(zs)
         y_vals.append(np.mean(ys))
     return x_vals, y_vals, err_vals
 
 
-def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None, plot_std=True,
-        return_y=False, labels=[], plot_ind=None, marker_func=None):
+def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
+         plot_std=True, return_y=False, labels=[], plot_ind=None, marker_func=None):
     """Plot performance as a function of reaction count.
     """
 
@@ -45,19 +47,19 @@ def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=N
         marker, hollow, color = marker_func(name)
     elif plot_ind is not None:
         assert labels
-        marker, hollow = ps.marker_wheel[plot_ind]
-        color = ps.color_wheel[plot_ind]
+        marker, hollow = ps.marker_wheel[plot_ind % len(ps.marker_wheel)]
+        color = ps.color_wheel[plot_ind % len(ps.marker_wheel)]
         name = labels[plot_ind]
     else:
         marker, hollow = ps.marker_dict[plot]
         color = ps.color_dict[plot]
         name = plot
 
-    argdict = {'x':x_vals,
-               'y':y_vals,
-               'linestyle':'',
-               'marker':marker,
-               'label':ps.pretty_names(name)
+    argdict = {'x': x_vals,
+               'y': y_vals,
+               'linestyle': '',
+               'marker': marker,
+               'label': ps.pretty_names(name)
                }
     argdict['color'] = color
     argdict['markeredgecolor'] = color
@@ -70,15 +72,14 @@ def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=N
     if plot_std:
         argdict['yerr'] = err_vals
     if plot_std:
-        line = plt.errorbar(**argdict)
+        plt.errorbar(**argdict)
     else:
-        line = plt.plot(**argdict)
+        plt.plot(**argdict)
 
-    this_minx = np.min(x_vals)
-    this_miny = np.min(y_vals)
     def __get_min(test, inval):
         return test if inval is None else (
             test if test < inval else inval)
+
     def __get_max(test, inval):
         return test if inval is None else (
             test if test > inval else inval)
@@ -90,13 +91,13 @@ def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=N
 
 
 def plot_scaling(plotdata, markerlist, colorlist, minx=None, miny=None,
-                 label_locs=None, plot_std=True, hollow=False
+                 label_locs=None, plot_std=True, hollow=False, legend_key={}
                  ):
     """Plots performance data with varying number of conditions.
     """
     mset = list(set(x.mechanism for x in plotdata))
-    mechs = sorted(mset, key=lambda mech:next(x for x in plotdata
-                   if x.mechanism == mech).num_specs
+    mechs = sorted(mset, key=lambda mech: next(x for x in plotdata
+                                               if x.mechanism == mech).num_specs
                    )
     for i, mech in enumerate(mechs):
         name = legend_key[mech]
@@ -117,14 +118,14 @@ def plot_scaling(plotdata, markerlist, colorlist, minx=None, miny=None,
                 else miny
                 )
 
-        argdict = {'x':x_vals,
-                   'y':y_vals,
-                   'linestyle':'',
-                   'marker':markerlist[i],
-                   'markeredgecolor':colorlist[i],
-                   'markersize':8,
-                   'color':colorlist[i],
-                   'label':name
+        argdict = {'x': x_vals,
+                   'y': y_vals,
+                   'linestyle': '',
+                   'marker': markerlist[i],
+                   'markeredgecolor': colorlist[i],
+                   'markersize': 8,
+                   'color': colorlist[i],
+                   'label': name
                    }
         # use hollow symbols for shared memory results
         if hollow:
@@ -137,16 +138,17 @@ def plot_scaling(plotdata, markerlist, colorlist, minx=None, miny=None,
         else:
             del argdict['x']
             del argdict['y']
-            line = plt.plot(x_vals, y_vals, **argdict)
+            plt.plot(x_vals, y_vals, **argdict)
 
         # Rather than legend, place labels above/below series
         if label_locs is not None:
             # get index of first value after specified location
             label_loc, label_off = label_locs[i]
-            pos_label = next(x[0] for x in enumerate(x_vals) if x[1] > label_loc)
+            pos_label = next(x[0]
+                             for x in enumerate(x_vals) if x[1] > label_loc)
             # average of points
             label_ypos = 0.5 * (y_vals[pos_label] + y_vals[pos_label - 1])
-            plt.text(label_loc, label_ypos*label_off, argdict['label'],
+            plt.text(label_loc, label_ypos * label_off, argdict['label'],
                      fontsize=font_size,
                      horizontalalignment='center', verticalalignment='center'
                      )
