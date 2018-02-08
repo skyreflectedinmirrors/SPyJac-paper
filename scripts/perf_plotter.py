@@ -9,10 +9,12 @@ import numpy as np
 import itertools
 import functools
 import copy
+import six
+import os
+import pickle
 
 run = data_parser.run
 rundata = data_parser.rundata
-data_clean = data_parser.parse_data()
 reacs_as_x = False
 norm = None
 
@@ -29,35 +31,61 @@ def rgetattr(obj, attr, default=sentinel):
     return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 
-def __compare(r, name, compare_value, plot_cores=False):
+def __compare(r, name, compare_value, plot_cores=False, strict=False):
     """
     Specialty comparison function to account for differences
     in runtypes
     """
-    if name == 'vecwidth' and r.vectype == 'par':
+    if six.callable(compare_value):
+        return compare_value(rgetattr(r, name))
+    if name == 'vecwidth' and r.vectype == 'par' and not strict:
         return True
     if plot_cores and name == 'cores':
         return True
     return rgetattr(r, name) == compare_value
 
 
-def plotter(plot_name='', show=True, plot_reacs=True, norm=True,
-            legend_handler=None, marker_func=None,
-            minx=None, miny=None, maxx=None, maxy=None, ylog=False,
-            return_vals=False, **filters):
+def flatten(data):
+    return [x for mech in data for x in data[mech] if x.rundata]
+
+
+def get_filtered_data(data_clean, warn=True, strict=False, **filters):
     data = copy.copy(data_clean)
-    # create fig, ax
-    plt.figure()
-    ax = plt.subplot(1, 1, 1)
     # apply filters
     for f in filters:
         if filters[f] is None:
             continue
-        assert any(data[x] for x in data), 'No data matching all filters'
-        if f in data[list(data.keys())[0]][0]._fields:
+        if warn:
+            assert any(data[x] for x in data), 'No data matching all filters'
+        if f in run._fields:
             for mech in data:
                 data[mech] = [x for x in data[mech]
-                              if __compare(x, f, filters[f])]
+                              if __compare(x, f, filters[f], strict=strict)]
+
+    return data
+
+
+def get_diffs(data):
+    diff_check = [x for x in run._fields if x not in ['mechdata', 'rundata']]
+    diffs = [set([getattr(x, check) for x in data])
+             for check in diff_check]
+    # get # with more than 1 option
+    diff_locs = [i for i in range(len(diffs)) if len(diffs[i]) > 1]
+    diffs = [x for x in diffs if len(x) > 1]
+    return diffs, diff_locs, diff_check
+
+
+def plotter(data_clean, plot_name='', show=True, plot_reacs=True, norm=True,
+            legend_handler=None, marker_func=None,
+            minx=None, miny=None, maxx=None, maxy=None, ylog=False,
+            return_vals=False, **filters):
+
+    # create fig, ax
+    plt.figure()
+    ax = plt.subplot(1, 1, 1)
+
+    data = get_filtered_data(data_clean, **filters)
+
     # now plot data
     to_plot = ['runtime']
     if filters.pop('plot_compilation', False):
@@ -65,16 +93,10 @@ def plotter(plot_name='', show=True, plot_reacs=True, norm=True,
     if filters.pop('plot_overhead', False):
         to_plot.append('overhead')
     # get data
-    plot_data = [x for mech in data for x in data[mech]]
+    plot_data = flatten(data)
     # get labels
-    import pdb; pdb.set_trace()
-    diff_check = [x for x in run._fields if x not in ['mechdata', 'rundata']]
-    diffs = [set([getattr(x, check) for x in plot_data])
-             for check in diff_check]
-    # get # with more than 1 option
-    diff_locs = [i for i in range(len(diffs)) if len(diffs[i]) > 1]
-    diffs = [x for x in diffs if len(x) > 1]
 
+    diffs, diff_locs, diff_check = get_diffs(plot_data)
     plot_cores = False
     if 'cores' in [diff_check[loc] for loc in diff_locs]:
         # can only process one
@@ -116,7 +138,7 @@ def plotter(plot_name='', show=True, plot_reacs=True, norm=True,
             if plot_cores:
                 # sort by mech size
                 diffs = [sorted(diff, key=lambda x:
-                                data[x][0].mechdata.num_reactions) for diff in diffs]
+                                data[x][0].mechdata.n_reactions) for diff in diffs]
             else:
                 diffs = [sorted(diff) for diff in diffs]
 
@@ -251,6 +273,9 @@ def plotter(plot_name='', show=True, plot_reacs=True, norm=True,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--rebuild',
+                        default=False,
+                        action='store_true')
     parser.add_argument('--lang',
                         required=False,
                         default='opencl',
@@ -305,7 +330,7 @@ if __name__ == '__main__':
                         required=False,
                         default=None,
                         type=str,
-                        choices=data_clean.keys()
+                        choices=['H2', 'CH4', 'C2H4', 'IC5H11OH']
                         )
     parser.add_argument('--descriptor',
                         required=False,
@@ -331,5 +356,19 @@ if __name__ == '__main__':
                         required=False,
                         default=True)
     opts = vars(parser.parse_args())
-    options = {k: opts[k] for k in opts if opts[k] is not None}
-    plotter(**options)
+
+    script_dir = os.path.dirname(os.path.normpath(__file__))
+    data_clean = None
+    try:
+        with open(os.path.join(script_dir, 'data.pickle'), 'rb') as file:
+            data_clean = pickle.load(file)
+    except:
+        pass
+    finally:
+        if data_clean is None:
+            data_clean = data_parser.parse_data()
+            with open(os.path.join(script_dir, 'data.pickle'), 'wb') as file:
+                pickle.dump(data_clean, file)
+
+    options = {k: opts[k] for k in opts if opts[k] is not None and k != 'rebuild'}
+    plotter(data_clean, **options)

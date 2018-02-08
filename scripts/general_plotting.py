@@ -38,11 +38,15 @@ def process_data(plotdata, plot, reacs_as_x=True,
 
 
 def plot(plot, x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
-         plot_std=True, return_y=False, labels=[], plot_ind=None, marker_func=None):
+         plot_std=True, return_y=False, labels=[], plot_ind=None, marker_func=None,
+         label=None, marker=None):
     """Plot performance as a function of reaction count.
     """
 
-    if marker_func is not None:
+    if label is not None and marker is not None:
+        name = label
+        marker, hollow, color = marker
+    elif marker_func is not None:
         name = labels[plot_ind]
         marker, hollow, color = marker_func(name)
     elif plot_ind is not None:

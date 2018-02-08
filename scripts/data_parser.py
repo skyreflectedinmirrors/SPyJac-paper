@@ -70,6 +70,7 @@ def parse_data(directory=os.path.join(script_dir, 'performance')):
                                 continue
                         except EOFError:
                             pass
+                    print('Loading pickled data failed')
 
                 # get name
                 name = os.path.basename(file)

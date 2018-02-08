@@ -1,9 +1,7 @@
 # a single consolidated place to import
 # such that all figures have identical styling (when possible)
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os.path
 
 # setup latex
 plt.rc('text', usetex=True)
@@ -55,14 +53,15 @@ legend_key = {'H2': r'H$_2$/CO',
               'IC5H11OH': r'IC$_5$H$_{11}$OH'
               }
 
+
 def pretty_names(pname, short=False):
     pname_dict = {'runtime': 'Runtime',
                   'comptime': 'Compilation time',
                   'overhead': 'Kernel Construction Overhead',
                   'vecwidth': 'Vector Width = {}',
-                  'vectype': dummy_formatter({'w': 'Shallow SIMD',
-                                              'par': 'SIMT',
-                                              'd': 'Deep SIMD'}),
+                  'vectype': dummy_formatter({'w': 'Shallow',
+                                              'par': 'Parallel',
+                                              'd': 'Deep'}),
                   'order': dummy_formatter({'C': 'C-order',
                                             'F': 'F-order'}),
                   'kernel': dummy_formatter({'single': 'Single Rate Kernel',
@@ -70,9 +69,10 @@ def pretty_names(pname, short=False):
                   'rates': dummy_formatter({'fixed': 'Fixed Rate Specialization',
                                             'hybrid': 'Hybrid Rate Specialization',
                                             'full': 'Full Rate Specialization'}),
-                  'mechdata.mech': dummy_formatter(legend_key)
-                  'descriptor': dummy_formatter({'srv2': 'sse',
-                                                 'haswell': 'haswell'})
+                  'mechdata.mech': dummy_formatter(legend_key),
+                  'descriptor': dummy_formatter({'srv2': r'\texttt{sse4.2}',
+                                                 'haswell': r'\texttt{avx2}'}),
+                  'lang': dummy_formatter({'c': r'OpenMP'})
                   }
     if pname in pname_dict:
         return pname_dict[pname]
