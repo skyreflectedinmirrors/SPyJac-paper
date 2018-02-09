@@ -69,9 +69,10 @@ def pretty_names(pname, short=False):
                   'rates': dummy_formatter({'fixed': 'Fixed Rate Specialization',
                                             'hybrid': 'Hybrid Rate Specialization',
                                             'full': 'Full Rate Specialization'}),
-                  'mechdata.mech': dummy_formatter(legend_key),
+                  'mechdata.name': dummy_formatter(legend_key),
                   'descriptor': dummy_formatter({'srv2': r'\texttt{sse4.2}',
-                                                 'haswell': r'\texttt{avx2}'}),
+                                                 'haswell': r'\texttt{avx2}',
+                                                 'gpu': r'\texttt{K40m}'}),
                   'lang': dummy_formatter({'c': r'OpenMP'})
                   }
     if pname in pname_dict:

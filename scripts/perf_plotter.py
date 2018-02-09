@@ -15,6 +15,7 @@ import pickle
 
 run = data_parser.run
 rundata = data_parser.rundata
+mechdata = data_parser.mechdata
 reacs_as_x = False
 norm = None
 
@@ -57,10 +58,12 @@ def get_filtered_data(data_clean, warn=True, strict=False, **filters):
             continue
         if warn:
             assert any(data[x] for x in data), 'No data matching all filters'
-        if f in run._fields:
+        try:
             for mech in data:
                 data[mech] = [x for x in data[mech]
                               if __compare(x, f, filters[f], strict=strict)]
+        except AttributeError:
+            pass
 
     return data
 
@@ -122,8 +125,7 @@ def plotter(data_clean, plot_name='', show=True, plot_reacs=True, norm=True,
     if not diff_locs:
         # regular plot
         for plot in to_plot:
-            gp.plot(plot, *gp.process_data(plot_data,
-                                           plot, reacs_as_x=plot_reacs))
+            gp.plot(*gp.process_data(plot_data, plot, reacs_as_x=plot_reacs))
     else:
         # create map dict
         loc_map = {}
@@ -242,7 +244,7 @@ def plotter(data_clean, plot_name='', show=True, plot_reacs=True, norm=True,
 
         # and finally plot
         for i in range(len(y_vals)):
-            gp.plot('', x_vals[i], y_vals[i], z_vals[i],
+            gp.plot(x_vals[i], y_vals[i], z_vals[i],
                     labels=labels, plot_ind=i, marker_func=marker_func)
         ax.set_xlim([minx, maxx])
         ax.set_ylim([miny, maxy])
@@ -366,7 +368,7 @@ if __name__ == '__main__':
         pass
     finally:
         if data_clean is None:
-            data_clean = data_parser.parse_data()
+            data_clean = data_parser.parse_data(rebuild=opts['rebuild'])
             with open(os.path.join(script_dir, 'data.pickle'), 'wb') as file:
                 pickle.dump(data_clean, file)
 

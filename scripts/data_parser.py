@@ -3,15 +3,30 @@ import os
 import yaml
 import hashlib
 import pickle
+import copy
 
 rundata = collections.namedtuple(
     'rundata', 'num_conditions comptime overhead runtime')
 mechdata = collections.namedtuple(
-    'mechdata', 'mech n_species n_reactions n_reversible')
-run = collections.namedtuple(
-    'run',
-    tuple('rtype sparse lang vecwidth order vectype platform rates kernel cores '
-          'conp descriptor rundata mechdata'.split()))
+    'mechdata', 'name mech n_species n_reactions n_reversible')
+
+
+class run (
+        collections.namedtuple('run', tuple(
+            'rtype sparse lang vecwidth order '
+            'vectype platform rates kernel cores '
+            'conp descriptor rundata mechdata'.split()))):
+    __slots__ = ()
+
+    def __repr__(self):
+        return self.__class__.__name__ + '({})'.format(', '.join([
+            '{}={}'.format(self._fields[i], self[i])
+            for i in range(len(self._fields)) if self._fields[i] not in
+            ['rundata', 'mechdata']]))
+
+    def copy(self):
+        return copy.deepcopy(self)
+
 
 script_dir = os.path.dirname(os.path.normpath(__file__))
 
@@ -40,7 +55,7 @@ def dirs_in(path):
     return __listdir(path, False)
 
 
-def parse_data(directory=os.path.join(script_dir, 'performance')):
+def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance')):
     # find all mechs
     mechs = [x for x in os.listdir(directory)
              if os.path.isdir(os.path.join(directory, x))]
@@ -51,7 +66,7 @@ def parse_data(directory=os.path.join(script_dir, 'performance')):
         mech_meta_file = next(x for x in files_in(path, '.yaml'))
         # read mechanism info
         with open(mech_meta_file, 'r') as f:
-            mech_info = mechdata(**yaml.load(f))
+            mech_info = mechdata(name=mech, **yaml.load(f))
         for desc in dirs_in(path):
             # get decriptor
             descriptor = os.path.basename(os.path.normpath(desc))
@@ -59,7 +74,8 @@ def parse_data(directory=os.path.join(script_dir, 'performance')):
                 # check for pickled data
                 pickle_file = file.replace('.txt', '.pickle')
                 md5_file = file.replace('.txt', '.md5')
-                if os.path.isfile(pickle_file) and os.path.isfile(md5_file):
+                if not rebuild and os.path.isfile(pickle_file) and os.path.isfile(
+                        md5_file):
                     # check checksum
                     with open(md5_file, 'r') as md5:
                         stored = md5.read()
