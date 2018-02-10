@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import yaml
+import cantera as ct
 from collections import defaultdict
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +22,19 @@ def get_error_files(ftype):
     return files
 
 
+def add_rxn_specific_inds(mech_info, rxn_type, rxn_str, path):
+    # load gas
+    gas = ct.Solution(os.path.join(path, mech_info['mech']))
+    # get fwd reaction indicies
+    mech_info['rop_fwd_' + rxn_str] = np.array([i for i, r in enumerate(
+        gas.reactions()) if not isinstance(r, rxn_type)])
+    # get reversible indicies
+    rev_rxns = [i for i, r in enumerate(gas.reactions()) if r.reversible]
+    mech_info['rop_rev_' + rxn_str] = np.array([
+        i for i, fi in enumerate(rev_rxns)
+        if not isinstance(gas.reaction(fi), rxn_type)])
+
+
 def run_error_calcs(ftype, updater):
     files = get_error_files(ftype)
     err_dicts = {}
@@ -29,9 +43,15 @@ def run_error_calcs(ftype, updater):
         err_dicts[mech_name] = defaultdict(lambda: 0)
 
         # get mech info
-        mech_info = os.path.join(mech, mech_name.lower() + '.yaml')
+        mech_info = os.path.join(mech, mech_name + '.yaml')
         with open(mech_info, 'r') as file:
             mech_info = yaml.load(file.read())
+            if mech_info['n_cheb']:
+                add_rxn_specific_inds(mech_info, ct.ChebyshevReaction, 'cheb_inds',
+                                      mech)
+            if mech_info['n_plog']:
+                add_rxn_specific_inds(mech_info, ct.PlogReaction, 'plog_inds',
+                                      mech)
 
         for file in files[mech]:
             updater(err_dicts[mech_name], np.load(file), filename=file,

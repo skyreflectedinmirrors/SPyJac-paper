@@ -24,7 +24,8 @@ def updater(err_dict, err, filename=None, mech_info={}):
         errs = err[name]
         values = err[name + '_value']
         errs = errs / (atol + rtol * np.abs(values))
-        if 'rop_fwd' == name or 'rop_rev' == name and np.any(errs > 1e-4):
+        if ('rop_fwd' == name or 'rop_rev' == name) and 'store' in name and np.any(
+                errs > 1e-4):
             from time import ctime
             print(filename, ctime(os.path.getmtime(filename)))
             print('Bad data detected...')
@@ -36,6 +37,12 @@ def updater(err_dict, err, filename=None, mech_info={}):
 
         if name not in err_dict:
             err_dict[name] = np.zeros((__get_size(name)))
+
+            if ('rop_fwd' in name or 'rop_rev' in name):
+                if mech_info['n_cheb']:
+                    err_dict[name + '_nocheb'] = np.zeros((__get_size(name)))
+                if mech_info['n_plog']:
+                    err_dict[name + '_noplog'] = np.zeros((__get_size(name)))
 
             if precs is not None:
                 err_dict['rop_component'] = np.zeros((__get_size(
@@ -49,6 +56,17 @@ def updater(err_dict, err, filename=None, mech_info={}):
 
         err_dict[name] = np.maximum(
             err_dict[name], errs)
+
+        def __update_rxn_type(rxn_str):
+            if ('rop_fwd' == name or 'rop_rev' == name) and \
+                    mech_info['n_' + rxn_str]:
+                inds = mech_info[name + '_' + rxn_str + '_inds']
+                err_dict[name + '_no' + rxn_str][inds] = np.maximum(
+                    err_dict[name + '_no' + rxn_str][inds], errs[inds])
+
+        __update_rxn_type('cheb')
+        __update_rxn_type('plog')
+
         if 'rop_net' in name:
             update_locs = np.where(err_dict[name] == errs)
             # update the precision norms at these locations
