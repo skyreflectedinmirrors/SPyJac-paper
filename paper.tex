@@ -8,6 +8,9 @@
 \usepackage[version=3]{mhchem} % Formula subscripts using \ce{}, e.g., \ce{H2SO4}
 \usepackage{booktabs,multicol} %better tables
 \usepackage{subcaption} %subfigs
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
 
 % shared equations in separate file
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
@@ -314,7 +317,6 @@ E_{\varepsilon} = \frac{\max(\varepsilon^{\prime}_{i^{*}j^{*}}\text{, }\varepsil
 \end{equation}
 This estimate allows for direct comparison of the error in forward or reverse ROPs to the value of the net ROP itself, if they are of similar magnitude the error in net ROP will be large.
 
-\todo[inline]{update species error with new data -- in particular the \num{e-4} for i-pentanol are all from november. preliminary data on the GPU shows ~\num{4e-8}}
 \begin{table}[htb]
 \sisetup{retain-zero-exponent=true}
 \centering
@@ -322,12 +324,12 @@ This estimate allows for direct comparison of the error in forward or reverse RO
 \toprule
 \multicolumn{1}{l}{Model} & \multicolumn{1}{l}{\ce{H2}\slash~\ce{CO}\cite{Burke:2011fh}} & \multicolumn{1}{l}{GRI-Mech.~3.0\cite{smith_gri-mech_30}} & \multicolumn{1}{l}{USC-Mech II\cite{Wang:2007}} & \multicolumn{1}{l}{\ce{iC5H11OH}\cite{Sarathy:2013jr}} \\
 \midrule
-\multicolumn{1}{c}{$E_{R^{\prime}}$} & 1.61e-8 & 2.95e-8 & 1.04e-7 & 4.86e-4 \\
-\multicolumn{1}{c}{$E_{R^{\prime\prime}}$} & 6.93e-8 & 6.43e-8 & 1.20e-7 & 5.07e-4 \\
-\multicolumn{1}{c}{$E_{R}$}  & 1.49e1 & 1.17e0 & 2.79e0 & 5.07e-1 \\
-\multicolumn{1}{c}{$E_{\varepsilon}$} & 1.52e1 & 1.09e0 & 2.91e0 & 4.43e-1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1 & 2.64e0 & 7.44e0 & 1.58e1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5 & 3.58e8 & 3.95e6 & 7.11e7 \\
+\multicolumn{1}{c}{$E_{R^{\prime}}$} & 1.56e-8 & 2.95e-8 & 9.42e-8 & 4.86e-4 \\
+\multicolumn{1}{c}{$E_{R^{\prime\prime}}$} & 6.92e-8 & 6.53e-8 & 1.20e-7 & 5.07e-4 \\
+\multicolumn{1}{c}{$E_{R}$}  & 1.49e1 & 1.11e0 & 2.80e0 & 4.82e-1 \\
+\multicolumn{1}{c}{$E_{\varepsilon}$} & 1.48e1 & 1.13e0 & 2.93e0 & 5.03e-1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1 & 2.60e0 & 7.62e0 & 1.58e1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5 & 3.35e8 & 3.95e6 & 7.11e7 \\
 \multicolumn{1}{c}{$E_{\frac{\text{d} S}{\text{d} t}}$} & 3.52e12 & 3.46e12 & 3.44e12 & 3.38e12 \\
 \bottomrule
 \end{tabular}
@@ -335,14 +337,19 @@ This estimate allows for direct comparison of the error in forward or reverse RO
 Error statistics are based on the infinity-norm of the relative error detailed in Eq.~\eqref{e:rel_err} for each quantity.
 The ``S'' in $E_{\frac{\text{d} S}{\text{d} t}}$ refers to the thermodynamic state parameter, either $V$ or $P$ for \conp~and \conv~respectively.
 }
-\label{T:error}
+\label{T:source_error}
 \end{table}
 
-In Table~\ref{T:error}, we see the results of this code as compared to Cantera~\cite{Cantera} on a library of partially stirred reaction conditions (PaSR) described in our previous works~\cite{CurtisGPU:2017,Niemeyer:2016aa}.
-Very close agreement is observed for the forward and reverse ROP for all models, however the net ROP error norm is \numrange{7}{9} orders of magnitude larger.
-We see here that $E_{\varepsilon}$ is very similar in magnitude to $E_R$ in all cases, indicating that this large increase in error is caused by the accumulation of floating point error from the forward and reverse ROPs, as previously discussed.
+In Table~\ref{T:source_error}, we see the results of this code as compared to Cantera~\cite{Cantera} on a library of partially stirred reaction conditions (PaSR) described in our previous works~\cite{CurtisGPU:2017,Niemeyer:2016aa}.
+Very close agreement is observed for the forward and reverse ROP for all models, however the error norm is \textasciitilde\numrange{3}{4} orders of magnitude larger for the isopentanol model.
+This results from differences in evaluation of P-Log reactions between \texttt{pyJac} and Cantera; namely \texttt{pyJac} computes the logarithm of the upper and lower reaction Arrhenius rates (see~\cref{deriv-s:pdep}) analytically while Cantera evaluates this term numerically.
+If the error from P-Log reactions are not considered in~\cref{e:rel_err}, the forward and reverse ROP falls to \num{5.44e-08} and \num{1.59e-07} respectively.
+We note that this discrepency does not imply any incorrectness in either \texttt{pyJac} or Cantera---in fact, the error is still well within the proscribed tolerances in~\cref{e:rel_err}---but merely emphasizes the effect small code-changes can have on the accumulation of floating point errors.
+
+This point is further underscored by the error in the net ROP, which is \textasciitilde\numrange{3}{9} (or \numrange{7}{9} for the P-Log excluded error) orders of magnitude larger than the error in either the forward or reverse ROP.
+In~\cref{T:source_error}, we see that $E_{\varepsilon}$ is very similar in magnitude to $E_R$ in all cases, indicating that this large increase in error is caused by the accumulation of floating point error from the forward and reverse ROPs, as previously discussed.
 The molar species production rate error norm is similar in magnitude to that of the net ROP, however the temperature and state parameter rate errors again increases as the error in species rates is amplified by multiplication with thermodynamic properties.
-We note that the above discussion does not imply that computation of the net ROP will cause large error in chemical kinetic integration---either in this code or Cantera~\cite{Cantera}---as this loss of accuracy only occurs when the forward and reverse ROP are nearly equal, implying the reaction is in near-equilibrium.
+Again, we note that the above discussion does not imply that discrepencies in computation of the net ROP will cause large error in chemical kinetic integration---either in this code or Cantera~\cite{Cantera}---as this loss of accuracy only occurs when the forward and reverse ROP are nearly equal, implying the reaction is in near-equilibrium.
 
 \subsection{Performance}
 \label{S:results}
