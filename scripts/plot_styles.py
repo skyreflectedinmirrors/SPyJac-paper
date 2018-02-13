@@ -83,12 +83,16 @@ def pretty_names(pname, short=False):
                   'rates': dummy_formatter({'fixed': 'Fixed Rate Specialization',
                                             'hybrid': 'Hybrid Rate Specialization',
                                             'full': 'Full Rate Specialization'}),
+                  'sparse': dummy_formatter({'sparse': 'Sparse',
+                                             'full': 'Dense'}),
                   'conp': '{}',
                   'mechdata.name': dummy_formatter(legend_key),
                   'descriptor': dummy_formatter({'srv2': r'\texttt{sse4.2}',
                                                  'srv2-gpu': r'\texttt{C2075}',
                                                  'haswell': r'\texttt{avx2}',
-                                                 'gpu': r'\texttt{K40m}'})
+                                                 'gpu': r'\texttt{K40m}'}),
+                  'rtype': dummy_formatter({'jac': 'Analytical',
+                                            'fdjac': 'Finite Difference'})
                   }
     if pname in pname_dict:
         return pname_dict[pname]
