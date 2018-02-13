@@ -10,9 +10,13 @@ def update(err_dict, err, filename=None, **kwargs):
     for name in err:
         if 'amax' in name or 'value' in name:
             continue
-        if err[name] > 1e20:
+        if any(x in name for x in ['thresholded']) and err[name] > 1e1:
             from time import ctime
-            print(filename, ctime(os.path.getmtime(filename)))
+            file = filename[filename.index('error_checking'):].replace(
+                'error_checking', 'performance')
+            path = os.path.dirname(file)
+            name = os.path.basename(file)
+            print(os.path.join(path, 'gpu', name))
             continue
         err_dict[name] = np.maximum(err_dict[name], err[name])
 

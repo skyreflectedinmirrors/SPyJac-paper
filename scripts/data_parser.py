@@ -8,7 +8,7 @@ import copy
 rundata = collections.namedtuple(
     'rundata', 'num_conditions comptime overhead runtime')
 mechdata = collections.namedtuple(
-    'mechdata', 'name mech n_species n_reactions n_reversible')
+    'mechdata', 'name mech n_species n_reactions n_reversible n_cheb n_plog')
 
 
 class run (
@@ -66,7 +66,7 @@ def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance'))
         mech_meta_file = next(x for x in files_in(path, '.yaml'))
         # read mechanism info
         with open(mech_meta_file, 'r') as f:
-            mech_info = mechdata(name=mech, **yaml.load(f))
+            mech_info = mechdata(**yaml.load(f))
         for desc in dirs_in(path):
             # get decriptor
             descriptor = os.path.basename(os.path.normpath(desc))
@@ -109,6 +109,13 @@ def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance'))
                 # add to run
                 params.extend([descriptor, data, mech_info])
                 perf_data[mech].append(run(*params))
+
+                if descriptor == 'srv2' and perf_data[mech][-1].platform == 'nvidia':
+                    perf_data[mech][-1] = perf_data[mech][-1]._replace(
+                        descriptor='srv2-gpu')
+                if perf_data[mech][-1].lang == 'c':
+                    perf_data[mech][-1] = perf_data[mech][-1]._replace(
+                        vectype='openmp')
 
                 # get file checksum and pickle
                 checksum = md5sum(file)

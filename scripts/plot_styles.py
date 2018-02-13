@@ -31,6 +31,19 @@ clear_marker_style = {
 default_keys = ['runtime', 'comptime', 'overhead']
 marker_wheel = [('o', True), ('>', True), ('s', True),
                 ('D', True)]
+
+
+class wheeler(object):
+    def __init__(self, wheel, raise_on_oob=True):
+        self.raise_on_oob = raise_on_oob
+        self.wheel = wheel[:]
+
+    def __getitem__(self, key):
+        if not self.raise_on_oob and key >= len(self.wheel):
+            key = key % len(self.wheel)
+        return self.wheel[key]
+
+
 marker_dict = {x: marker_wheel[i] for i, x in enumerate(default_keys)}
 
 
@@ -61,7 +74,8 @@ def pretty_names(pname, short=False):
                   'vecwidth': 'Vector Width = {}',
                   'vectype': dummy_formatter({'w': 'Shallow',
                                               'par': 'Parallel',
-                                              'd': 'Deep'}),
+                                              'd': 'Deep',
+                                              'openmp': r'OpenMP'}),
                   'order': dummy_formatter({'C': 'C-order',
                                             'F': 'F-order'}),
                   'kernel': dummy_formatter({'single': 'Single Rate Kernel',
@@ -69,11 +83,12 @@ def pretty_names(pname, short=False):
                   'rates': dummy_formatter({'fixed': 'Fixed Rate Specialization',
                                             'hybrid': 'Hybrid Rate Specialization',
                                             'full': 'Full Rate Specialization'}),
+                  'conp': '{}',
                   'mechdata.name': dummy_formatter(legend_key),
                   'descriptor': dummy_formatter({'srv2': r'\texttt{sse4.2}',
+                                                 'srv2-gpu': r'\texttt{C2075}',
                                                  'haswell': r'\texttt{avx2}',
-                                                 'gpu': r'\texttt{K40m}'}),
-                  'lang': dummy_formatter({'c': r'OpenMP'})
+                                                 'gpu': r'\texttt{K40m}'})
                   }
     if pname in pname_dict:
         return pname_dict[pname]

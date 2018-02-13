@@ -50,12 +50,14 @@ def flatten(data):
     return [x for mech in data for x in data[mech] if x.rundata]
 
 
-def get_filtered_data(data_clean, warn=True, strict=False, **filters):
+def get_filtered_data(data_clean, warn=True, strict=False, printf=False, **filters):
     data = copy.copy(data_clean)
     # apply filters
     for f in filters:
         if filters[f] is None:
             continue
+        if printf:
+            print(f, filters[f], sum(len(data[x]) for x in data))
         if warn:
             assert any(data[x] for x in data), 'No data matching all filters'
         try:
@@ -367,7 +369,7 @@ if __name__ == '__main__':
     except:
         pass
     finally:
-        if data_clean is None:
+        if data_clean is None or opts['rebuild']:
             data_clean = data_parser.parse_data(rebuild=opts['rebuild'])
             with open(os.path.join(script_dir, 'data.pickle'), 'wb') as file:
                 pickle.dump(data_clean, file)
