@@ -152,11 +152,26 @@ If some threads must execute a different instruction---e.g., due to if\slash the
 This phenomena, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
 \subsection{Previous works and goals of this study}
-Several recent works, e.g.~\cite{CurtisGPU:2017}, have investigated SIMT-based chemical kinetic integration on GPUs, however SIMD-based chemical kinetics have been less studied in comparison.
-Stone et al., \cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
+A number of recent works have investigated the use of high-performance SIMT-devices to accelerate reactive-flow and chemical kinetics simulations.
+Spafford et al.~\cite{Spafford:2010aa} investigated an implementation of an explicit direct numerical simulation code for compressible turbulent combustion on a Tesla C1060 GPU, and found an order of magnitude speedup in evaluation fo species production rates as compared to a serial CPU implementation on an AMD-Opteron processor.
+Shi et al.~\cite{Shi:2011aa} developed a code to evaluate species rates and factorize the chemical kinetic Jacobian on a Tesla C2050 GPU, and found an order of magnitude speedup during integration of large chemical models when these operations were offloaded to the GPU as compared to the standard \texttt{CHEMKIN}~\cite{kee1989chemkin} and \texttt{LAPACK}~\cite{Anderson:1999aa} libraries on a quad-core Intel i7 930 CPU; it was not clear how\slash if the CPU code was parallelized.
+Niemeyer et al.~\cite{Niemeyer:2011aa} implemented an explicit fourth-order Runge--Kutta integrator for non-stiff chemical kinetic integration on a Tesla C2075 GPU, and found a speedup of nearly two orders of magnitude when compared with a sequential CPU-code on an Intel Xeon X5650 CPU.
+Shi et al.~\cite{Shi:2012aa} later extended their work to develop a stabilized-explicit solver on a Tesla C2050; paired with a traditional implicit integrator on quad-core Intel i7 930 which handled the stiffest computational cells, an \SIrange{11}{46}{$\times$} speedup was achieved over the base implicit CPU integrator during simulation of a three-dimensional premixed diesel engine simulation.
+Le et al.~\cite{Le2013596} implemented two high-order shock-capturing reactive-flow codes on a Tesla C2070, and found a \numrange{30}{50}$\times$ speedup over a sequential CPU version of the same code on a Intel Xeon X5650.
+Stone and Davis~\cite{Stone:2013aa} implemented the implicit VODE~\cite{Brown:1989vl} integrator on a Fermi M2050 GPU, achieving an order of magnitude speedup over the baseline CPU version on a single core of an AMD Opteron 6134 Magny-Cours.
+Niemeyer and Sung~\cite{Niemeyer:2014aa} later developed a stabilized explicit second-order Runge--Kutta--Chebyshev algorithm on a Tesla C2075, demonstrating an order of magnitude speedup for a over a CPU implementation of VODE on a six-core Intel X5650 for moderately stiff chemical kinetics.
+Sewerin and Rigopoulos~\cite{Sewerin20151375} implemented a three-stage\slash fifth-order implicit Runge--Kutta method~\cite{wanner1991solving} on a both high-end (Nvidia Quadro 6000) and consumer-grade (Nvidia Quadro 600) GPUs, as well as a standard CPU (two-core, four-thread Intel i5-520M) and a scientific workstation (eight-core, 16-thread Intel Xeon E5-2687W); the high-end GPU was at best \SI{1.8}{$\times$} slower than the workstation CPU (16 threads), while the consumer level GPU was at best \SI{5.5}{$\times$} slower than the corresponding standard CPU (four threads).
+Niemeyer et al.~\cite{Niemeyer:2016aa} additionally developed and validated an analytical chemical kinetic Jacobian code for the CPU and GPU.
+Yonkee and Sutherland~\cite{Yonkee2016} implemented SIMT-accelerated evaluations of thermodynamic parameters, multicomponent transport properties and species production rates for solution of a partial differential equations on an Intel Xeon E5-2680 CPU and an Tesla K20 GPU.
+In evaluation of the thermochemical properties, speedups between \SIrange{8}{13}{$\times$} were on 16 CPU cores, and \SI{20}{40}{$\times$} on the GPU; speedups of \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} were found in solution of a partially premixed methanol flame PDE on 16 CPU cores and the GPU respectively.
+Curtis et al.~\cite{CurtisGPU:2017} implemented a different formulation of the same fifth-order implicit Runge--Kutta method, as well as two-fourth order exponential integration techniques paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} on a Tesla C2075; the implicit Runge--Kutta method was roughly equivalent to VODE running on 12--38 Intel Xeon E5-4640 v2 CPU cores for two smaller chemical models with an integration time step of \SI{e-6}{$\sec$}.
+
+In contrast, SIMD-based chemical kinetics evaluation\slash integration have been far less studied.
+Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock atmospheric chemical kinetics solver on the CPU, GPU and cell croadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
+Kroshko and Spiteri~\cite{kroshko2013efficient} implemented a shallow-SIMD vectorized third order stiff Rosenbrock integrator for atmospheric chemistry on the CBE finding a speedup of \SI{1.89}{$\times$} over a serial version of the same code.
+Stone et al.,~\cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
 The shallow-SIMD and SIMT-vectorization models were implemented in OpenCL and compared to an OpenMP baseline code that was deep SIMD-vectorized by simple compiler hints (a.k.a pragmas).
 The shallow-SIMD vectorization improved the integrator performance over the OpenMP baseline by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was \SIrange{1.4}{1.6}{$\times$} slower than the OpenMP baseline due to thread-divergence concerns.
-\cite{kroshko2013efficient} implemented a shallow-SIMD vectorized third order stiff Rosenbrock integrator for atmospheric chemistry on a Cell Broadband Engine---a specially designed vector processor---finding a speedup of \SI{1.89}{$\times$} over a serial version of the same code.
 
 This work will study the performance of thermo-chemical source term evaluation of automatically generated shallow-SIMD vectorized codes for a wide range chemical kinetic models on the CPU.
 The performance will be compared to a baseline shallow-SIMT vectorized code to determine the effective SIMD speedup.
@@ -291,9 +306,46 @@ Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner
 This allows for easy changes of program structure, e.g. data ordering, vectorization, threading patterns and easy switching of target-languages (and simpler extension to additional languages, e.g., CUDA).
 Additionally, \texttt{loo.py} can execute developed subroutines from python (natively for C-code, and via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL-code), enabling unit-testing\slash validation for each component of the Jacobian or source terms.
 The source-terms and subcomponents thereof (e.g., rates of progress, pressure-modification terms, etc.) are directly compared to Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{adept-v11} is used to obtain reference answers for Jacobian subcomponents.
-Validation of the complete source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
+The Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} are used to run OpenCL and C unit-testing, respectively, on the continous integration framework Travis CI~\cite{travis:2018}.
+Validation of the complete (as opposed to the subcomponent testing discussed here) generated source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
 
 \section{Results and Discussion}
+\subsection{Validation and performance study platforms}
+
+The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
+\Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
+In addition,~\cref{t:gpus} lists the model, number of CUDA cores and NVIDIA driver of each of the GPUs used in this work.
+NVIDIA's OpenCL runtime is bundled with the NVIDIA driver~\cite{NVIDIA:2018}, hence we use driver version to specify the OpenCL runtime version.
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{@{}l l l l l@{}}
+\toprule
+CPU Model & Instruction Set & Vector Width & Cores & Identifier \\
+\midrule
+Xeon X5650 & SSE4.2 & \SI{128}{\bit} & $2 \times 6$ & \texttt{sse4.2} \\
+E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
+\bottomrule
+\end{tabular}
+\label{t:cpus}
+\caption{The Intel CPU configurations used in this study. The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
+\end{table}
+\begin{table}
+\centering
+\begin{tabular}{@{}l l l l@{}}
+\toprule
+NVIDIA Model & Driver Version & CUDA Cores & Identifier \\
+\midrule
+Tesla C2075 & \num{384.81} & \num{448} & \texttt{C2075} \\
+Tesla K40m & \num{375.26} & \num{2880} & \texttt{K40m} \\
+\bottomrule
+\end{tabular}
+\label{t:gpus}
+\caption{The NVIDIA GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphic driver, rather than any specific version of CUDA.
+Again, the identifier field will be used as a shorthand descriptor during analysis of the performance results.}
+\end{table}
+
+
 \subsection{Source term validation}
 \label{s:validation}
 The reaction rates of progress (ROP), species and temperature rates in this study are validated by comparison with Cantera~\cite{Cantera}, however special care must be taken due floating point arithmetic issues.
@@ -396,39 +448,11 @@ Similar error characteristics are seen for all models except GRI-Mech 3.0---in w
 
 \subsection{Performance}
 \label{S:results}
-The performance studies in this work were run on a variety of different machines:
-
-\begin{table}[htb]
-\centering
-\begin{tabular}{@{}l l l l l@{}}
-\toprule
-Model & Instruction Set & Vector Width & Cores & Identifier \\
-\midrule
-Intel Xeon X5650 & SSE4.2 & \SI{128}{\bit} & $2 \times 6$ & \texttt{sse4.2} \\
-Intel E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
-\bottomrule
-\end{tabular}
-\label{t:cpus}
-\caption{The CPU configurations used in this study.}
-\end{table}
-\begin{table}
-\centering
-\begin{tabular}{@{}l l l l l@{}}
-\toprule
-Model & NVIDIA Driver Version & CUDA Cores & Identifier \\
-\midrule
-Tesla C2075 & 384.81 & \num{448} & \texttt{C2075} \\
-Tesla K40m & 375.26 & \num{2880} & \texttt{K40m} \\
-\bottomrule
-\end{tabular}
-\label{t:gpus}
-\caption{The GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphic driver, rather than any specific version of CUDA.}
-\end{table}
-
+The performance studies in this work were run on a variety of different machines.
 
 four ten-core \SI{2.2}{\giga\hertz} Intel Xeon E5-4640 v2 CPUs with \SI{20}{\mega\byte} of L3 cache memory, installed on an Ace Powerworks PW8027R-TRF+ with a Supermicro X9QR7-TF+/X9QRi-F+ baseboard.
 Runtimes in each case were averaged over ten runs, each using the same set of PaSR conditions utilized in validation.
-All code was compiled with \texttt{gcc 4.8.5} and ``\texttt{-O3}'' optimization, running on \texttt{v16.1.1} of the Intel OpenCL runtime supporting OpenCL \texttt{v1.2}.
+All code was compiled with \texttt{gcc 4.8.5} and ``\texttt{-O3}'' optimization, running on  of the 
 
 \begin{figure}[htb]
   \centering
