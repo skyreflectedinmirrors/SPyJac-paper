@@ -173,9 +173,14 @@ Stone et al.,~\cite{stone2016} implemented a linearly-implicit fourth-order stif
 The shallow-SIMD and SIMT-vectorization models were implemented in OpenCL and compared to an OpenMP baseline code that was deep SIMD-vectorized by simple compiler hints (a.k.a pragmas).
 The shallow-SIMD vectorization improved the integrator performance over the OpenMP baseline by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was \SIrange{1.4}{1.6}{$\times$} slower than the OpenMP baseline due to thread-divergence concerns.
 
-This work will study the performance of thermo-chemical source term evaluation of automatically generated shallow-SIMD vectorized codes for a wide range chemical kinetic models on the CPU.
-The performance will be compared to a baseline shallow-SIMT vectorized code to determine the effective SIMD speedup.
-Finally future extensions to this work will be detailed.
+This work will build upon our previous analytical chemical kinetic Jacobian code,~\cite{Niemeyer:2016aa} in order to:
+\begin{itemize}
+ \item Derive and validate a new Jacobian formulation that greatly increases sparsity
+ \item Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators
+ \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
+ \item Discuss future extensions to this work as well as the most promising directions for SIMD\slash SIMT vectorization in reactive flow simulations
+\end{itemize}
+.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
