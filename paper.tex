@@ -1,4 +1,4 @@
-\documentclass[12pt,number,sort&compress]{elsarticle}
+\documentclass[12pt,number,sort&compress,preprint]{elsarticle}
 
 %======================================================================
 \usepackage{todonotes}
@@ -87,7 +87,7 @@
 \NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
 
 
-\title{SIMD\slash SIMT-vectorized Thermo-chemical Source Term Evaluation}
+\title{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source Term Evaluation}
 
 \author[1]{Nicholas Curtis\corref{corr}}
 \ead{nicholas.curtis@uconn.edu}
@@ -102,11 +102,8 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-A code generation platform for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized thermo-chemical source term evaluation was developed and validated against Cantera for a wide range of chemical kinetic models.
-Speedups of up to \SIrange{1.90}{2.45}{$\times$} were observed over a baseline single-instruction, multiple-thread (SIMT) parallelized code.
-Additionally, use of a row-major data layout was found to increase both the SIMD and SIMT performance by up to \SIrange{2.00}{2.38}{$\times$} over a column-major data layout.
-Larger vector-widths were found to produce speedups up to \SI{1.8}{$\times$} as compared to a small vector-width for smaller models, e.g. GRI-Mech 3.0, but as the model size increased the performance of all vector-widths were similar.
-Finally, the parallel scaling efficiency was found to be slightly better for larger models, and future extensions of this work were discussed.
+A code generation platform for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized thermo-chemical source term and sparse chemical kinetic Jacobian evaluation was developed and validated for a wide range of chemical kinetic models.
+\todo[inline]{this}
 \end{abstract}
 
 % (Provide 2-4 keywords describing your research. Only abbreviations firmly
@@ -123,9 +120,9 @@ Finally, the parallel scaling efficiency was found to be slightly better for lar
 %
 
 Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processing are two important vector-processing paradigms used increasingly in scientific computing.
-Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however SIMD processors---as well as SIMT processors, e.g. in the form of graphics processing units (GPUs)---have gained recognition due to their increased floating operation throughput.
+Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however SIMD processors---as well as SIMT processors, e.g., in the form of graphics processing units (GPUs)---have gained recognition due to their increased floating operation throughput.
 The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector-processing based codes in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., the CPU, GPU, or Intel's Many Integrated Core architecture (MIC), etc.
-In this discussion, we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convient way to classify otherwise disparate processor type (e.g., CPUs and GPUs).
+In this discussion, we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor type (e.g., CPUs and GPUs), however the concepts discussed are broadly applicable to SIMD\slash SIMT processing and not tied to OpenCL specifically.
 
 \begin{figure}[htb]
   \centering
@@ -144,7 +141,7 @@ In this discussion, we will largely use OpenCL terminology to describe these pro
 
 A typical modern CPU has many compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions (\cref{F:SIMD}).
 A SIMD instruction utilizes the vector processor to execute the same floating point operation (e.g. multiplication, division, etc.) on a several different data concurrently; the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations. 
-Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor (MIC) have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also expected on cutting-edge and forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
+Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor (MIC) have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also found on cutting-edge and expected on forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
 
 SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large groups of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
 A group of threads---typically \num{32} threads, known as a warp on NVIDIA GPUs---execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
@@ -153,32 +150,32 @@ This phenomena, known as thread-divergence, is a key consideration for SIMT-proc
 
 \subsection{Previous works and goals of this study}
 A number of recent works have investigated the use of high-performance SIMT-devices to accelerate reactive-flow and chemical kinetics simulations.
-Spafford et al.~\cite{Spafford:2010aa} investigated an implementation of an explicit direct numerical simulation code for compressible turbulent combustion on a Tesla C1060 GPU, and found an order of magnitude speedup in evaluation fo species production rates as compared to a serial CPU implementation on an AMD-Opteron processor.
-Shi et al.~\cite{Shi:2011aa} developed a code to evaluate species rates and factorize the chemical kinetic Jacobian on a Tesla C2050 GPU, and found an order of magnitude speedup during integration of large chemical models when these operations were offloaded to the GPU as compared to the standard \texttt{CHEMKIN}~\cite{kee1989chemkin} and \texttt{LAPACK}~\cite{Anderson:1999aa} libraries on a quad-core Intel i7 930 CPU; it was not clear how\slash if the CPU code was parallelized.
+Spafford et al.~\cite{Spafford:2010aa} investigated an implementation of an explicit direct numerical simulation code for compressible turbulent combustion on a Tesla C1060 GPU, and found an order of magnitude speedup in evaluation of species production rates as compared to a serial CPU implementation on an AMD-Opteron processor.
+Shi et al.~\cite{Shi:2011aa} developed a code to evaluate species production rates and factorize the chemical kinetic Jacobian on a Tesla C2050 GPU, and found an order of magnitude speedup during integration of large chemical models when these operations were offloaded to the GPU as compared to the standard \texttt{CHEMKIN}~\cite{kee1989chemkin} and \texttt{LAPACK}~\cite{Anderson:1999aa} libraries on a quad-core Intel i7 930 CPU; it was not clear how\slash if the CPU code was parallelized.
 Niemeyer et al.~\cite{Niemeyer:2011aa} implemented an explicit fourth-order Runge--Kutta integrator for non-stiff chemical kinetic integration on a Tesla C2075 GPU, and found a speedup of nearly two orders of magnitude when compared with a sequential CPU-code on an Intel Xeon X5650 CPU.
 Shi et al.~\cite{Shi:2012aa} later extended their work to develop a stabilized-explicit solver on a Tesla C2050; paired with a traditional implicit integrator on quad-core Intel i7 930 which handled the stiffest computational cells, an \SIrange{11}{46}{$\times$} speedup was achieved over the base implicit CPU integrator during simulation of a three-dimensional premixed diesel engine simulation.
 Le et al.~\cite{Le2013596} implemented two high-order shock-capturing reactive-flow codes on a Tesla C2070, and found a \numrange{30}{50}$\times$ speedup over a sequential CPU version of the same code on a Intel Xeon X5650.
 Stone and Davis~\cite{Stone:2013aa} implemented the implicit VODE~\cite{Brown:1989vl} integrator on a Fermi M2050 GPU, achieving an order of magnitude speedup over the baseline CPU version on a single core of an AMD Opteron 6134 Magny-Cours.
 Niemeyer and Sung~\cite{Niemeyer:2014aa} later developed a stabilized explicit second-order Runge--Kutta--Chebyshev algorithm on a Tesla C2075, demonstrating an order of magnitude speedup for a over a CPU implementation of VODE on a six-core Intel X5650 for moderately stiff chemical kinetics.
-Sewerin and Rigopoulos~\cite{Sewerin20151375} implemented a three-stage\slash fifth-order implicit Runge--Kutta method~\cite{wanner1991solving} on a both high-end (Nvidia Quadro 6000) and consumer-grade (Nvidia Quadro 600) GPUs, as well as a standard CPU (two-core, four-thread Intel i5-520M) and a scientific workstation (eight-core, 16-thread Intel Xeon E5-2687W); the high-end GPU was at best \SI{1.8}{$\times$} slower than the workstation CPU (16 threads), while the consumer level GPU was at best \SI{5.5}{$\times$} slower than the corresponding standard CPU (four threads).
+Sewerin and Rigopoulos~\cite{Sewerin20151375} implemented a three-stage\slash fifth-order implicit Runge--Kutta method~\cite{wanner1991solving} on both a high-end (Nvidia Quadro 6000) and consumer-grade (Nvidia Quadro 600) GPUs, as well as a standard CPU (two-core, four-thread Intel i5-520M) and a scientific workstation (eight-core, 16-thread Intel Xeon E5-2687W); the high-end GPU was at best \SI{1.8}{$\times$} slower than the workstation CPU (16 threads), while the consumer level GPU was at best \SI{5.5}{$\times$} slower than the corresponding standard CPU (four threads).
 Niemeyer et al.~\cite{Niemeyer:2016aa} additionally developed and validated an analytical chemical kinetic Jacobian code for the CPU and GPU.
-Yonkee and Sutherland~\cite{Yonkee2016} implemented SIMT-accelerated evaluations of thermodynamic parameters, multicomponent transport properties and species production rates for solution of a partial differential equations on an Intel Xeon E5-2680 CPU and an Tesla K20 GPU.
-In evaluation of the thermochemical properties, speedups between \SIrange{8}{13}{$\times$} were on 16 CPU cores, and \SI{20}{40}{$\times$} on the GPU; speedups of \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} were found in solution of a partially premixed methanol flame PDE on 16 CPU cores and the GPU respectively.
-Curtis et al.~\cite{CurtisGPU:2017} implemented a different formulation of the same fifth-order implicit Runge--Kutta method, as well as two-fourth order exponential integration techniques paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} on a Tesla C2075; the implicit Runge--Kutta method was roughly equivalent to VODE running on 12--38 Intel Xeon E5-4640 v2 CPU cores for two smaller chemical models with an integration time step of \SI{e-6}{$\sec$}.
+Yonkee and Sutherland~\cite{Yonkee2016} implemented SIMT-accelerated evaluations of thermodynamic parameters, multicomponent transport properties and species production rates for solution of a partial differential equations (PDEs) on an Intel Xeon E5-2680 CPU and an Tesla K20 GPU.
+In evaluation of the thermo-chemical properties, speedups between \SIrange{8}{13}{$\times$} were on 16 CPU cores, and \SIrange{20}{40}{$\times$} on the GPU; speedups of \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} were found in solution of a partially premixed methanol flame PDE on 16 CPU cores and the GPU respectively.
+Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two-fourth order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} on a Tesla C2075; the implicit Runge--Kutta method was roughly equivalent to VODE running on 12--38 Intel Xeon E5-4640 v2 CPU cores for two smaller chemical models with an integration time step of \SI{e-6}{$\sec$}.
 
 In contrast, SIMD-based chemical kinetics evaluation\slash integration have been far less studied.
 Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock atmospheric chemical kinetics solver on the CPU, GPU and cell croadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
 Kroshko and Spiteri~\cite{kroshko2013efficient} implemented a shallow-SIMD vectorized third order stiff Rosenbrock integrator for atmospheric chemistry on the CBE finding a speedup of \SI{1.89}{$\times$} over a serial version of the same code.
 Stone et al.,~\cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
-The shallow-SIMD and SIMT-vectorization models were implemented in OpenCL and compared to an OpenMP baseline code that was deep SIMD-vectorized by simple compiler hints (a.k.a pragmas).
-The shallow-SIMD vectorization improved the integrator performance over the OpenMP baseline by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was \SIrange{1.4}{1.6}{$\times$} slower than the OpenMP baseline due to thread-divergence concerns.
+The shallow-SIMD and SIMT-vectorization models were implemented in OpenCL and compared to an OpenMP baseline code that was deep SIMD-vectorized by simple compiler hints (i.e., \texttt{\#pragmas}).
+The shallow-SIMD vectorization improved the integrator performance over the OpenMP baseline by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread-divergence concerns.
 
-This work will build upon our previous analytical chemical kinetic Jacobian code,~\cite{Niemeyer:2016aa} in order to:
+This work will build upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}, in order to:
 \begin{itemize}
  \item Derive and validate a new Jacobian formulation that greatly increases sparsity
  \item Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
- \item Discuss future extensions to this work as well as the most promising directions for SIMD\slash SIMT vectorization in reactive flow simulations
+ \item Discuss future extensions to this work as well as the most promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations
 \end{itemize}
 .
 
@@ -220,9 +217,11 @@ In the ``C'' (C row-major) format, the concentrations of all species for a singl
 Conversely in the ``F'' (Fortran column-major) format, the concentrations of a single species $j$ over all thermo-chemical states are adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index \num{1}, $[C]_{2, 1}$ in index \num{2} and so on, as shown in \cref{F:column_major}.
 This ordering---along with the device (CPU, GPU, etc.) and vectorization pattern in question---have a large effect on the performance of SIMD\slash SIMT-vectorized algorithms.
 
-In a \textit{shallow}-SIMD\slash SIMT vectorization, each SIMD-lane (or SIMT-thread) in a compute-unit evaluates thermo-chemical source terms for a different thermo-chemical state.
-If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{L, j})$, the concentration of species $j$ for states $1, 2,\ldots L$---the size of the vector lane for SIMD or the number of threads in a SIMT warp---will load sequential locations in memory, however the first $(j+1)$th species concentration, $[C]_{1, j+1}$ will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{NVIDIA:2018}.
-In a \textit{deep}-SIMD\slash SIMT vectorization, a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermo-chemical source terms for a single thermo-chemical state, thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + L}$---the species concentrations for state 1, species $j \ldots j + L$---will access sequential memory locations if the data is stored in ``C''-order.
+In a \textit{shallow}-SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works~\cite{Stone:2013aa} using GPUs), each SIMD-lane (or SIMT-thread) in a compute-unit evaluates thermo-chemical source terms\slash chemical kinetic Jacobian for a different thermo-chemical state.
+If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{L, j}$, the concentration of species $j$ for states $1, 2,\ldots L$---the size of the vector lane for SIMD or the number of threads in a SIMT warp---will load sequential locations in memory.
+The first $(j+1)$th species concentration however, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{NVIDIA:2018}.
+
+In a \textit{deep}-SIMD\slash SIMT vectorization (also referred to as ``per-block'' in previous GPU works), a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermo-chemical source terms for a single thermo-chemical state, thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + L}$---the species concentrations for state 1, species $j \ldots j + L$---will access sequential memory locations if the data is stored in ``C''-order.
 Further, in the ``C''-ordering the furthest difference between any two species concentrations within the same thermo-chemical state is at most $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU, but leads to uncoalesced memory-accesses on the GPU.
 However, a deep vectorization requires both synchronization between SIMD-lanes\slash SIMT-threads, and may result in SIMD-waste\slash SIMT thread-divergence, caused by different SIMD-lanes\slash SIMT-threads executing different instructions (e.g. resulting from different if\slash then branches)
 
@@ -319,6 +318,7 @@ Validation of the complete (as opposed to the subcomponent testing discussed her
 
 The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
 \Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
+Additionally, \texttt{v5.0} of the LLVM\slash\texttt{clang}~\cite{Lattner:2004:LCF:977395.977673} compiler chain was installed on all machines to enable use of POCL.
 In addition,~\cref{t:gpus} lists the model, number of CUDA cores and NVIDIA driver of each of the GPUs used in this work.
 NVIDIA's OpenCL runtime is bundled with the NVIDIA driver~\cite{NVIDIA:2018}, hence we use driver version to specify the OpenCL runtime version.
 
@@ -332,8 +332,8 @@ Xeon X5650 & SSE4.2 & \SI{128}{\bit} & $2 \times 6$ & \texttt{sse4.2} \\
 E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
 \bottomrule
 \end{tabular}
-\label{t:cpus}
 \caption{The Intel CPU configurations used in this study. The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
+\label{t:cpus}
 \end{table}
 \begin{table}
 \centering
@@ -345,8 +345,8 @@ Tesla C2075 & \num{384.81} & \num{448} & \texttt{C2075} \\
 Tesla K40m & \num{375.26} & \num{2880} & \texttt{K40m} \\
 \bottomrule
 \end{tabular}
-\label{t:gpus}
 \caption{The NVIDIA GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphic driver, rather than any specific version of CUDA.
+\label{t:gpus}
 Again, the identifier field will be used as a shorthand descriptor during analysis of the performance results.}
 \end{table}
 
@@ -401,24 +401,24 @@ In Table~\ref{T:source_error}, we see the results of this code as compared to Ca
 Very close agreement is observed for the forward and reverse ROP for all models, however the error norm is \textasciitilde\numrange{3}{4} orders of magnitude larger for the isopentanol model.
 This results from differences in evaluation of P-Log reactions between \texttt{pyJac} and Cantera; namely \texttt{pyJac} computes the logarithm of the upper and lower reaction Arrhenius rates (see~\cref{deriv-s:pdep}) analytically while Cantera evaluates this term numerically.
 If the error from P-Log reactions are not considered in~\cref{e:rel_err}, the forward and reverse ROP falls to \num{5.44e-08} and \num{1.59e-07} respectively.
-We note that this discrepency does not imply any incorrectness in either \texttt{pyJac} or Cantera---in fact, the error is still well within the proscribed tolerances in~\cref{e:rel_err}---but merely emphasizes the effect small code-changes can have on the accumulation of floating point errors.
+We note that this discrepancy does not imply any incorrectness in either \texttt{pyJac} or Cantera---in fact, the error is still well within the proscribed tolerances in~\cref{e:rel_err}---but merely emphasizes the effect small code-changes can have on the accumulation of floating point errors.
 
 This point is further underscored by the error in the net ROP, which is \textasciitilde\numrange{3}{9} orders of magnitude (or \numrange{7}{9} orders of magnitude for the P-Log excluded error) larger than the error in either the forward or reverse ROP.
 In~\cref{T:source_error}, we see that $E_{\varepsilon}$ is very similar in magnitude to $E_R$ in all cases, indicating that this large increase in error is caused by the accumulation of floating point error from the forward and reverse ROPs, as previously discussed.
-The molar species production rate error norm is similar in magnitude to that of the net ROP, however the temperature and state parameter rate errors again increases as the error in species rates is amplified by multiplication with thermodynamic properties.
+The molar species production rate error norm is similar in magnitude to that of the net ROP, however the temperature and state parameter rate errors again increases as the error in net species production rates is amplified by multiplication with thermodynamic properties.
 Again, we note that the above discussion does not imply that discrepencies in computation of the net ROP will cause large error in chemical kinetic integration---either in this code or Cantera~\cite{Cantera}---as this loss of accuracy only occurs when the forward and reverse ROP are nearly equal, implying the reaction is in near-equilibrium.
 
 \subsection{Jacobian validation}
 
-As in our previous work~\cite{Niemeyer:2016aa}, the correctness of the Jacobian codes generated by \texttt{pyJac} was determined by comparison to Jacobians obtained by automatic differentiation of the source rate subroutines via the \texttt{Adept} software library~\cite{adept-v11,hogan2014fast}.
-The reasons for this choice are explained fully in~\cite{Niemeyer:2016aa}, but broadly speaking automatic differentiation provides relatively fast, highly accurate Jacobian matrix evaluation with relatively programming little effort.
-The discrepency between the analytical and automatic differentiated Jacobians for thermochemical state $k$, denoted by $\mathcal{J}_k$ and $\hat{\mathcal{J}}_k$ respectively, is determined by the relative error Frobenius norm over all Jacobian indicies $i, j$:
+As in our previous work~\cite{Niemeyer:2016aa}, the correctness of the Jacobian codes generated by \texttt{pyJac} was determined by comparison to the Jacobian obtained by automatic differentiation of the source rate subroutines generated by \texttt{pyJac} via the \texttt{Adept} software library~\cite{adept-v11,hogan2014fast}.
+The reasons for this choice are explained fully in~\cite{Niemeyer:2016aa}, but broadly speaking automatic differentiation provides relatively fast, highly accurate Jacobian matrix evaluation with minimal additional programming little effort.
+The discrepancy between the analytical and automatic differentiated Jacobians for thermo-chemical state $k$, denoted by $\mathcal{J}_k$ and $\hat{\mathcal{J}}_k$ respectively, is determined by the relative error Frobenius norm over all Jacobian indicies $i, j$:
 \begin{equation}
  \label{e:jac_error_base}
  E_{\text{rel}, k} = \frac{\left\lVert \hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk} \right\rVert_{i,j,F}}{\left\lVert \hat{\mathcal{J}}_{ijk} \right\rVert_{i,j,F}}
 \end{equation}
 
-To avoid large relative errors of small nonzero Jacobian elements due to accumulation of floating point error, the Frobenius norm of the automatically differentiated Jacobian is calculated over all thermochemical states $k$:
+To avoid large relative errors of small nonzero Jacobian elements due to accumulation of floating point error, the Frobenius norm of the automatically differentiated Jacobian is calculated over all thermo-chemical states $k$:
 \begin{equation}
  \label{e:thresh}
  \mathcal{T} = \left\lVert \mathcal{\hat{J}} \right\rVert_{k, F}
@@ -445,7 +445,7 @@ It is noted that the threshold described in~\cref{e:thresh} varies slightly betw
 \label{T:error}
 \end{table}
 
-\Cref{T:error} presents the error statistics of \texttt{pyJac} over the tested PaSR thermochemical condition database.
+\Cref{T:error} presents the error statistics of \texttt{pyJac} over the tested PaSR thermo-chemical condition database.
 For all tested cases, \todo{need srv2 nvidia tests to really confirm here} the maximum filtered error norm is less than unity.
 The filtered error norm is largest for the \ce{H2}\slash\ce{CO} model with the more stringent tolerance ($\mathcal{C} = 10^{20}$).
 We note that $\mathcal{T}$ for this model is smaller than the tolerance in this case, and hence we are comparing numbers smaller than $\mathcal{O}(1)$; relaxing the tolerance to $\mathcal{C} = 10^{15}$ significantly lowers the filtered error norm to $\mathcal{O}(10^{-5})$.
