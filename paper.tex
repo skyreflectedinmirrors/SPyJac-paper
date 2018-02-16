@@ -323,14 +323,30 @@ The source-terms and subcomponents thereof (e.g., rates of progress, pressure-mo
 The Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} are used to run OpenCL and C unit-testing, respectively, on the continous integration framework Travis CI~\cite{travis:2018}.
 Validation of the complete (as opposed to the subcomponent testing discussed here) generated source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
 
+
 \section{Results and Discussion}
-\subsection{Validation and performance study platforms}
+\subsection{Testing platforms and practical notes on OpenCL usage}
 
 The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
 \Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
 Additionally, \texttt{v5.0} of the LLVM\slash\texttt{clang}~\cite{Lattner:2004:LCF:977395.977673} compiler chain was installed on all machines to enable use of POCL.
 In addition,~\cref{t:gpus} lists the model, number of CUDA cores and NVIDIA driver of each of the GPUs used in this work.
 NVIDIA's OpenCL runtime is bundled with the NVIDIA driver~\cite{NVIDIA:2018}, hence we use driver version to specify the OpenCL runtime version.
+
+Finally,~\cref{t:platforms} lists the platforms and vectorization\slash execution patterns they are capable of running.
+It is important to note, that while OpenCL provides an easy way to enable cross-platform execution, there are some serious potential pit-falls in its use.
+Typically speaking, the closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain more bugs that result in compilation failures or simply incorrect vectorized machine code; further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIAs case, change-logs of bugfixes).
+As demonstration, we've created a minimum working example~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
+This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
+
+Further, the Intel and NVIDIA OpenCL runtimes lack a key feature---implementations of atomic operations on double precision variables---that are currently necessary for \texttt{pyJac} to run deep-vectorized code.
+On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations; it is our experience that the POCL community is very responsive to bug reports and user outreach.
+However, POCL's implicit vectorization module---which utilizes the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to attempt to translate OpenCL code to vectorized machine code---typically fails to achieve much speedup, if any.
+Thus POCL is a particularly useful tool for validation, but not necessarily for performance studies.
+Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the only significant code change is building the wrapper that initializes\slash transfers memory and calls the kernel.
+Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py}) is a key priority going forwards.
+This discussion will be expanded upon in~\cref{s:future} to highlight the most promising future directions.
+
 
 \begin{table}[htb]
 \centering
@@ -345,6 +361,7 @@ E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
 \caption{The Intel CPU configurations used in this study. The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
 \label{t:cpus}
 \end{table}
+
 \begin{table}
 \centering
 \begin{tabular}{@{}l l l l@{}}
@@ -352,12 +369,28 @@ E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
 NVIDIA Model & Driver Version & CUDA Cores & Identifier \\
 \midrule
 Tesla C2075 & \num{384.81} & \num{448} & \texttt{C2075} \\
-Tesla K40m & \num{375.26} & \num{2880} & \texttt{K40m} \\
+Tesla K40m & \num{387.26} & \num{2880} & \texttt{K40m} \\
 \bottomrule
 \end{tabular}
 \caption{The NVIDIA GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphic driver, rather than any specific version of CUDA.
-\label{t:gpus}
 Again, the identifier field will be used as a shorthand descriptor during analysis of the performance results.}
+\label{t:gpus}
+\end{table}
+
+\begin{table}
+\centering
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+Platform & Parallel & Shallow Vectorization & Deep Vectorization \\
+\midrule
+OpenMP & X & -- & -- \\
+POCL OpenCL & X & X & X \\
+Intel OpenCL & X & X & -- \\
+NVIDIA OpenCL & -- & X & -- \\
+\bottomrule
+\end{tabular}
+\caption{The various platforms used in this study and the execution \slash vectorization patterns they are capable of running}
+\label{t:platforms}
 \end{table}
 
 
@@ -477,7 +510,7 @@ Hence, in this section we will detail the sparsity of both forms of the Jacobian
 
 In~\cref{F:jac_sparsity}, a graphical representation of the sparsity pattern for GRI-Mech 3.0 is displayed.
 In particular we note that~\cref{F:jac_sparse_approx} is has several rows that are no longer fully-dense, as result of its approximate form -- these rows correspond to species directly interacting with \ce{N2}, largely in GRI-Mech 3.0's \ce{NOx} chemistry reactions.
-Table~\cref{T:jac_sparsity} shows the density of the exact and approximate Jacobians for all mechanisms tested in this work.
+\cref{T:jac_sparsity} shows the density of the exact and approximate Jacobians for all mechanisms tested in this work.
 The smallest model, \ce{H2}\slash\ce{CO} is very dense with \textasciitilde\SI{70}{\percent} of the Jacobian entries non-zero however this drops to just \textasciitilde\SI{50}{\percent} for GRI-Mech 3.0, and continues to decrease to \textasciitilde\SI{27}{\percent} for USC-Mech II and just \textasciitilde\SI{10}{\percent} for the isopentanol model.
 The approximate Jacobian assumption drops the density of Jacobian by \textasciitilde\SIrange{3}{7}{\percent} for all models.
 
@@ -570,6 +603,10 @@ Interestingly the efficiency of the hydrogen model decreases the fastest while t
 Additionally, it appears that for a fixed number of cores, the scaling efficiency increases with model size.
 This suggests that evaluation of the chemical-source terms for a single thermo-chemical state for the smaller models may not saturate the processing power of the CPU, some efficiency may be lost due to context switching within OpenCL itself.
 Additionally, OpenCL allows assigning of work to devices by shared memory resources, e.g., a L3 cache, which was not pursued in this study for simplicity; this should be investigated in future work to determine the effect on scaling efficiency.
+
+\section{Future directions}
+\label{s:future}
+NVIDIA 375.26 is a bad driver, yo.
 
 \section{Conclusions}
 In this work, automatically generated OpenCL codes for shallow SIMD-vectorized thermo-chemical source term evaluation were developed and validated against Cantera~\cite{Cantera} for a wide range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr}.
