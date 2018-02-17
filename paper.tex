@@ -424,12 +424,12 @@ This estimate allows for direct comparison of the error in forward or reverse RO
 \toprule
 \multicolumn{1}{l}{Model} & \multicolumn{1}{l}{\ce{H2}\slash~\ce{CO}\cite{Burke:2011fh}} & \multicolumn{1}{l}{GRI-Mech.~3.0\cite{smith_gri-mech_30}} & \multicolumn{1}{l}{USC-Mech II\cite{Wang:2007}} & \multicolumn{1}{l}{\ce{iC5H11OH}\cite{Sarathy:2013jr}} \\
 \midrule
-\multicolumn{1}{c}{$E_{R^{\prime}}$} & 1.56e-8 & 2.95e-8 & 9.42e-8 & 4.86e-4 \\
-\multicolumn{1}{c}{$E_{R^{\prime\prime}}$} & 6.92e-8 & 6.53e-8 & 1.20e-7 & 5.07e-4 \\
-\multicolumn{1}{c}{$E_{R}$}  & 1.49e1 & 1.11e0 & 2.80e0 & 4.82e-1 \\
-\multicolumn{1}{c}{$E_{\varepsilon}$} & 1.48e1 & 1.13e0 & 2.93e0 & 5.03e-1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1 & 2.60e0 & 7.62e0 & 1.58e1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5 & 3.35e8 & 3.95e6 & 7.11e7 \\
+\multicolumn{1}{c}{$E_{R^{\prime}}$}                    & 1.56e-8 & 2.95e-8 & 9.42e-8 & 4.86e-4 \\
+\multicolumn{1}{c}{$E_{R^{\prime\prime}}$}              & 6.92e-8 & 6.53e-8 & 1.20e-7 & 5.07e-4 \\
+\multicolumn{1}{c}{$E_{R}$}                             & 1.49e1  & 1.11e0  & 2.80e0  & 4.82e-1 \\
+\multicolumn{1}{c}{$E_{\varepsilon}$}                   & 1.48e1  & 1.13e0  & 2.93e0  & 5.03e-1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1  & 2.60e0  & 7.62e0  & 1.58e1 \\
+\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5  & 3.35e8  & 3.95e6  & 7.11e7 \\
 \multicolumn{1}{c}{$E_{\frac{\text{d} S}{\text{d} t}}$} & 3.52e12 & 3.46e12 & 3.44e12 & 3.38e12 \\
 \bottomrule
 \end{tabular}
@@ -468,17 +468,16 @@ To avoid large relative errors of small nonzero Jacobian elements due to accumul
 \end{equation}
 The error statistics reported in this section are then based only on matrix elements where $\mathcal{J}_{ijk} \ge \frac{\mathcal{T}}{\mathcal{C}}$; this filtered form of~\cref{e:jac_error_base} is denoted $E_{\mathcal{C}}$.
 
-\todo{rerun, especially H2 error}
 \begin{table}[tbp]
 \centering
 \begin{tabular}{@{}l S S[table-format=1.3e1] S[table-format=1.3e1] S[table-format=1.3e1]@{}}
 \toprule
 Model                 & \multicolumn{1}{c}{Sample size}   & \multicolumn{1}{c}{$\bar{\mathcal{T}}$}  & \multicolumn{1}{c}{$E_{10^{20}}$}   & \multicolumn{1}{c}{$E_{10^{15}}$} \\
 \midrule
-\ce{H2}\slash \ce{CO} & \num{900900}                      & \num{6.431e+18}      & \num{8.083e-1}  & \num{1.907e-5} \\
+\ce{H2}\slash \ce{CO} & \num{900900}                      & \num{6.431e+18}      & \num{8.084e-1}  & \num{1.907e-5} \\
 GRI-Mech 3.0          & \num{450900}                      & \num{7.783e+19}      & \num{1.890e-7}  & \num{1.877e-7} \\
-USC-Mech II           & \num{91800}                       & \num{2.830e+21}      & \num{5.567e-3}  & \num{1.704e-7} \\
-\ce{iC5H11OH}         & \num{450900}                      & \num{2.733e+26}      & \num{1.136e-3}  & \num{2.764e-5} \\
+USC-Mech II           & \num{91800}                       & \num{2.830e+21}      & \num{1.540e-3}  & \num{1.704e-7} \\
+\ce{iC5H11OH}         & \num{450900}                      & \num{2.733e+26}      & \num{1.363e-3}  & \num{2.764e-5} \\
 \bottomrule
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results.
@@ -489,7 +488,7 @@ It is noted that the threshold described in~\cref{e:thresh} varies slightly betw
 \end{table}
 
 \Cref{T:error} presents the error statistics of \texttt{pyJac} over the tested PaSR thermo-chemical condition database.
-For all tested cases, \todo{need srv2 nvidia tests to really confirm here} the maximum filtered error norm is less than unity.
+For all tested cases, the maximum filtered error norm is less than unity.
 The filtered error norm is largest for the \ce{H2}\slash\ce{CO} model with the more stringent tolerance ($\mathcal{C} = 10^{20}$).
 We note that $\mathcal{T}$ for this model is smaller than the tolerance in this case, and hence we are comparing numbers smaller than $\mathcal{O}(1)$; relaxing the tolerance to $\mathcal{C} = 10^{15}$ significantly lowers the filtered error norm to $\mathcal{O}(10^{-5})$.
 Similar error characteristics are seen for all models except GRI-Mech 3.0---in which the error norms for both tolerances are $\sim\mathcal{O}(10^{-7})$---that is a larger error norm for the more stringent tolerance that drops 2--4 orders of magnitude for the relaxed tolerance.

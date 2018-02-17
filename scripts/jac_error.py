@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from load_error_files import print_error
 
@@ -11,10 +10,8 @@ def update(err_dict, err, filename=None, **kwargs):
         if ('amax' in name or 'value' in name) and name != 'jac_threshold_value':
             continue
         assert 'fdjac' not in filename
-        if 'nvidia' in filename:
-            from time import ctime
-            print('Known driver issue:', filename, ctime(os.path.getmtime(filename)))
-            continue
+        if err_dict['jac_thresholded_15'] > 1e0:
+            print(filename)
         # special handling for threshold
         if name == 'jac_threshold_value':
             sparse = 'sparse' if ('sparse' in filename) else 'dense'
@@ -22,7 +19,7 @@ def update(err_dict, err, filename=None, **kwargs):
             val = err[name]
             name += '_{}_{}'.format(sparse, conp)
             if name in err_dict:
-                assert np.isclose(err_dict[name], np.asscalar(val))
+                assert np.isclose(err_dict[name], np.asscalar(val), rtol=5e-4)
             err_dict[name] = np.asscalar(val)
             continue
         err_dict[name] = np.maximum(err_dict[name], err[name])
@@ -43,7 +40,8 @@ def printer(err_dict):
     mean_thr = mean_thr[0] / mean_thr[1]
 
     print('\n'.join(
-        ['{}: {:.15e}'.format(k, v) for k, v in err_dict.items()]))
+        ['{}: {:.15e}'.format(k, v) for k, v in err_dict.items()
+         if 'thresholded' in k]))
     print('mean_threshold: {:.15e}'.format(mean_thr))
 
 
