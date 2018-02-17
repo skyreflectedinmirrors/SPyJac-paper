@@ -350,12 +350,15 @@ This discussion will be expanded upon in~\cref{s:future} to highlight the most p
 
 \begin{table}[htb]
 \centering
-\begin{tabular}{@{}l l l l l@{}}
+\begin{tabular}{@{}l l l@{}}
 \toprule
-CPU Model & Instruction Set & Vector Width & Cores & Identifier \\
+CPU Model        & Xeon X5650      & E5-2690 V3     \\
 \midrule
-Xeon X5650 & SSE4.2 & \SI{128}{\bit} & $2 \times 6$ & \texttt{sse4.2} \\
-E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
+Instruction Set  & SSE4.2 	   & AVX2 	    \\
+Vector Width     & \SI{128}{\bit}  & \SI{256}{\bit} \\
+Cores            & $2 \times 6$    & $2 \times 12$  \\
+Identifier       & \texttt{sse4.2} & \texttt{avx2}  \\
+OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 \bottomrule
 \end{tabular}
 \caption{The Intel CPU configurations used in this study. The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
@@ -364,12 +367,14 @@ E5-2690 V3 & AVX2 & \SI{256}{\bit} & $2 \times 12$ & \texttt{avx2} \\
 
 \begin{table}
 \centering
-\begin{tabular}{@{}l l l l@{}}
+\begin{tabular}{@{}l l l l l@{}}
 \toprule
-NVIDIA Model & Driver Version & CUDA Cores & Identifier \\
+NVIDIA Model   & Tesla C2075    & Tesla K40m    \\
 \midrule
-Tesla C2075 & \num{384.81} & \num{448} & \texttt{C2075} \\
-Tesla K40m & \num{387.26} & \num{2880} & \texttt{K40m} \\
+Driver Version & \num{384.81}   & \num{387.26}  \\
+CUDA Cores     & \num{448}      & \num{2880}    \\
+Identifier     & \texttt{C2075} & \texttt{K40m} \\
+OpenCL Version & \num{1.1}	& \num{1.2}	\\
 \bottomrule
 \end{tabular}
 \caption{The NVIDIA GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphic driver, rather than any specific version of CUDA.
@@ -504,7 +509,7 @@ Either case will result in an undesirable fully dense Jacobian row for all speci
 
 However, \texttt{pyJac} allows the user to simply ignore these derivatives (via a command-line switch) to and avoid any negative adverse affects on the Jacobian sparsity.
 The rational behind this choice is that many common implicit integration techniques (e.g., CVODE~\cite{cvode:2.8.2}) used in solution of chemical kinetic initial value problems are formulated around the assumption that the supplied Jacobian is approximate; this allows the Jacobian and its LU factorization to be reused for multiple internal integration time-steps, accelerating the solution process.
-For such solvers, there is no need for the exact form of the Jacobian and the so-called ``appropriate'' form is preferable.
+For such solvers, there is no need for the exact form of the Jacobian and the so-called ``approximate'' form is preferable.
 Hence, in this section we will detail the sparsity of both forms of the Jacobian for the chemical models tested.
 
 In~\cref{F:jac_sparsity}, a graphical representation of the sparsity pattern for GRI-Mech 3.0 is displayed.
@@ -552,56 +557,24 @@ USC-Mech II           & \SI{28.2}{\percent} & \SI{26.4}{\percent} \\
 
 \subsection{Performance}
 \label{S:results}
-The performance studies in this work were run on a variety of different machines.
-
-four ten-core \SI{2.2}{\giga\hertz} Intel Xeon E5-4640 v2 CPUs with \SI{20}{\mega\byte} of L3 cache memory, installed on an Ace Powerworks PW8027R-TRF+ with a Supermicro X9QR7-TF+/X9QRi-F+ baseboard.
+The performance studies in this work were run on the platforms listed in~\cref{t:cpus,t:gpus}.
 Runtimes in each case were averaged over ten runs, each using the same set of PaSR conditions utilized in validation.
-All code was compiled with \texttt{gcc 4.8.5} and ``\texttt{-O3}'' optimization, running on  of the 
+The wrapping code---responsible for initializing\slash transfering memory, reading input, etc.---was compiled with \texttt{gcc v5.4.0} on the \texttt{avx2}\slash\texttt{K40m} platforms, and \texttt{gcc 4.8.5} on the \texttt{sse4.2}\slash\texttt{C2075} machines.
+The optimization level ``\texttt{-O3}'' was used in all cases, and no ``fast-math'' OpenCL optimizations were enabled.
+Additionally, the ``exact'' form of the Jacobian (as opposed the the ``appropriate'' form discussed in~\cref{S:sparsity}) was used in all cases.
+
+\Cref{f:source} shows the runtime of \texttt{pyJac} on the test platforms.
 
 \begin{figure}[htb]
-  \centering
-  \begin{minipage}[t]{0.48\linewidth}
-    \includegraphics[width=\textwidth]{SIMD_SIMT_Order_comparison}
-    \caption{Runtime in milliseconds per thermo-chemical state of shallow-SIMD and SIMT-vectorization on a single CPU core for both ``C'' (filled symbols) and ``F'' (empty symbols) data ordering.}
-    \label{F:SIMDComp}
-  \end{minipage}
-  \hfill
-  \begin{minipage}[t]{0.48\linewidth}
-    \includegraphics[width=\textwidth]{SIMD_Vecwidth_comparison}
-    \caption{Speedup of a ``C''-ordered shallow-SIMD vectorization on a single CPU core when varying the supplied vector-width.}
-    \label{F:Veccomp}
-  \end{minipage}
-\end{figure}
-\begin{figure}[htb]
-  \centering
-  \begin{minipage}[t]{0.5\linewidth}
-    \includegraphics[width=\textwidth]{SIMD_scaling}
-    \caption{Strong parallel scaling efficiency of a ``C''-ordered shallow-SIMD vectorization using a vector-width of 16.}
-    \label{F:SIMDscale}
-  \end{minipage}
+   \centering
+  \begin{subfigure}{0.45\linewidth}
+      \includegraphics[width=\textwidth]{intel_source.pdf}
+      \caption{The ``exact'' Jacobian.}
+      \label{F:intel_source_noorm}
+  \end{subfigure}
+ \label{f:source}
 \end{figure}
 
-
-In Fig.~\ref{F:SIMDComp}, the performance of the shallow-SIMD and SIMT vectorization are compared on a single CPU core for both ``C'' and ``F'' memory formats.
-The ``C''-ordered SIMD\slash SIMT vectorizations show a speedup over the equivalent ``F''-ordered code by \SIrange{1.46}{2.00}{$\times$} and \SIrange{1.61}{2.38}{$\times$} respectively.
-This demonstrates that enhanced data-locality of the ``C''-ordering for CPU caching---discussed in Sec.~\ref{S:data}---is key to high performance on the CPU, and suggests that a deep vectorization would see even greater accelerations.
-The shallow vectorization is consistently faster than the SIMT vectorization, by \SIrange{1.73}{1.90}{$\times$} and \SIrange{2.00}{2.45}{$\times$} for the ``C'' and ``F'' memory formats respectively.
-This is less than the theoretical maximum speedup on this CPU, which can process \SI{256}{\bit} AVX instructions (i.e. four double-precision operations) concurrently.
-Most likely this is due to the non-sequential memory access patterns of the shallow vectorization discussed previously, but could also be caused in part by inefficiencies in translation of the OpenCL code to AVX code, a process handled by the Intel Opencl Runtime.
-
-The effect of changing the vector-width supplied to a ``C''-ordered shallow-SIMD vectorization on a single CPU core is investigated in Fig.~\ref{F:Veccomp}.
-Significant speedups are seen with larger vector-widths for the smaller models, however as the model size increases data must be loaded from increasingly distant memory locations and the performance of all three vector-widths becomes similar.
-
-Finally, the strong parallel scaling efficiency is defined as:
-\begin{equation}
-S = \frac{t_1}{N t_N}
-\end{equation}
-where $t_1$ is the mean wall-clock runtime of thermo-chemical source terms evaluation on one core and $t_N$ the mean runtime on $N$ cores.
-Fig.~\ref{F:SIMDscale} examines the strong parallel scaling efficiency for all four models with a ``C''-ordered shallow SIMD-vectorization and vector-width of 16.
-Interestingly the efficiency of the hydrogen model decreases the fastest while the larger models have significantly larger scaling efficiencies for more than 4 cores.
-Additionally, it appears that for a fixed number of cores, the scaling efficiency increases with model size.
-This suggests that evaluation of the chemical-source terms for a single thermo-chemical state for the smaller models may not saturate the processing power of the CPU, some efficiency may be lost due to context switching within OpenCL itself.
-Additionally, OpenCL allows assigning of work to devices by shared memory resources, e.g., a L3 cache, which was not pursued in this study for simplicity; this should be investigated in future work to determine the effect on scaling efficiency.
 
 \section{Future directions}
 \label{s:future}

@@ -1,0 +1,7 @@
+mech: Sarathy_ic5_mech_rev.cti
+n_cheb: 1
+n_plog: 81
+n_reactions: 2100
+n_reversible: 1828
+n_species: 360
+name: IC5H11OH

@@ -1,0 +1,7 @@
+mech: h2.cti
+n_cheb: 0
+n_plog: 0
+n_reactions: 27
+n_reversible: 27
+n_species: 13
+name: H2

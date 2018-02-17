@@ -1,0 +1,7 @@
+mech: uscmech.cti
+n_cheb: 0
+n_plog: 0
+n_reactions: 784
+n_reversible: 782
+n_species: 111
+name: C2H4

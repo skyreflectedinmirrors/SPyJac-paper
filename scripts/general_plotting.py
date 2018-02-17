@@ -66,12 +66,13 @@ def process_data(plotdata, plot, reacs_as_x=True,
 
 def get_marker_and_label(plot_ind=None, marker_func=None, label=None, marker=None,
                          labels=[]):
+    size = None
     if label is not None and marker is not None:
         name = label
-        marker, hollow, color = marker
+        marker, hollow, color, size = marker
     elif marker_func is not None:
         name = labels[plot_ind]
-        marker, hollow, color = marker_func(name)
+        marker, hollow, color, size = marker_func(name)
     elif plot_ind is not None:
         assert labels
         marker, hollow = ps.marker_wheel[plot_ind % len(ps.marker_wheel)]
@@ -81,7 +82,11 @@ def get_marker_and_label(plot_ind=None, marker_func=None, label=None, marker=Non
         marker, hollow = ps.marker_dict[plot]
         color = ps.color_dict[plot]
         name = plot
-    return marker, hollow, color, name
+
+    if size is None:
+        size = ps.marker_style['size'] if not hollow else ps.clear_marker_style[
+            'size']
+    return marker, hollow, color, name, size
 
 
 def plot(x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
@@ -89,7 +94,7 @@ def plot(x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
          label=None, marker=None):
     """Plot performance as a function of reaction count."""
 
-    marker, hollow, color, name = get_marker_and_label(
+    marker, hollow, color, name, size = get_marker_and_label(
         plot_ind, marker_func, label, marker, labels)
 
     argdict = {'x': x_vals,
@@ -100,11 +105,9 @@ def plot(x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
                }
     argdict['color'] = color
     argdict['markeredgecolor'] = color
-    if not hollow:
-        argdict['markersize'] = ps.marker_style['size']
-    else:
+    argdict['markersize'] = size
+    if hollow:
         argdict['markerfacecolor'] = 'None'
-        argdict['markersize'] = ps.clear_marker_style['size']
 
     if plot_std:
         argdict['yerr'] = err_vals
