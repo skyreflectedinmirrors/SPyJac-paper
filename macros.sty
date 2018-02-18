@@ -1,0 +1,63 @@
+\ProvidesPackage{macros}[2018/02/18 v1.0 Common macros used in pyJac paper]
+
+% required pacakages
+\RequirePackage{amsmath}
+\RequirePackage{eqparbox}
+\RequirePackage{xparse}
+\RequirePackage{catchfilebetweentags}
+\RequirePackage{mathtools}
+
+% simple macros
+\def\pluseq/{\mathrel{{+}{=}}}
+\def\minuseq/{\mathrel{{-}{=}}}
+\def\ns/{N_{sp}}
+\def\nr/{N_{reac}}
+\def\conp/{CONP}
+\def\conv/{CONV}
+\def\dconp/{\ifmmode\text{for \conp/,}\else for \conp/\fi}
+\def\dconv/{\ifmmode\text{for \conv/,}\else for \conv/\fi}
+\def\Ru/{\mathcal{R}}
+\def\Ru/{\mathcal{R}}
+\def\avx/{\texttt{avx2}}
+\def\sse/{\texttt{sse4.2}}
+\def\gpuold/{\texttt{C2075}}
+\def\gpunew/{\texttt{K40m}}
+
+% https://tex.stackexchange.com/a/34412/5764
+\makeatletter
+\NewDocumentCommand{\eqmathbox}{o O{c} m}{%
+  \IfValueTF{#1}
+    {\def\eqmathbox@##1##2{\eqmakebox[#1][#2]{$##1##2$}}}
+    {\def\eqmathbox@##1##2{\eqmakebox{$##1##2$}}}
+  \mathpalette\eqmathbox@{#3}
+}
+\makeatother
+
+% simple command for equal-sized eqmathbox's on the lhs / rhs and conditional
+% arguements are tag, text, alignment
+\NewDocumentCommand{\lhs}{mmO{r}}{\eqmathbox[LHS_#1][#3]{#2}}
+\NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
+\NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
+\NewDocumentCommand{\mathcond}{mmO{r}}{\eqmathbox[COND_#1][#3]{#2}}
+
+% consistent multiline equation spacing
+\NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
+
+% shared equations in separate file
+% https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
+\newcommand{\loadeq}[1]{%
+   \ExecuteMetaData[eqn_dict.tex]{eq#1}%
+}
+
+%fix to dcases from here:http://tex.stackexchange.com/questions/252410/centering-in-dcases-environment/252414
+\MHInternalSyntaxOn
+\renewcommand{\dcases}
+ {
+  \MT_start_cases:nnnn
+    {\quad}
+    {$\m@th\displaystyle##$\hfil}
+    {$\m@th\displaystyle##$\hfil}
+    {\lbrace}
+ }
+\MHInternalSyntaxOff
+

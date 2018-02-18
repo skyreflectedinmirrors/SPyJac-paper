@@ -16,14 +16,13 @@
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
 \usepackage{catchfilebetweentags}
 
-\newcommand{\loadeq}[1]{%
-   \ExecuteMetaData[eqn_dict.tex]{eq#1}%
-}
-
 % external references https://tex.stackexchange.com/a/14365/56227
 \usepackage{xr-hyper}
 
-\usepackage{amsmath,eqparbox,xparse}
+\usepackage{amsmath,eqparbox,xparse,mathtools}
+
+% load common macros / commands
+\usepackage{macros}
 
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % load after hyperref
@@ -33,17 +32,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %      Custom Commands     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-% https://tex.stackexchange.com/a/34412/5764
-\makeatletter
-\NewDocumentCommand{\eqmathbox}{o O{c} m}{%
-  \IfValueTF{#1}
-    {\def\eqmathbox@##1##2{\eqmakebox[#1][#2]{$##1##2$}}}
-    {\def\eqmathbox@##1##2{\eqmakebox{$##1##2$}}}
-  \mathpalette\eqmathbox@{#3}
-}
-\makeatother
 
 
 \sisetup{group-separator={,},
@@ -65,30 +53,6 @@
 %======================================================================
 % Add your bibliography file here, replace template.bib
 \bibliographystyle{elsarticle-num}
-
-\newcommand{\pluseq}{\mathrel{{+}{=}}}
-\newcommand{\minuseq}{\mathrel{{-}{=}}}
-\newcommand{\ns}{N_{sp}}
-\newcommand{\nr}{N_{reac}}
-\newcommand{\conp}{CONP}
-\newcommand{\conv}{CONV}
-\newcommand{\dconp}{\ifmmode\text{for \conp,}\else for \conp,\fi}
-\newcommand{\dconv}{\ifmmode\text{for \conv,}\else for \conv.\fi}
-\newcommand{\Ru}{\mathcal{R}}
-\newcommand{\avx}{\texttt{avx2}}
-\newcommand{\sse}{\texttt{sse4.2}}
-\newcommand{\gpuold}{\texttt{C2075}}
-\newcommand{\gpunew}{\texttt{K40m}}
-
-% simple command for equal-sized eqmathbox's on the lhs / rhs and conditional
-% arguements are tag, text, alignment
-\NewDocumentCommand{\lhs}{mmO{r}}{\eqmathbox[LHS_#1][#3]{#2}}
-\NewDocumentCommand{\rhs}{mmO{l}}{\eqmathbox[RHS_#1][#3]{#2}}
-\NewDocumentCommand{\cond}{mmO{r}}{\eqmakebox[COND_#1][#3]{#2}}
-\NewDocumentCommand{\mathcond}{mmO{r}}{\eqmathbox[COND_#1][#3]{#2}}
-
-% consistent multiline equation spacing
-\NewDocumentCommand{\mathindent}{O{space}}{\hphantom{\mathrel{#1}}}
 
 % set figure path
 \graphicspath{{./figures/}}
@@ -217,7 +181,7 @@ This work will build upon our previous analytical chemical kinetic Jacobian code
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
 \Cref{F:mem} depicts an example data array with K-rows and N-columns and index ($i$, $j$) corresponding to the $i$th row and $j$th column.
-For example the concentration of species $j$ for the $i$-th thermo-chemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$, the number of thermo-chemical states considered, and $1 \le j \le \ns$, the number of species in the model.
+For example the concentration of species $j$ for the $i$-th thermo-chemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$, the number of thermo-chemical states considered, and $1 \le j \le \ns/$, the number of species in the model.
 The stored concentrations would then have $K = N_{\text{state}}$ rows, and $N = N_{\text{sp}}$ columns.
 
 In the ``C'' (C row-major) format, the concentrations of all species for a single thermo-chemical condition $i$ would be stored sequentially in memory, i.e., with  $[C]_{1, 1}$ in index \num{1}, $[C]_{1, 2}$ in index \num{2} etc. as shown in \cref{F:row_major}.
@@ -259,27 +223,27 @@ Conversely, the data-ordering in~\cref{F:column_major_split} is designed to enab
 The effects of these various data-ordering and vectorization patterns on performance will be studied in~\cref{S:results}.
 
 \subsection{Thermo-chemical Source Terms and Jacobian}
-This new version of \texttt{pyJac} is capable of evaluating the thermo-chemical source terms for using both the constant-pressure (\conp) or constant-volume (\conv) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
+This new version of \texttt{pyJac} is capable of evaluating the thermo-chemical source terms for using both the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
 In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to our complete derivations, attached as supplemental material to this document.
 
 The thermo-chemical state vector derivation consists of the temperature, the non-constant thermodynamic state parameter (volume or pressure) and the number of moles of all species except the last in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
 \loadeq{state}
-where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns$ total species).
+where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns/$ total species).
 
 This state vector---inspired by~\cite{SCHWER2002270}---has a number of features that recommend its use.
 First, the state vector results in highly sparse chemical kinetic Jacobians as will be detailed in~\cref{S:sparsity}.
 Second, mass is explicitly conserved in this formulation owing to the fact that the moles of the final species is calculated from the ideal gas law, and the rate of change of the final species from conservation of mass (see \cref{deriv-s:state,deriv-s:source} of the supplemental material respectively); i.e., system is not over-constrained.
-Finally, the chemical kinetic Jacobian changes relatively little between the \conp~and \conv~forms, making maintaining the code-base much simpler.
+Finally, the chemical kinetic Jacobian changes relatively little between the \conp/ and \conv/ forms, making maintaining the code-base much simpler.
 Although most current combustion codes do not use species moles as a state variable, to\slash from more common mass\slash mole-fractions and moles is straightforward, and once inside integration of an chemical kinetic initial value problem, the choice of variables no longer matter.
 
 The evolution of the thermo-chemical state vector is described by a set of chemical kinetic ordinary differential equations:
 \loadeq{dstate}
 
-For both \conp~and \conv, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
+For both \conp/ and \conv/, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \loadeq{dmolar}
 where $\dot{\omega}_k$ is the $kth$ species' overall production rate:
 \begin{equation}
- \dot{\omega}_{k} = \sum_{i=1}^{\nr} \nu_{k, i} R_{i} c_{i}
+ \dot{\omega}_{k} = \sum_{i=1}^{\nr/} \nu_{k, i} R_{i} c_{i}
 \end{equation}
 where $\nu_{k, i}$ is the net stoichiometic coefficient of species $k$ in reaction $i$, $R_{i}$ the net rate of progress of reaction $i$ (described in~\cref{deriv-s:rop_net} of the supplemental), and $c_{i}$ the pressure modification term i.e., for third-body (see~\cref{deriv-s:thdbody} of the supplimental), or fall-off\slash chemically-activated reactions (\cref{deriv-s:falloff} of the same).
 
@@ -298,7 +262,7 @@ The Jacobian entries computed by \texttt{pyJac} are arranged such that entry ($i
 
 The derivative of the temperature source term with respect to itself is:
 \loadeq{dTdotdT}
-and with respect to the thermodynamic state parameter (the volume \slash pressure for \conp\slash\conv~respectively):
+and with respect to the thermodynamic state parameter (the volume \slash pressure for \conp/\slash\conv/ respectively):
 \loadeq{dTdotdE}
 and the moles of species $j$:
 \loadeq{dTdotdnj}
@@ -361,7 +325,7 @@ CPU Model        & Xeon X5650      & E5-2690 V3     \\
 Instruction Set  & SSE4.2 	   & AVX2 	    \\
 Vector Width     & \SI{128}{\bit}  & \SI{256}{\bit} \\
 Cores            & $2 \times 6$    & $2 \times 12$  \\
-Identifier       & \sse & \avx  \\
+Identifier       & \sse/ 	   & \avx/  	    \\
 OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 \bottomrule
 \end{tabular}
@@ -377,7 +341,7 @@ NVIDIA Model   & Tesla C2075    & Tesla K40m    \\
 \midrule
 Driver Version & \num{384.81}   & \num{387.26}  \\
 CUDA Cores     & \num{448}      & \num{2880}    \\
-Identifier     & \gpuold & \gpunew \\
+Identifier     & \gpuold/ 	& \gpunew/	\\
 OpenCL Version & \num{1.1}	& \num{1.2}	\\
 \bottomrule
 \end{tabular}
@@ -444,7 +408,7 @@ This estimate allows for direct comparison of the error in forward or reverse RO
 \end{tabular}
 \caption{Summary of rate of progress, species and temperature rate correctness.
 Error statistics are based on the infinity-norm of the relative error detailed in Eq.~\eqref{e:rel_err} for each quantity.
-The ``S'' in $E_{\frac{\text{d} S}{\text{d} t}}$ refers to the thermodynamic state parameter, either $V$ or $P$ for \conp~and \conv~respectively.
+The ``S'' in $E_{\frac{\text{d} S}{\text{d} t}}$ refers to the thermodynamic state parameter, either $V$ or $P$ for \conp/ and \conv/ respectively.
 }
 \label{T:source_error}
 \end{table}
@@ -491,7 +455,7 @@ USC-Mech II           & \num{91800}                       & \num{2.830e+21}     
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results.
 Error statistics are the largest filtered relative error $E_\mathcal{C}$ for over all samples.
-It is noted that the threshold described in~\cref{e:thresh} varies slightly between the \conp~and \conv~cases; the reported $\bar{\mathcal{T}}$ is the average of the two, however the appropriate value was used during calculations of the error statistics..
+It is noted that the threshold described in~\cref{e:thresh} varies slightly between the \conp/ and \conv/ cases; the reported $\bar{\mathcal{T}}$ is the average of the two, however the appropriate value was used during calculations of the error statistics..
 }
 \label{T:error}
 \end{table}
@@ -563,18 +527,18 @@ USC-Mech II           & \SI{28.2}{\percent} & \SI{26.4}{\percent} \\
 \label{S:results}
 The performance studies in this work were run on the platforms listed in~\cref{t:cpus,t:gpus}.
 Runtimes in each case were averaged over ten runs, each using the same set of PaSR conditions utilized in validation.
-The wrapping code---responsible for initializing\slash transfering memory, reading input, etc.---was compiled with \texttt{gcc v5.4.0} on the \avx\slash\gpunew platforms, and \texttt{gcc 4.8.5} on the \sse\slash\gpuold machines.
+The wrapping code---responsible for initializing\slash transfering memory, reading input, etc.---was compiled with \texttt{gcc v5.4.0} on the \avx/\slash\gpunew/ platforms, and \texttt{gcc 4.8.5} on the \sse/\slash\gpuold/ machines.
 The optimization level ``\texttt{-O3}'' was used in all cases, and no ``fast-math'' OpenCL optimizations were enabled.
 Additionally, the ``exact'' form of the Jacobian (as opposed the the ``appropriate'' form discussed in~\cref{S:sparsity}) was used in all cases.
 
 \Cref{f:source} explores the performance of the source term evaluations generated by \texttt{pyJac} on the CPU test platforms listed in~\cref{t:cpus}.
-In~\cref{F:intel_source_noorm}, the mean runtime per initial condition is shown for both the~\avx and~\sse CPUs, using both Intel OpenCL and OpenMP.
+In~\cref{F:intel_source_noorm}, the mean runtime per initial condition is shown for both the~\avx/ and~\sse/ CPUs, using both Intel OpenCL and OpenMP.
 This normalization is chosen to account for the varying numbers of conditions in the PaSR databases for each model (\cref{T:error}}).
 For both CPUs, the OpenMP implementation is the slowest over all models; interestingly the parallel (non-vectorized) Intel OpenCL code is slightly faster than OpenMP in all cases.\todo{rerun OpenMP w/ mtune=native}
-As expected, the \avx machine is moderately faster than the \sse CPU; additionally, the wide-vectorized OpenCL code is significantly faster than either the OpenMP or unvectorized OpenCL codes on both processors.
+As expected, the \avx/ machine is moderately faster than the \sse/ CPU; additionally, the wide-vectorized OpenCL code is significantly faster than either the OpenMP or unvectorized OpenCL codes on both processors.
 In~\cref{F:intel_source}, the extent of this speedup is detailed; we note that the speedup displayed is normalized per-machine, such that the speedup of the wide-vectorized OpenCL code can be readily assessed.
 On both machines, the unvectorized OpenCL code is \textasciitilde\SIrange{1.25}{1.5}{$\times$} faster than the baseline parallel OpenMP code.
-Additionally, the wide-vectorized OpenCL code is \textasciitilde\SIrange{2.5}{3}{$\times$} and \textasciitilde\SIrange{3.5}{4}{$\times$} faster than the OpenMP code for the \sse and \avx machines respectively.
+Additionally, the wide-vectorized OpenCL code is \textasciitilde\SIrange{2.5}{3}{$\times$} and \textasciitilde\SIrange{3.5}{4}{$\times$} faster than the OpenMP code for the \sse/ and \avx/ machines respectively.
 In contrast,~\cref{F:pocl_source} shows the runtime of deep, wide and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU; indeed the OpenMP is faster in both cases.
 The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work, however briefly speaking vectorization might be achieved on POCL via a combination of relaxed math (``-cl-fast-relaxed-math''), use of explicit OpenCL vector types and newer versions of LLVM (specifically, potential improvments to the vectorization module).
@@ -604,10 +568,10 @@ This will be explored more in future work, but for the moment POCL is still quit
 \end{figure}
 
 
-\Cref{f:source_permutate} shows the effect of changing data-ordering patterns as well as the \conp~or \conv~formulation on the performance of source term evaluation in \texttt{pyJac}.
-In~\cref{F:source_conpvsconv}, we see that choice of the constant-pressure or constant-volume formulation has little to no effect on runtime for OpenMP as well as the shallow-vectorized\slash unvectorized Intel OpenCL codes on the \avx machine.
-Generally speaking, the difference between the \conp~and \conv~formulations has little effect on performance regardless of CPU\slash GPU choice, or even for Jacobian evaluation which will be explored later.
-In contrast,~\Cref{F:source_cvsf} shows large speedups of ``C''-ordered data over ``F''-ordered data on the \avx machine; the speedup presented is normalized per language, i.e., the roughly \SIrange{1.5}{2}{$\times$} speedup of the ``C''-ordered OpenMP implementation is relative to the ``F''-order OpenMP baseline while the OpenCL speedups are given with respect to the ``F''-ordered unvectorized OpenCL code.
+\Cref{f:source_permutate} shows the effect of changing data-ordering patterns as well as the \conp/ or \conv/ formulation on the performance of source term evaluation in \texttt{pyJac}.
+In~\cref{F:source_conpvsconv}, we see that choice of the constant-pressure or constant-volume formulation has little to no effect on runtime for OpenMP as well as the shallow-vectorized\slash unvectorized Intel OpenCL codes on the \avx/ machine.
+Generally speaking, the difference between the \conp/ and \conv/ formulations has little effect on performance regardless of CPU\slash GPU choice, or even for Jacobian evaluation which will be explored later.
+In contrast,~\Cref{F:source_cvsf} shows large speedups of ``C''-ordered data over ``F''-ordered data on the \avx/ machine; the speedup presented is normalized per language, i.e., the roughly \SIrange{1.5}{2}{$\times$} speedup of the ``C''-ordered OpenMP implementation is relative to the ``F''-order OpenMP baseline while the OpenCL speedups are given with respect to the ``F''-ordered unvectorized OpenCL code.
 Additionally, we note that the ``C''-ordered wide-vectorization in~\cref{F:source_cvsf} utilizes the vectorized-data ordering described in~\cref{S:data}.
 In general, the data-ordering has a much more profound affect on the vectorized-OpenCL codes; this is due to the nature of SIMD-operations, which are much more efficient when operating on contiguous (in memory) data rather than incurring an expensive memory ``gather'' operation.
 The ``C''-ordered unvectorized OpenCL code (which uses the default unvectorized row-major data ordering) is \textasciitilde\SIrange{1.5}{2.5}{$\times$} faster than the unvectorized ``F''-ordered code, and is in some cases almost as fast as the ``F''-ordered wide-vectorized OpenCL implementation.
@@ -617,16 +581,16 @@ However, the ``C''-ordered wide-vectorization achieves speedups of \textasciitil
    \centering
   \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{source_conpvsconv.pdf}
-      \caption{The mean runtime per condition for each chemical model using both the \conp~and \conv~formulations on Intel OpenCL and OpenMP for \avx.}
+      \caption{The mean runtime per condition for each chemical model using both the \conp/ and \conv/ formulations on Intel OpenCL and OpenMP for \avx/.}
       \label{F:source_conpvsconv}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{source_cvsf.pdf}
-      \caption{The speedup achieved by ``C'' ordering over ``F'' ordering for Intel OpenCL and OpenMP on the \avx CPU.  The speedup presented is normalized per-language (OpenMP and OpenCL) to better assess the effect of the data-ordering.}
+      \caption{The speedup achieved by ``C'' ordering over ``F'' ordering for Intel OpenCL and OpenMP on the \avx/ CPU.  The speedup presented is normalized per-language (OpenMP and OpenCL) to better assess the effect of the data-ordering.}
       \label{F:source_cvsf}
   \end{subfigure}
-  \caption{The effect of the \conp~and \conv~formulations, as well as ``C'' and ``F'' data-ordering on source term evaluation performance in \texttt{pyJac}.
+  \caption{The effect of the \conp/ and \conv/ formulations, as well as ``C'' and ``F'' data-ordering on source term evaluation performance in \texttt{pyJac}.
 	   It is noted the wide-vectorized ``C'' ordered OpenCL case corresponds to the vectorized data ordering described in~\cref{S:data}}
   \label{f:source_permutate}
 \end{figure}
