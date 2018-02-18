@@ -12,13 +12,14 @@ plt.rc('text.latex',
 plt.rc('font', family='serif')
 
 legend_style = {'loc': 0,
-                'fontsize': 18,
+                'fontsize': 16,
                 'numpoints': 1,
                 'shadow': True,
                 'fancybox': True
                 }
 
 tick_font_size = 20
+title_font_size = 24
 
 marker_style = {
     'size': 15
@@ -38,7 +39,7 @@ class wheeler(object):
         self.raise_on_oob = raise_on_oob
         self.wheel = wheel[:]
 
-    def __getitem__(self, key):
+    def __call__(self, key):
         if not self.raise_on_oob and key >= len(self.wheel):
             key = key % len(self.wheel)
         return self.wheel[key]
@@ -106,9 +107,11 @@ color_dict = {x: color_wheel[i] for i, x in enumerate(default_keys)}
 
 def finalize(tight=True):
     ax = plt.gca()
-    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-                 ax.get_xticklabels() + ax.get_yticklabels()):
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(tick_font_size)
+
+    for item in (ax.title, ax.xaxis.label, ax.yaxis.label):
+        item.set_fontsize(title_font_size)
 
     if tight:
         plt.tight_layout()

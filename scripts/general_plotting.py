@@ -106,6 +106,7 @@ def plot(x_vals, y_vals, err_vals, minx=None, miny=None, maxx=None, maxy=None,
     argdict['color'] = color
     argdict['markeredgecolor'] = color
     argdict['markersize'] = size
+    argdict['markeredgewidth'] = 1.25
     if hollow:
         argdict['markerfacecolor'] = 'None'
 
