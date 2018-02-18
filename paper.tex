@@ -133,13 +133,13 @@ In this discussion, we will largely use OpenCL terminology to describe these pro
 
 \begin{figure}[htb]
   \centering
-  \begin{subfigure}[htp]{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{SIMD.pdf}
       \caption{Schematic of SIMD processing.  A single compute unit (e.g., a CPU core) contains a vector unit with $N_v$ processing elements, together called a vector-lane.  The vector unit executes a single instruction concurrently on multiple data.}
       \label{F:SIMD}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[htp]{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{SIMT.pdf}
       \caption{Schematic of SIMT processing. A single compute unit (e.g., a GPU streaming multiprocessor) contains many processing elements and hosts many threads, each with an instruction to execute (I1, I2).  Threads with the same instruction execute concurrently on multiple data while the others must wait (leading to thread divergence).}
       \label{F:SIMT}
@@ -524,13 +524,13 @@ The approximate Jacobian assumption drops the density of Jacobian by \textasciit
 
 \begin{figure}[htb]
   \centering
-  \begin{subfigure}{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{ch4_sparsity_exact.pdf}
       \caption{The ``exact'' Jacobian.}
       \label{F:jac_sparse_exact}
   \end{subfigure}
   \hfill
-  \begin{subfigure}{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{ch4_sparsity_approximate.pdf}
       \caption{The ``approximate'' Jacobian.}
       \label{F:jac_sparse_approx}
@@ -577,29 +577,58 @@ On both machines, the unvectorized OpenCL code is \textasciitilde\SIrange{1.25}{
 Additionally, the wide-vectorized OpenCL code is \textasciitilde\SIrange{2.5}{3}{$\times$} and \textasciitilde\SIrange{3.5}{4}{$\times$} faster than the OpenMP code for the \sse and \avx machines respectively.
 In contrast,~\cref{F:pocl_source} shows the runtime of deep, wide and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU; indeed the OpenMP is faster in both cases.
-The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work, however briefly speaking it is possible vectorization might be achieved on POCL via combination of relaxed math (``-cl-fast-relaxed-math''), use of explicit OpenCL vector types and future improvements to LLVM's vectorization module.
+The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work, however briefly speaking vectorization might be achieved on POCL via a combination of relaxed math (``-cl-fast-relaxed-math''), use of explicit OpenCL vector types and newer versions of LLVM (specifically, potential improvments to the vectorization module).
 This will be explored more in future work, but for the moment POCL is still quite useful as a validation tool.
-
 
 \begin{figure}[htb]
    \centering
-  \begin{subfigure}{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{intel_source_nonorm.pdf}
-      \caption{The mean runtime per condition for each chemical model using the Intel OpenCL and OpenMP on both CPUs studied; the names in the legend correspond to the identifiers listed in~\cref{t:cpus}}
+      \caption{The mean runtime per condition for each chemical model using the Intel OpenCL and OpenMP on both CPUs studied.}
       \label{F:intel_source_noorm}
   \end{subfigure}
-  \begin{subfigure}{0.45\linewidth}
+  \hfill
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{intel_source.pdf}
-      \caption{The speedup achieved over the baseline OpenMP parallelization by both the unvectorized and wide-vectorized Intel OpenCL codes for each chemical model.}
+      \caption{The speedup achieved over the baseline OpenMP parallelization by both the unvectorized and wide-vectorized Intel OpenCL codes.}
       \label{F:intel_source}
   \end{subfigure}
   \\
-  \begin{subfigure}{0.45\linewidth}
+  \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{pocl_source_nonorm.pdf}
-      \caption{The mean runtime per condition of the Portable OpenCL runtime compared to OpenMP parallelization for each chemical model.}
+      \caption{The mean runtime per condition of the Portable OpenCL runtime compared to OpenMP parallelization.}
       \label{F:pocl_source}
   \end{subfigure}
+ \caption{Mean runtimes per condition and speedups achieved by the various CPU OpenCL runtimes compared to OpenMP parallelization for each chemical model studied. The names in the legends correspond to the identifiers listed in~\cref{t:cpus}}
  \label{f:source}
+\end{figure}
+
+
+\Cref{f:source_permutate} shows the effect of changing data-ordering patterns as well as the \conp~or \conv~formulation on the performance of source term evaluation in \texttt{pyJac}.
+In~\cref{F:source_conpvsconv}, we see that choice of the constant-pressure or constant-volume formulation has little to no effect on runtime for OpenMP as well as the shallow-vectorized\slash unvectorized Intel OpenCL codes on the \avx machine.
+Generally speaking, the difference between the \conp~and \conv~formulations has little effect on performance regardless of CPU\slash GPU choice, or even for Jacobian evaluation which will be explored later.
+In contrast,~\Cref{F:source_cvsf} shows large speedups of ``C''-ordered data over ``F''-ordered data on the \avx machine; the speedup presented is normalized per language, i.e., the roughly \SIrange{1.5}{2}{$\times$} speedup of the ``C''-ordered OpenMP implementation is relative to the ``F''-order OpenMP baseline while the OpenCL speedups are given with respect to the ``F''-ordered unvectorized OpenCL code.
+Additionally, we note that the ``C''-ordered wide-vectorization in~\cref{F:source_cvsf} utilizes the vectorized-data ordering described in~\cref{S:data}.
+In general, the data-ordering has a much more profound affect on the vectorized-OpenCL codes; this is due to the nature of SIMD-operations, which are much more efficient when operating on contiguous (in memory) data rather than incurring an expensive memory ``gather'' operation.
+The ``C''-ordered unvectorized OpenCL code (which uses the default unvectorized row-major data ordering) is \textasciitilde\SIrange{1.5}{2.5}{$\times$} faster than the unvectorized ``F''-ordered code, and is in some cases almost as fast as the ``F''-ordered wide-vectorized OpenCL implementation.
+However, the ``C''-ordered wide-vectorization achieves speedups of \textasciitilde\SIrange{4}{7}{$\times$} demonstrating the value of the vectorized data ordering for CPU execution.
+
+\begin{figure}[htb]
+   \centering
+  \begin{subfigure}[t]{0.45\linewidth}
+      \includegraphics[width=\textwidth]{source_conpvsconv.pdf}
+      \caption{The mean runtime per condition for each chemical model using both the \conp~and \conv~formulations on Intel OpenCL and OpenMP for \avx.}
+      \label{F:source_conpvsconv}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.45\linewidth}
+      \includegraphics[width=\textwidth]{source_cvsf.pdf}
+      \caption{The speedup achieved by ``C'' ordering over ``F'' ordering for Intel OpenCL and OpenMP on the \avx CPU.  The speedup presented is normalized per-language (OpenMP and OpenCL) to better assess the effect of the data-ordering.}
+      \label{F:source_cvsf}
+  \end{subfigure}
+  \caption{The effect of the \conp~and \conv~formulations, as well as ``C'' and ``F'' data-ordering on source term evaluation performance in \texttt{pyJac}.
+	   It is noted the wide-vectorized ``C'' ordered OpenCL case corresponds to the vectorized data ordering described in~\cref{S:data}}
+  \label{f:source_permutate}
 \end{figure}
 
 

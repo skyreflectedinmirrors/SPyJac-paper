@@ -73,7 +73,7 @@ def pretty_names(pname, short=False):
                   'overhead': 'Kernel Construction Overhead',
                   'vecwidth': 'Vector Width = {}',
                   'vectype': dummy_formatter({'w': 'Shallow',
-                                              'par': 'Parallel',
+                                              'par': 'Unvectorized',
                                               'd': 'Deep',
                                               'openmp': r'OpenMP'}),
                   'order': dummy_formatter({'C': 'C-order',
