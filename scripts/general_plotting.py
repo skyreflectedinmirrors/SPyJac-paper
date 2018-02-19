@@ -9,7 +9,7 @@ font_size = 'large'
 
 
 def process_data(plotdata, plot, reacs_as_x=True,
-                 plot_cores=False, plot_scaling=False):
+                 plot_cores=False, plot_condition_scaling=False):
     """
     Process the data into an easily usable form
     """
@@ -24,7 +24,7 @@ def process_data(plotdata, plot, reacs_as_x=True,
     if plot_cores:
         plotdata = sorted(plotdata, key=lambda x: float(x.cores))
         x_vals = [float(x.cores) for x in plotdata]
-    elif plot_scaling:
+    elif plot_condition_scaling:
         # first sort by # mech
         plotdata, _ = __mechsort(plotdata)
         # next sort within mechanism by # of conditions
