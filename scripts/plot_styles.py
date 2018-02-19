@@ -19,6 +19,7 @@ legend_style = {'loc': 0,
                 }
 
 tick_font_size = 20
+minor_tick_font_size = 16
 title_font_size = 24
 
 marker_style = {
@@ -107,12 +108,12 @@ color_dict = {x: color_wheel[i] for i, x in enumerate(default_keys)}
 
 
 def finalize(tight=True):
+    # triger tick positioning
     ax = plt.gca()
-    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(tick_font_size)
+    if tight:
+        plt.tight_layout()
+
+    plt.tick_params(axis='both', which='major', labelsize=tick_font_size)
 
     for item in (ax.title, ax.xaxis.label, ax.yaxis.label):
         item.set_fontsize(title_font_size)
-
-    if tight:
-        plt.tight_layout()

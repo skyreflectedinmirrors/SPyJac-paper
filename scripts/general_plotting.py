@@ -9,21 +9,26 @@ font_size = 'large'
 
 
 def process_data(plotdata, plot, reacs_as_x=True,
-                 plot_cores=False, plot_condition_scaling=False):
+                 plot_cores=False, plot_condition_scaling=False,
+                 plot_simd=False):
     """
     Process the data into an easily usable form
     """
+    def __mechx(datum):
+        return datum.mechdata.n_reactions if reacs_as_x else datum.mechdata.n_species
+
     def __mechsort(data):
-        if reacs_as_x:
-            data = sorted(data, key=lambda x: x.mechdata.n_reactions)
-            return data, [x.mechdata.n_reactions for x in data]
-        else:
-            data = sorted(data, key=lambda x: x.mechdata.n_species)
-            return data, [x.mechdata.n_species for x in data]
+        data = sorted(data, key=lambda x: __mechx(x))
+        return data, [__mechx(x) for x in data]
 
     if plot_cores:
         plotdata = sorted(plotdata, key=lambda x: float(x.cores))
         x_vals = [float(x.cores) for x in plotdata]
+    elif plot_simd:
+        plotdata = sorted(plotdata, key=lambda x: (
+            __mechx(x),
+            ['par', 'w', 'd'].index(x.vectype))),
+        x_vals = [__mechx(x) for x in plotdata]
     elif plot_condition_scaling:
         # first sort by # mech
         plotdata, _ = __mechsort(plotdata)
