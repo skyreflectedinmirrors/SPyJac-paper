@@ -459,7 +459,7 @@ USC-Mech II           & \num{91800}                       & \num{2.830e+21}     
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results.
 Error statistics are the largest filtered relative error $E_\mathcal{C}$ for over all samples.
-It is noted that the threshold described in~\cref{e:thresh} varies slightly between the \conp/ and \conv/ cases; the reported $\bar{\mathcal{T}}$ is the average of the two, however the appropriate value was used during calculations of the error statistics..
+It is noted that the threshold described in~\cref{e:thresh} varies slightly between the \conp/ and \conv/ cases; the reported $\bar{\mathcal{T}}$ is the average of the two, however the appropriate value was used during calculations of the error statistics.
 }
 \label{T:error}
 \end{table}
@@ -508,6 +508,19 @@ The approximate Jacobian assumption drops the density of Jacobian by \textasciit
 	   The numbers indicate the index of the entry in the state vector.}
   \label{F:jac_sparsity}
 \end{figure}
+
+Currently, \texttt{pyJac} can utilize two common sparse matrix storage formats~\cite{netlib_templates}, compressed row\slash column storage (CSR\slash CSC), used for ``C'' and ``F''-ordered data respectively.
+These formats contain three vectors, for convenience we will outline only the CSR format but the CSC format is very similar~\cite{netlib_templates}.
+An $N\times N$ CSC matrix is composed of three vectors, a value vector of length $NNZ$---the number of non-zero elements in the Jacobian---which stores the elements of the Jacobian, a row pointer vector---of length $N$---which stores the locations in the value vector that begin a row, and a column index vector---of length $NNZ$---which stores the column indicies of the elements in the value vector.
+
+The Jacobian access pattern used by \texttt{pyJac} is fairly irregular currently; for simplicity we will only discuss looping-structure of species derivatives calculations as these form the bulk of the computation, and have the most challenging Jacobian access patterns.
+In general, an outer loop iterates over all reactions of a certain type (e.g., falloff reactions) and calculates the relevant Jacobian subproducts (e.g., the derivative of the falloff pressure modification term with respect to a species $j$).
+Two inner loops then iterate over the species in a reaction, updating the Jacobian entries for these species as appropriate.
+This pattern leads to fairly easily vectorizable code, and efficient Jacobian evaluation as the bulk of the computation is dependent only on the reaction in question, as discussed in our previous work~\cite{Niemeyer:2016aa}.
+Generally, this means that a lookup operation is required to find the sparse Jacobian index for any pair of state variables; in some cases this can be avoided, e.g., the rows corresponding to derivatives of the temperature and thermodynamic state parameter source terms are fully dense in \texttt{pyJac}, and hence no lookup is necessary.
+This lookup operation is currently implemented as a simple for-loop, e.g., for a sparse lookup of a pair of indicies $(i, j)$ in a compressed row storage matrix, the lookup function searches the column index vector between the values $\texttt{row\_pointer}[i] \ldots \texttt{row\_pointer}[i + 1]$ for $j$, and returns the offset from $\texttt{row\_pointer}[i]$ (or $\num{-1}$ if not found).
+As will be explored in~\cref{S:jacobian_results}, this slows down sparse Jacobian evaluation, and might be improved---at the cost of increased constant data usage, a limitation for OpenCL---by a static mapping of the full Jacobian indicies to the sparse index (or some null value if the entry is empty).
+Additionally, this might be an excellent usage of OpenCL's Image memory type (similar to texture memory in CUDA terminology) and both of these sparse indexing techniques merit future investigation.
 
 \begin{table}[tbp]
 \centering
@@ -667,7 +680,7 @@ Additionally, OpenMP tends to have higher scalings then the shallow-vectorized O
 This is again likely due to relatively small amounts of work associated with source rate evaluation; the longest runtime (the isopentanol model on a single core) takes only \textasciitilde\SI{2}{\second} for OpenCL, and \textasciitilde\SI{9}{\second} for OpenMP.
 By the time 4--8 CPU cores are utilized, the runtime of shallow-vectorized OpenCL code can be measured in hundreds of milliseconds, and parallel overhead begins to dominate, decreasing efficiency.
 In contrast, the OpenMP code requires \textasciitilde\num{4} cores to match the performance of the shallow-vectorized OpenCL code in this case, hence parallel overhead concerns become increasingly important for 8--16 cores.
-Indeed, as will be investigated in~\cref{s:jacobian_results} the strong scalings for sparse Jacobian evaluation---the most computationally intensive task in this work for which the efficiency will investigated---are far more similar between Intel OpenCL and OpenMP.
+Indeed, as will be investigated in~\cref{S:jacobian_results} the strong scalings for sparse Jacobian evaluation---the most computationally intensive task in this work for which the efficiency will investigated---are far more similar between Intel OpenCL and OpenMP.
 
 The SIMD efficiency is defined as:
 \begin{equation}
@@ -705,6 +718,31 @@ Interestingly,~\cref{F:source_sse_simd_scaling} shows the SIMD efficiency on the
 
 \subsubsection{Jacobian evaluation}
 \label{S:jacobian_results}
+\Cref{F:jacobian_perfomance} shows the performance of the sparse and dense Jacobian evaluations in \texttt{pyJac} on the CPU platforms.
+In~\cref{F:sparse_vs_dense}, the mean runtime per condition is presented for the shallow-vectorized Intel OpenCL and OpenMP codes on the \avx/ CPU.
+The sparse Jacobian evaluations are slower on both Intel OpenCL and OpenMP due to indirect lookup indexing requirements, as discussed in~\cref{S:sparsity}.
+Interestingly the shallow-vectorized OpenCL code is less negatively impacted by the indirect lookup; the sparse OpenMP code is \SIrange{2.5}{7}{$\times$} slower than the dense OpenMP evaluation, while the sparse shallow-vectorized OpenCL code is just \SIrange{1.4}{3.3}{$\times$} slower than its dense counterpart.
+Indeed, the shallow-vectorized sparse OpenCL code is faster than the dense OpenMP code in all cases.
+\Cref{F:sparse_vs_dense_speedup} shows the speedup of the sparse\slash dense shallow-vectorized OpenCL the over the same sparse\slash dense Jacobian format on OpenMP; a speedup of \SIrange{3.7}{4.2}{$\times$} is exhibited for the dense OpenCL code, increasing to \SIrange{6.6}{8.4}{$\times$} for the sparse Jacobian.
+
+
+\begin{figure}[htbp]
+   \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{sparse_vs_dense.pdf}
+      \caption{The mean runtime per-condition of sparse and dense Jacobian evaluation for Intel OpenCL\slash OpenMP on the \avx/ machine.}
+      \label{F:sparse_vs_dense}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{sparse_vs_dense_speedup.pdf}
+      \caption{The speedup of the sparse and dense Jacobian evaluation for Intel OpenCL over the sparse\slash dense OpenMP baseline on the \avx/ machine.}
+      \label{F:sparse_vs_dense_speedup}
+  \end{subfigure}
+  \caption{Performance of sparse and dense Jacobian evaluation in \texttt{pyJac}.}
+  \label{F:jacobian_perfomance}
+\end{figure}
+
 
 \section{Future directions}
 \label{s:future}
