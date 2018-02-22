@@ -764,7 +764,8 @@ The \ce{H2}\slash\ce{CO} model has the worst scaling for both codes, ranging fro
 As the model size increases, the efficiency of the OpenCL code improves dramatically, reaching \numrange{0.997}{0.84} for the isopentanol model.
 It is worth noting that the OpenCL code's scaling is more negatively affected by the switch from a single 12-core CPU (\cref{t:cpus}) to two CPUs (i.e., the 16 core data-point) than the OpenMP code.
 In contrast,~\cref{F:dense_jac_scaling} shows scaling for the shallow-vectorized dense Jacobian OpenCL code that is higher than for source-rate evaluation, but not as good as for sparse Jacobian evaluation.
-
+In this case, the USC-Mech II model\todo{note: don't have data for ipentanol yet} has the worst scaling for both codes; ranging from \numrange{0.96}{0.63} and \numrange{0.91}{0.34} for OpenMP and OpenCL respectively.
+As in~\cref{S:source_results}, we note that the shallow-vectorized OpenCL code on a single core of the \avx/ machine is roughly as fast than the OpenMP code on four cores of the same; hence, the OpenMP code has more room to improve performance before parallel-overhead and memory-bandwidth issues become a limiting concern.
 
 
 \begin{figure}[htbp]
@@ -782,6 +783,8 @@ In contrast,~\cref{F:dense_jac_scaling} shows scaling for the shallow-vectorized
   \end{subfigure}
   \caption{The parallel scaling efficiencies of sparse and dense Jacobian evaluation for the shallow-vectorized Intel OpenCL and OpenMP codes on the \avx/ CPU.}
 \end{figure}
+
+The GPU performance 
 
 
 \section{Future directions}
