@@ -721,9 +721,12 @@ Interestingly,~\cref{F:source_sse_simd_scaling} shows the SIMD efficiency on the
 \Cref{F:jacobian_perfomance} shows the performance of the sparse and dense Jacobian evaluations in \texttt{pyJac} on the CPU platforms.
 In~\cref{F:sparse_vs_dense}, the mean runtime per condition is presented for the shallow-vectorized Intel OpenCL and OpenMP codes on the \avx/ CPU.
 The sparse Jacobian evaluations are slower on both Intel OpenCL and OpenMP due to indirect lookup indexing requirements, as discussed in~\cref{S:sparsity}.
-Interestingly the shallow-vectorized OpenCL code is less negatively impacted by the indirect lookup; the sparse OpenMP code is \SIrange{2.5}{7}{$\times$} slower than the dense OpenMP evaluation, while the sparse shallow-vectorized OpenCL code is just \SIrange{1.4}{3.3}{$\times$} slower than its dense counterpart.
-Indeed, the shallow-vectorized sparse OpenCL code is faster than the dense OpenMP code in all cases.
-\Cref{F:sparse_vs_dense_speedup} shows the speedup of the sparse\slash dense shallow-vectorized OpenCL the over the same sparse\slash dense Jacobian format on OpenMP; a speedup of \SIrange{3.7}{4.2}{$\times$} is exhibited for the dense OpenCL code, increasing to \SIrange{6.6}{8.4}{$\times$} for the sparse Jacobian.
+Interestingly the shallow-vectorized OpenCL code is less negatively impacted by the indirect lookup; the sparse OpenMP code is \SIrange{2.5}{7}{$\times$} slower than the dense OpenMP evaluation, while the sparse shallow-vectorized OpenCL code is just \SIrange{1.4}{3.3}{$\times$} slower than its dense counterpart
+As a result, the shallow-vectorized sparse OpenCL code is faster than the dense OpenMP code in all cases on the \avx/ machine (\cref{F:sparse_vs_dense}).
+\Cref{F:sparse_vs_dense_speedup} shows the speedup of the sparse\slash dense shallow-vectorized OpenCL the over the same sparse\slash dense Jacobian format on OpenMP; the dense OpenCL is \SIrange{3.7}{4.2}{$\times$} faster than the corresponding dense OpenMP code, this speedup increases to \SIrange{6.6}{8.4}{$\times$} for the sparse Jacobian.
+On the \sse/ machine,~\cref{F:sparse_vs_dense_sse} shows similar results; the sparse OpenMP code is the slowest in all cases, and the shallow-vectorized OpenCL code is nearly as fast as the dense OpenMP code.
+Once again, the sparse OpenCL code is far less negatively impacted by the indirect lookup, and is only \SIrange{1.8}{3.2}{$\times$} slower than its dense counterpart, while the sparse OpenMP code is significantly (\SIrange{2.25}{6.2}{$\times$}) slower than the dense version.
+In~\cref{F:sparse_vs_dense_sse_speedup}, the speedup of the sparse and dense shallow-vectorized OpenCL codes are compared to their OpenMP version; the dense OpenCL code is \SIrange{3.8}{4.2}{$\times$} faster, while the sparse shallow-vectorization achieves a speedup of \SIrange{6.6}{9.1}{$\times$}.
 
 
 \begin{figure}[htbp]
@@ -739,8 +742,45 @@ Indeed, the shallow-vectorized sparse OpenCL code is faster than the dense OpenM
       \caption{The speedup of the sparse and dense Jacobian evaluation for Intel OpenCL over the sparse\slash dense OpenMP baseline on the \avx/ machine.}
       \label{F:sparse_vs_dense_speedup}
   \end{subfigure}
-  \caption{Performance of sparse and dense Jacobian evaluation in \texttt{pyJac}.}
+  \\
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{sparse_vs_dense_sse.pdf}
+      \caption{The mean runtime per-condition of sparse and dense Jacobian evaluation for Intel OpenCL\slash OpenMP on the \sse/ machine.}
+      \label{F:sparse_vs_dense_sse}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{sparse_vs_dense_sse_speedup.pdf}
+      \caption{The speedup of the sparse and dense Jacobian evaluation for Intel OpenCL over the sparse\slash dense OpenMP baseline on the \sse/ machine.}
+      \label{F:sparse_vs_dense_sse_speedup}
+  \end{subfigure}
+  \caption{Performance of sparse and dense Jacobian evaluation on the CPU platforms in \texttt{pyJac}.}
   \label{F:jacobian_perfomance}
+\end{figure}
+
+In~\cref{F:sparse_jac_scaling}, the parallel scaling efficiency of the sparse shallow-vectorized OpenCL is compared to the sparse OpenMP code.
+The plot is a bit difficult to read, as most of the data-points are clustered together however the key takeaway is that the parallel scaling efficiency of the shallow-vectorized OpenCL code is much closer in value to that of the OpenMP code as compared to the source rate evaluations (\cref{F:source_parallel_scaling}).
+The \ce{H2}\slash\ce{CO} model has the worst scaling for both codes, ranging from \numrange{0.93}{0.54} and \numrange{0.99}{0.86} for OpenCL and OpenMP respectively on \numrange{2}{16} cores.
+As the model size increases, the efficiency of the OpenCL code improves dramatically, reaching \numrange{0.997}{0.84} for the isopentanol model.
+It is worth noting that the OpenCL code's scaling is more negatively affected by the switch from a single 12-core CPU (\cref{t:cpus}) to two CPUs (i.e., the 16 core data-point) than the OpenMP code.
+In contrast,~\cref{F:dense_jac_scaling} shows scaling for the shallow-vectorized dense Jacobian OpenCL code that is higher than for source-rate evaluation, but not as good as for sparse Jacobian evaluation.
+
+
+
+\begin{figure}[htbp]
+   \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{sparse_jac_scaling.pdf}
+      \caption{Sparse Jacobian evaluation parallel scaling efficiency for Intel OpenCL\slash OpenMP on the \avx/ machine.}
+      \label{F:sparse_jac_scaling}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{dense_jac_scaling.pdf}
+      \caption{Dense Jacobian evaluation parallel scaling efficiency for Intel OpenCL\slash OpenMP on the \avx/ machine.}
+      \label{F:dense_jac_scaling}
+  \end{subfigure}
+  \caption{The parallel scaling efficiencies of sparse and dense Jacobian evaluation for the shallow-vectorized Intel OpenCL and OpenMP codes on the \avx/ CPU.}
 \end{figure}
 
 
