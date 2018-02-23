@@ -95,7 +95,10 @@ def pretty_names(pname, short=False):
                                                  'haswell': r'\texttt{avx2}',
                                                  'gpu': r'\texttt{K40m}'}),
                   'rtype': dummy_formatter({'jac': 'Analytical',
-                                            'fdjac': 'Finite Difference'})
+                                            'fdjac': 'Finite Difference'}),
+                  'platform': dummy_formatter({'srv2': r'\texttt{pyJac}-v2',
+                                               'srv2-gpu': r'\texttt{pyJac}-v2',
+                                               'v1': r'\texttt{pyJac}-v1'})
                   }
     if pname in pname_dict:
         return pname_dict[pname]
