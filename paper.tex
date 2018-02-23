@@ -788,7 +788,7 @@ As in~\cref{S:source_results}, we note that the shallow-vectorized OpenCL code o
 The mean runtime per-condition for the sparse and dense Jacobian evaluation on the \gpunew/ GPU is plotted in~\cref{F:gpu_sparse_vs_dense}.
 As in the species evaluation case, the mean runtime per-condition drops steadily, for both cases becoming constant after just \num{3e3} states (except for \ce{H2}\slash\ce{CO}, which levels off near \num{e4} conditions).
 \Cref{F:gpu_jacobian_speedup} presents the speedup of the \gpunew/ over the \gpuold/ GPU for sparse\slash dense Jacobian evaluation; sparse evaluation on the \gpunew/ is \SIrange{1.22}{1.63}{$\times$} faster, while dense evaluation is \SIrange{1.62}{2.1}{$\times$} faster.
-The speedup on the \gpunew/ appears to decrease with increasing mechanism size for the sparse evalution, however we note that the \gpuold/ GPU has high variability in runtimes for the larger models.\todo{missing srv2 data for ipentanol, and need to rerun srv2 data}.
+The speedup on the \gpunew/ appears to decrease with increasing mechanism size for the sparse evalution, however we note that the \gpuold/ GPU has high variability in runtimes for the larger models.\todo{missing srv2 data for ipentanol, and need to rerun srv2 data}
 
 \begin{figure}[htbp]
    \centering
@@ -806,7 +806,31 @@ The speedup on the \gpunew/ appears to decrease with increasing mechanism size f
   \caption{The performance of sparse\slash dense Jacobian evaluation on the \gpunew/ and \gpuold/ GPUs.}
 \end{figure}
 
+In~\cref{F:fd_vs_analytical}, the performance of the sparse analytical-Jacobian is compared to a sparse first-order finite-difference Jacobian on both the \avx/ CPU and the \gpuold/ \gpunew/ GPUs.\todo{missing data}
+\Cref{F:fd_vs_analytical_cpu} shows large speedups for both the OpenMP code and shallow-vectorized OpenCL code; the analytical OpenMP Jacobian is \SIrange{3.92}{-11111}{$\times$} faster, while the analytical OpenCL Jacobian achives speedups of \SIrange{17}{55}{$\times$}.
+It is noted that the current finite-difference formulation breaks Intel's auto-vectorizer, hence the OpenCL speedup comparison is made against the unvectorized OpenCL code; it is not a high priority to fix this issue, as the finite-difference Jacobian is implemented for comparison purposes only.
+Although we do not display the dense finite-difference Jacobian speedup in~\cref{F:fd_vs_analytical_cpu}, the dense OpenCL and OpenMP analytical Jacobian codes out-perform the finite-difference variants by even larger margins; \SIrange{24}{-155}{$\times$} for OpenCL, and \SIrange{10}{-11111}{$\times$} for OpenMP.
+A comparison of the sparse analytical and finite-difference Jacobians is presented in~\cref{F:fd_vs_analytical_gpu}.
+The analytical Jacobian on the \gpunew/ shows large speedups, increasing with chemical model size, in the range of \SIrange{5}{16}{$\times$}; however, the \gpuold/ GPU shows almost no speedup, it is not clear why this is the case.\todo{reaaaally need to re-run this data}
+Although not pictured, the dense analytical-Jacobian on the \gpunew/ GPU has larger speedups compared with the dense finite-difference Jacobian, in the range of \SIrange{5}{42}{$\times$}.
 
+
+\begin{figure}[htbp]
+   \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{finite_difference_vs_analytical.pdf}
+      \caption{Mean runtime per-condition of sparse and dense Jacobian evaluation on the \gpunew/ GPU.}
+      \label{F:fd_vs_analytical_cpu}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{finite_difference_vs_analytical_gpu.pdf}
+      \caption{Speedup of the \gpunew/ over \gpuold/ GPUs for sparse and dence Jacobian evaluation.}
+      \label{F:fd_vs_analytical_gpu}
+  \end{subfigure}
+  \caption{The performance of a sparse, first-order forward finite-difference Jacobian compared to the analytical Jacobian on the \avx/ CPU and both GPUs.}
+  \label{F:fd_vs_analytical}
+\end{figure}
 
 \section{Future directions}
 \label{s:future}
