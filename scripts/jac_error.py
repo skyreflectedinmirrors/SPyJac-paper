@@ -40,7 +40,7 @@ def printer(err_dict):
     mean_thr = mean_thr[0] / mean_thr[1]
 
     print('\n'.join(
-        ['{}: {:.15e}'.format(k, v) for k, v in err_dict.items()
+        ['{}: {:.3e}'.format(k, v) for k, v in sorted(err_dict.items())
          if 'thresholded' in k]))
     print('mean_threshold: {:.15e}'.format(mean_thr))
 
