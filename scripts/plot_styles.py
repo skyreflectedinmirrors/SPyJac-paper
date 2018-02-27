@@ -93,12 +93,11 @@ def pretty_names(pname, short=False):
                   'descriptor': dummy_formatter({'srv2': r'\texttt{sse4.2}',
                                                  'srv2-gpu': r'\texttt{C2075}',
                                                  'haswell': r'\texttt{avx2}',
-                                                 'gpu': r'\texttt{K40m}'}),
+                                                 'gpu': r'\texttt{K40m}',
+                                                 'v1': r'\texttt{sse4.2-v1}',
+                                                 'v1-gpu': r'\texttt{C2075.2-v1}'}),
                   'rtype': dummy_formatter({'jac': 'Analytical',
-                                            'fdjac': 'Finite Difference'}),
-                  'platform': dummy_formatter({'srv2': r'\texttt{pyJac}-v2',
-                                               'srv2-gpu': r'\texttt{pyJac}-v2',
-                                               'v1': r'\texttt{pyJac}-v1'})
+                                            'fdjac': 'Finite Difference'})
                   }
     if pname in pname_dict:
         return pname_dict[pname]

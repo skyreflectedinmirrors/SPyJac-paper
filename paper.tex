@@ -228,6 +228,7 @@ The effects of these various data-ordering and vectorization patterns on perform
 This new version of \texttt{pyJac} is capable of evaluating the thermo-chemical source terms for using both the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
 In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to our complete derivations, attached as supplemental material to this document.
 
+
 The thermo-chemical state vector derivation consists of the temperature, the non-constant thermodynamic state parameter (volume or pressure) and the number of moles of all species except the last in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
 \loadeq{state}
 where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns/$ total species).
