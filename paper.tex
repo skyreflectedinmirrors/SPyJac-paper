@@ -820,18 +820,39 @@ Although not pictured, the dense analytical-Jacobian on the \gpunew/ GPU has lar
    \centering
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{finite_difference_vs_analytical.pdf}
-      \caption{Mean runtime per-condition of sparse and dense Jacobian evaluation on the \gpunew/ GPU.}
+      \caption{Speedup of the analytical versus finite-difference Jacobian evaluation on the \avx/ CPU, normalized per-language}
       \label{F:fd_vs_analytical_cpu}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{finite_difference_vs_analytical_gpu.pdf}
-      \caption{Speedup of the \gpunew/ over \gpuold/ GPUs for sparse and dence Jacobian evaluation.}
+      \caption{Speedup of the analytical versus finite-difference Jacobian evaluation on both the \gpunew/ and \gpuold/ GPUs, normalized per-GPU}
       \label{F:fd_vs_analytical_gpu}
   \end{subfigure}
   \caption{The performance of a sparse, first-order forward finite-difference Jacobian compared to the analytical Jacobian on the \avx/ CPU and both GPUs.}
   \label{F:fd_vs_analytical}
 \end{figure}
+
+Finally, in~\cref{F:v1_vs_v2} compares the performance for evaluation of the dense-analytical Jacobian of the new version of \texttt{pyJac} to the previous version~\cite{pyjac16} on the \sse/ CPU and \gpuold/ GPU; dense Jacobian evaluation was selected as it was the only type implemented in the previous verison.
+
+
+\begin{figure}[htbp]
+   \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{v1_vs_v2.pdf}
+      \caption{Speedup of dense Jacobian evaluation in \texttt{pyJac-v2} over \texttt{pyJac-v1} on the \sse/ CPU}
+      \label{F:v1_vs_v2_cpu}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{v1_vs_v2_gpu.pdf}
+      \caption{Speedup of dense Jacobian evaluation in \texttt{pyJac-v2} over \texttt{pyJac-v1} on the \gpuold/ GPU}
+      \label{F:v1_vs_v2_gpu}
+  \end{subfigure}
+  \caption{Performance comparison of the new version of \texttt{pyJac} (\texttt{v2}) and the previous verison, \texttt{v1}~\cite{pyjac16}.}
+  \label{F:v1_vs_v2}
+\end{figure}
+
 
 \section{Future directions}
 \label{s:future}
