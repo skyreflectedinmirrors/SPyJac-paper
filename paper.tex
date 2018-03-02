@@ -92,12 +92,17 @@ A code generation platform for single-instruction, multiple-data (SIMD) and sing
 \section{Introduction}
 %
 
+As the importance of detailed chemical kinetics for predictive reactive-flow simulations has become recognized~\cref{LU2009192}, the size and complexity of chemical kinetic models describing current and next-generation fuels relevant to transportation and power generation have increased greatly; e.g., a recent biodiesel model consists of \textasciitilde\num{3500} chemical species, and over \num{17000} reactions.
+Moreover, the cost of evaluating the chemical source terms scales linearly with the size of the model, while evaluation and factorization of the chemical kinetic Jacobian, if naively implemented, scale quadratically and cubically with the number of species in the model~\cref{LU2009192}.
+These factors often make the use of detailed chemical kinetics prohibitive in practice; for direct numerical simulations, evaluation of reaction rates can consume around half of the total runtime~\cite{Spafford:2010aa}.
+In addition, chemical kinetic Jacobian evaluation and factorization---required for most implicit integration techniques utilized to deal with numerical stiffness---becomes a bottleneck for even modestly sized chemical models in realistic reactive flow simulations~\cite{LU2009192}, and necessitates use of other cost-reduction strategies. 
+
 Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processing are two important vector-processing paradigms used increasingly in scientific computing.
-Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however SIMD processors---as well as SIMT processors, e.g., in the form of graphics processing units (GPUs)---have gained recognition due to their increased floating operation throughput.
+Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however as exponential growth in processing power---colloquially known as Moore's law---has slowed~\cite{khan2018science}, SIMD processors as well as SIMT processors, e.g., in the form of graphics processing units (GPUs), have gained recognition due to their increased floating operation throughput.
 The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector-processing based codes in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., the CPU, GPU, or Intel's Many Integrated Core architecture (MIC), etc.
 In this discussion, we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor type (e.g., CPUs and GPUs), however the concepts discussed are broadly applicable to SIMD\slash SIMT processing and not tied to OpenCL specifically.
 
-\begin{figure}[htb]
+\begin{figure}[phtb]
   \centering
   \begin{subfigure}[t]{0.45\linewidth}
       \includegraphics[width=\textwidth]{SIMD.pdf}
@@ -117,7 +122,7 @@ A SIMD instruction utilizes the vector processor to execute the same floating po
 Additionally, specialized hardware accelerators, e.g. Intel's Xeon Phi co-processor (MIC) have been developed that have tens of cores with very wide vector-widths (e.g. 4--8 double precision operations); these very wide vector-widths are also found on cutting-edge and expected on forthcoming Intel CPUs (the Skylake Xeon and Cannon Lake architectures).
 
 SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large groups of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
-A group of threads---typically \num{32} threads, known as a warp on NVIDIA GPUs---execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
+A group of threads---typically \num{32}, known as a warp on NVIDIA GPUs---execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
 If some threads must execute a different instruction---e.g., due to if\slash then branching or predication---they are forced to wait and execute later.
 This phenomena, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
@@ -132,7 +137,7 @@ Stone and Davis~\cite{Stone:2013aa} implemented the implicit VODE~\cite{Brown:19
 Niemeyer and Sung~\cite{Niemeyer:2014aa} later developed a stabilized explicit second-order Runge--Kutta--Chebyshev algorithm on a Tesla C2075, demonstrating an order of magnitude speedup for a over a CPU implementation of VODE on a six-core Intel X5650 for moderately stiff chemical kinetics.
 Sewerin and Rigopoulos~\cite{Sewerin20151375} implemented a three-stage\slash fifth-order implicit Runge--Kutta method~\cite{wanner1991solving} on both a high-end (Nvidia Quadro 6000) and consumer-grade (Nvidia Quadro 600) GPUs, as well as a standard CPU (two-core, four-thread Intel i5-520M) and a scientific workstation (eight-core, 16-thread Intel Xeon E5-2687W); the high-end GPU was at best \SI{1.8}{$\times$} slower than the workstation CPU (16 threads), while the consumer level GPU was at best \SI{5.5}{$\times$} slower than the corresponding standard CPU (four threads).
 Niemeyer et al.~\cite{Niemeyer:2016aa} additionally developed and validated an analytical chemical kinetic Jacobian code for the CPU and GPU.
-Yonkee and Sutherland~\cite{Yonkee2016} implemented SIMT-accelerated evaluations of thermodynamic parameters, multicomponent transport properties and species production rates for solution of a partial differential equations (PDEs) on an Intel Xeon E5-2680 CPU and an Tesla K20 GPU.
+Yonkee and Sutherland~\cite{Yonkee2016} implemented SIMT-accelerated evaluations of thermodynamic parameters, multicomponent transport properties and species production rates for solution of a partial differential equations (PDEs) on an Intel Xeon E5-2680 CPU and a Tesla K20 GPU.
 In evaluation of the thermo-chemical properties, speedups between \SIrange{8}{13}{$\times$} were on 16 CPU cores, and \SIrange{20}{40}{$\times$} on the GPU; speedups of \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} were found in solution of a partially premixed methanol flame PDE on 16 CPU cores and the GPU respectively.
 Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two-fourth order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} on a Tesla C2075; the implicit Runge--Kutta method was roughly equivalent to VODE running on 12--38 Intel Xeon E5-4640 v2 CPU cores for two smaller chemical models with an integration time step of \SI{e-6}{$\sec$}.
 
@@ -150,7 +155,6 @@ This work will build upon our previous analytical chemical kinetic Jacobian code
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
  \item Discuss future extensions to this work as well as the most promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations
 \end{itemize}
-.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
