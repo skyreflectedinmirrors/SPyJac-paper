@@ -256,9 +256,12 @@ where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, 
 \begin{equation}
  [C]_{k} = \frac{n_{k}}{V}
 \end{equation}
-By differentiating the ideal gas law, the volume and pressure source terms can be found:
+By differentiating the ideal gas law:
+\begin{equation}
+ PV = n\mathcal{R}T \;,
+\end{equation}
+where $\mathcal{R}$ is the ideal gas-constant, the volume and pressure source terms can be found:
 \loadeq{dparam}
-where $\mathcal{R}$ is the ideal gas-constant.
 
 The Jacobian entries computed by \texttt{pyJac} are arranged such that entry ($i$, $j$) corresponds to the partial derivative of the $i$-th source term in~\cref{e:source_terms} by the $j$-th state variable in~\cref{e:state}:
 \loadeq{jacgeneral}

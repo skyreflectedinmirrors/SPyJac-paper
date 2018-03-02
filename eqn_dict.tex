@@ -13,8 +13,8 @@
 \begin{subequations}
 \label{e:state}
 \begin{align}
-\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns/ - 1}\right\}&\text{\dconp/}\\
-\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns/ - 1}\right\}&\text{\dconv/}
+\Phi &= \left\{T, V, n_1, n_2 \ldots n_{\ns/ - 1}\right\}&\text{\dconp/,}\\
+\Phi &= \left\{T, P, n_1, n_2 \ldots n_{\ns/ - 1}\right\}&\text{\dconv/,}
 \end{align}
 \end{subequations}
 %</eqstate>
@@ -23,8 +23,8 @@
 \begin{subequations}
 \label{e:source_terms}
 \begin{align}
-f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns/ - 1} }{\text{d} t }\right\} & \text{\dconp/} \\
-f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns/ - 1} }{\text{d} t }\right\} & \text{\dconv/}
+f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} V }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns/ - 1} }{\text{d} t }\right\} & \text{\dconp/,} \\
+f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t },\frac{\text{d} P }{\text{d} t },\frac{\text{d} n_1}{\text{d} t },\frac{\text{d} n_2 }{\text{d} t }\ldots \frac{\text{d} n_{\ns/ - 1} }{\text{d} t }\right\} & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdstate>
@@ -32,7 +32,7 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 %<*eqdmolar>
 \begin{equation}
 \label{e:spec}
-\frac{\text{d} n }{\text{d} t }_{k} = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns/ - 1,
+\frac{\text{d} n_{k} }{\text{d} t } = V \dot{\omega}_{k} \qquad k = 1, \ldots, \ns/ - 1,
 \end{equation}
 %</eqdmolar>
 
@@ -55,8 +55,8 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{subequations}
 \label{e:temperature_incomplete}
 \begin{align}
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns/} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns/} [C]_{k} {C_{p, k}}} & \text{\dconp/} \\
-\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns/} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns/} [C]_{k} {C_{v, k}}} & \text{\dconv/}
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns/} H_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns/} [C]_{k} {C_{p, k}}} & \text{\dconp/,} \\
+\frac{\text{d} T }{\text{d} t } &= - \frac{\sum_{k=1}^{\ns/} U_{k} \dot{\omega}_{k}}{\sum_{k=1}^{\ns/} [C]_{k} {C_{v, k}}} & \text{\dconv/,}
 \end{align}
 \end{subequations}
 %</eqdtemp>
@@ -65,8 +65,8 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{subequations}
 \label{e:param_complete}
 \begin{align}
-\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru/}{P} \sum_{k=1}^{\ns/  - 1} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp/} \\
-\frac{\text{d} P }{\text{d} t } &= T \Ru/ \sum_{k=1}^{\ns/  - 1} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv/}
+\frac{\text{d} V }{\text{d} t } &= V \left(\frac{T \Ru/}{P} \sum_{k=1}^{\ns/  - 1} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \dot{\omega}_{k} + \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right)& \text{\dconp/,} \\
+\frac{\text{d} P }{\text{d} t } &= T \Ru/ \sum_{k=1}^{\ns/  - 1} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \dot{\omega}_{k} + \frac{P}{T} \frac{\text{d} T }{\text{d} t }&\text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdparam>
@@ -166,7 +166,7 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 %<*eqjacgeneral>
 \begin{equation}
  \label{e:jac_general}
- \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad j=1 \ldots \ns/ - 1
+ \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j},\qquad i,j=1 \ldots \ns/ - 1\;,
 \end{equation}
 %</eqjacgeneral>
 
