@@ -42,11 +42,11 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{align}
 \mathcal{J}_{1, 1} &= \frac{1}{\sum_{k=1}^{\ns/} [C]_{k} {C_p}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns/} \left(- \frac{\text{d} {C_p} }{\text{d} T }_{k} + \frac{{C_p}_{\ns/}}{T}\right) [C]_{k} + & \nonumber \\
 				    & \sum_{k=1}^{-1 + \ns/} \biggl( \left(- H_{k} + \frac{W_{k} H_{\ns/}}{W_{\ns/}}\right) \frac{\mathcal{J}_{k + 2, 1}}{V} + & \nonumber \\
-				    & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns/}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp/} \\
+				    & \mathindent[larger] \left(- {C_p}_{k} + \frac{W_{k} {C_p}_{k} }{W_{\ns/}} \right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconp/,} \\
 \intertext{and similarly:}
 \mathcal{J}_{1, 1} &= \frac{1}{\sum_{k=1}^{\ns/} [C]_{k} {C_v}_{k}} \Biggl[ \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{\ns/} \left(- \frac{\text{d} {C_v} }{\text{d} T }_{k} + \frac{{C_v}_{\ns/}}{T}\right) [C]_{k} + & \nonumber \\
 				     & \sum_{k=1}^{-1 + \ns/} \biggl(\left(- U_{k} + \frac{W_{k} U_{\ns/}}{W_{\ns/}}\right) \frac{\mathcal{J}_{k + 2, 1}}{V} + & \nonumber \\
-				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns/}}{W_{\ns/}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv/}
+				     & \mathindent[larger] \left(- {C_v}_{k} + \frac{W_{k} {C_v}_{\ns/}}{W_{\ns/}}\right) \dot{\omega}_{k}\biggr)\Biggr] & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdTdotdT>
@@ -77,11 +77,11 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{align}
  \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{V} }{\partial T} & \nonumber \\
 		    &= \frac{V}{[C]} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \left(\frac{\mathcal{J}_{k + 2, 1}}{V} + \frac{\dot{\omega}_{k}}{T}\right) \nonumber \\
-		    &  \mathindent + \frac{V}{T} \left(\mathcal{J}_{1, 1} - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconp/}
+		    &  \mathindent + \frac{V}{T} \left(\mathcal{J}_{1, 1} - \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconp/,}
 \intertext{and:}
  \mathcal{J}_{2, 1} &= \frac{\partial }{\partial T } \frac{\text{d} V}{\text{d} t} = \frac{\partial \dot{P} }{\partial T} & \nonumber \\
 		    &= \Ru/ \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \left(T \frac{\mathcal{J}_{k + 2, 1}}{V} + \dot{\omega}_{k}\right) & \nonumber \\
-		    & \mathindent + \frac{P}{T} \left(\mathcal{J}_{1, 1}- \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconv/}
+		    & \mathindent + \frac{P}{T} \left(\mathcal{J}_{1, 1}- \frac{1}{T} \frac{\text{d} T }{\text{d} t }\right) & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdEdotdT>
@@ -89,7 +89,7 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 %<*eqdnkdotdT>
 \begin{align}
  \label{e:dnkdotdT}
- \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}}  &= \rhs{dnkdotdT}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial T } + \nu_{k,i} \frac{\partial R_{i}}{\partial T } c_{i}\right)} & \cond{dnkdotdT}{}
+ \lhs{dnkdotdT}{\mathcal{J}_{k + 2, 1}}  &= \rhs{dnkdotdT}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial T } + \nu_{k,i} \frac{\partial R_{i}}{\partial T } c_{i}\right)} & \cond{dnkdotdT}{,}
 \end{align}
 %</eqdnkdotdT>
 
@@ -99,10 +99,10 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{align}
  \mathcal{J}_{1, 2} &= \frac{1}{\sum_{k=1}^{\ns/} V [C]_{k} {C_p}_{k}} \Biggl[ & \nonumber \\
 				     & \mathindent - \sum_{k=1}^{-1 + \ns/} \left(H_{k} - \frac{W_{k} H_{\ns/}}{W_{\ns/}}\right) \left(\mathcal{J}_{k + 2, 2} - \dot{\omega}_{k}\right) + & \nonumber \\
-				     & \mathindent \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{-1 + \ns/} \left(- {C_p}_{\ns/} + {C_p}_{k}\right) [C]_{k}\Biggr] & \text{\dconp/} \\
+				     & \mathindent \frac{\text{d} T }{\text{d} t } \sum_{k=1}^{-1 + \ns/} \left(- {C_p}_{\ns/} + {C_p}_{k}\right) [C]_{k}\Biggr] & \text{\dconp/,} \\
  \mathcal{J}_{1, 2} &= \frac{1}{\sum_{k=1}^{\ns/} [C]_{k} {C_v}_{k}} \Biggl[ & \nonumber \\
 				     & \mathindent - \sum_{k=1}^{-1 + \ns/} \left(U_{k} - \frac{W_{k} U_{\ns/}}{W_{\ns/}}\right) \frac{\mathcal{J}_{k + 2, 2}}{V} - & \nonumber \\
-				     & \mathindent \frac{{C_v}_{\ns/}}{T \Ru/} \frac{\text{d} T }{\text{d} t } \Biggr] & \text{\dconv/}
+				     & \mathindent \frac{{C_v}_{\ns/}}{T \Ru/} \frac{\text{d} T }{\text{d} t } \Biggr] & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdTdotdE>
@@ -112,10 +112,10 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \label{e:dEdotdE}
 \begin{align}
  \mathcal{J}_{2, 2} &= \frac{1}{[C]} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k+2, 2} \nonumber \\
-		    & \mathindent + \frac{1}{T} \left(V \mathcal{J}_{1, 2} + \dot{T}\right) & \text{\dconp/} \\
+		    & \mathindent + \frac{1}{T} \left(V \mathcal{J}_{1, 2} + \dot{T}\right) & \text{\dconp/,} \\
  \intertext{and:}
  \mathcal{J}_{2, 2} &= \frac{T \Ru/}{V} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k+2, 2} & \nonumber \\
-		    & \mathindent + \frac{1}{T} \left(P \mathcal{J}_{1, 2} + \dot{T}\right) & \text{\dconv/}
+		    & \mathindent + \frac{1}{T} \left(P \mathcal{J}_{1, 2} + \dot{T}\right) & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdEdotdE>
@@ -124,8 +124,8 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{subequations}
  \label{e:dnkdotdE}
  \begin{align}
-  \lhs{dnkdotdE}{\mathcal{J}_{k + 2, 2}} &= \rhs{dnkdotdE}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial V } + \nu_{k,i} \frac{\partial R_{i}}{\partial V } c_{i}\right) + \dot{\omega}_{k}} & \cond{dnkdotdE}{\dconp/}\\
-  \lhs{dnkdotdE}{\mathcal{J}_{k + 2, 2}} &= \rhs{dnkdotdE}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial P } + \nu_{k,i} \frac{\partial R_{i}}{\partial P } c_{i}\right)} & \cond{dnkdotdE}{\dconv/}
+  \lhs{dnkdotdE}{\mathcal{J}_{k + 2, 2}} &= \rhs{dnkdotdE}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial V } + \nu_{k,i} \frac{\partial R_{i}}{\partial V } c_{i}\right) + \dot{\omega}_{k}} & \cond{dnkdotdE}{\dconp/,}\\
+  \lhs{dnkdotdE}{\mathcal{J}_{k + 2, 2}} &= \rhs{dnkdotdE}{V \sum_{i=1}^{\nr/} \left(\nu_{k,i} R_{i} \frac{\partial c_{i}}{\partial P } + \nu_{k,i} \frac{\partial R_{i}}{\partial P } c_{i}\right)} & \cond{dnkdotdE}{\dconv/.}
  \end{align}
 \end{subequations}
 %</eqdnkdotdE>
@@ -136,11 +136,11 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{align}
  \mathcal{J}_{1, j + 2} &= \frac{1}{\sum_{k=1}^{\ns/} V [C]_{k} {C_p}_{k}} \Biggl[ & \nonumber \\
 				       & \mathindent[largerindent] - \sum_{k=1}^{-1 + \ns/} \left(H_{k} - \frac{W_{k} H_{\ns/}}{W_{\ns/}}\right) \mathcal{J}_{k+2, j+2} & \nonumber \\
-				       & \mathindent[largerindent] - \frac{\text{d} T }{\text{d} t } \left(- {C_p}_{\ns/} + {C_p}_{j}\right)\Biggr] & \text{\dconp/} \\
+				       & \mathindent[largerindent] - \frac{\text{d} T }{\text{d} t } \left(- {C_p}_{\ns/} + {C_p}_{j}\right)\Biggr] & \text{\dconp/,} \\
 \intertext{and:}
  \mathcal{J}_{1, j + 2} &= \frac{1}{\sum_{k=1}^{\ns/} V [C]_{k} {C_v}_{k}} \Biggl[ & \nonumber \\
 				       & \mathindent[largerindent] - \sum_{k=1}^{-1 + \ns/} \left(U_{k} - \frac{W_{k} U_{\ns/}}{W_{\ns/}}\right) \mathcal{J}_{k+2, j+2} & \nonumber \\
-				       & \mathindent[largerindent] - \frac{\text{d} T }{\text{d} t } \left(- {C_v}_{\ns/} + {C_v}_{j}\right) \Biggr] & \text{\dconv/}
+				       & \mathindent[largerindent] - \frac{\text{d} T }{\text{d} t } \left(- {C_v}_{\ns/} + {C_v}_{j}\right) \Biggr] & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdTdotdnj>
@@ -149,9 +149,9 @@ f &= \frac{\text{d} \Phi }{\text{d} t } = \left\{\frac{\text{d} T }{\text{d} t }
 \begin{subequations}
 \label{e:dnkdotdE_nojac}
 \begin{align}
- \mathcal{J}_{2, j + 2} &= \frac{1}{[C]} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k + 2, j + 2} + \frac{V}{T} \mathcal{J}_{1, j + 2} & \text{\dconp/}
+ \mathcal{J}_{2, j + 2} &= \frac{1}{[C]} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k + 2, j + 2} + \frac{V}{T} \mathcal{J}_{1, j + 2} & \text{\dconp/,}
 \intertext{and:}
- \mathcal{J}_{2, j + 2} &= \frac{T \Ru/}{V} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k + 2, j + 2} + \frac{P}{T} \mathcal{J}_{2, j + 2} & \text{\dconv/}
+ \mathcal{J}_{2, j + 2} &= \frac{T \Ru/}{V} \sum_{k=1}^{-1 + \ns/} \left(1 - \frac{W_{k}}{W_{\ns/}}\right) \mathcal{J}_{k + 2, j + 2} + \frac{P}{T} \mathcal{J}_{2, j + 2} & \text{\dconv/.}
 \end{align}
 \end{subequations}
 %</eqdEdotdnj>

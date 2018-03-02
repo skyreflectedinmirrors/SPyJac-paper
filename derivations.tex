@@ -791,15 +791,15 @@ For elementary reactions, the derivative of the pressure-modification term with 
 \begin{align}
 \lhs{dci_elem}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{,} \label{e:dci_elem_dt}
 \end{align}
-the state parameter:
+and with respect to the state parameter:
 \begin{subequations}
  \label{e:dci_elem_de}
  \begin{align}
-  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconp/} \\
-  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconv/}
+  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconp/,} \\
+  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{\dconv/,}
  \end{align}
 \end{subequations}
-and the moles:
+and finally, with respect to the moles of species $j$:
 \begin{align}
  \lhs{dci_elem}{\frac{\partial c_{i} }{\partial {n_j} }} &= \rhs{dci_elem}{0} & \cond{dci_elem}{.} \label{e:dci_elem_dnj}
 \end{align}
@@ -807,7 +807,7 @@ and the moles:
 
 \subsubsection{Third-body enhanced reactions}
 \label{s:dci_thd}
-For a third-body enhanced reaction~\cref{e:thd_mix} is differentiated with respect to temperature to give:
+For a \textbf{mixture} based third-body enhanced reaction~\cref{e:thd_mix} is differentiated with respect to temperature to give:
 \begin{align}
  \label{e:dci_thd_dt}
  \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial T }} &= \rhs{dci_thd_mix}{-\frac{[C] \alpha_{\ns/,i}}{T}} & \cond{dci_thd_mix}{,}
@@ -816,8 +816,8 @@ and with respect to the state parameter:
 \begin{subequations}
  \label{e:dci_thd_de}
  \begin{align}
- \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial V }} &= \rhs{dci_thd_mix}{\frac{1}{V} \left([C] \alpha_{\ns/,i} - [X]_{i}\right)} & \cond{dci_thd_mix}{\dconp/}\\
- \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial P }} &= \rhs{dci_thd_mix}{\frac{\alpha_{\ns/,i}}{T \Ru/}} & \cond{dci_thd_mix}{\dconv/}
+ \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial V }} &= \rhs{dci_thd_mix}{\frac{1}{V} \left([C] \alpha_{\ns/,i} - [X]_{i}\right)} & \cond{dci_thd_mix}{\dconp/,}\\
+ \lhs{dci_thd_mix}{\frac{\partial [X]_i }{\partial P }} &= \rhs{dci_thd_mix}{\frac{\alpha_{\ns/,i}}{T \Ru/}} & \cond{dci_thd_mix}{\dconv/,}
  \end{align}
 \end{subequations}
 and finally, with respect to the moles of species $j$:
@@ -827,7 +827,7 @@ and finally, with respect to the moles of species $j$:
 \end{align}
 
 
-If $\alpha_{j,i} = 1$ for all species $j$,~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} may be simplified to:
+If $\alpha_{j,i} = 1$ for all species $j$ (i.e., a \textbf{unity} third-body), \cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} may be simplified to:
 \begin{align}
  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_thd_unity}{- \frac{[C]}{T}}& \cond{dci_thd_unity}{,} \label{e:dci_thd_unity_dt}
 \end{align}
@@ -835,18 +835,18 @@ and for the state parameter:
 \begin{subequations}
  \label{e:dci_thd_unity_de}
  \begin{align}
-  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_unity}{0}[c] & \cond{dci_thd_unity}{\dconp/} \\
-  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_unity}{\frac{1}{T \Ru/}}& \cond{dci_thd_unity}{\dconv/}
+  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_unity}{0}[c] & \cond{dci_thd_unity}{\dconp/,} \\
+  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_unity}{\frac{1}{T \Ru/}}& \cond{dci_thd_unity}{\dconv/,}
  \end{align}
 \end{subequations}
 and finally for the moles of species $j$:
 \begin{align}
   \label{e:dci_thd_unity_dnj}
-  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial n_{j} }} &= \rhs{dci_thd_unity}{0}[c] & \cond{dci_thd_unity}{,}
+  \lhs{dci_thd_unity}{\frac{\partial c_{i} }{\partial n_{j} }} &= \rhs{dci_thd_unity}{0}[c] & \cond{dci_thd_unity}{.}
 \end{align}
 
 
-If the third-body is the $m$th species,~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} become:
+If the third-body is the $m$th \textbf{species},~\cref{e:dci_thd_dt,e:dci_thd_dnj,e:dci_thd_de} become:
 \begin{align}
  \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial T }} &= \rhs{dci_thd_spec}{-\frac{\delta_{\ns/ m}}{T} [C]}&\cond{dci_thd_spec}{,} \label{e:dci_thd_spec_dt}
 \end{align}
@@ -854,13 +854,13 @@ and:
 \begin{subequations}
 \label{e:dci_thd_spec_de}
 \begin{align}
-\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns/ m}}{V} \left([C] - [C]_{\ns/}\right) + \frac{[C]_{m}}{V} \left(\delta_{\ns/ m} - 1\right)} & \cond{dci_thd_spec}{\dconp/} \\
-\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns/ m}}{T \Ru/}} & \cond{dci_thd_spec}{\dconv/}
+\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial V }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns/ m}}{V} \left([C] - [C]_{\ns/}\right) + \frac{[C]_{m}}{V} \left(\delta_{\ns/ m} - 1\right)} & \cond{dci_thd_spec}{\dconp/,} \\
+\lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial P }} &= \rhs{dci_thd_spec}{\frac{\delta_{\ns/ m}}{T \Ru/}} & \cond{dci_thd_spec}{\dconv/,}
 \end{align}
 \end{subequations}
 and for the molar derivative:
 \begin{align}
- \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial n_j }} &= \rhs{dci_thd_spec}{\frac{1}{V} \left(- \delta_{\ns/ m} + \delta_{j m}\right)}&\cond{dci_thd_spec}{,} \label{e:dci_thd_spec_dnj}
+ \lhs{dci_thd_spec}{\frac{\partial c_{i} }{\partial n_j }} &= \rhs{dci_thd_spec}{\frac{1}{V} \left(- \delta_{\ns/ m} + \delta_{j m}\right)}&\cond{dci_thd_spec}{.} \label{e:dci_thd_spec_dnj}
 \end{align}
 
 \subsubsection{Unimolecular\slash~recombination fall-off reactions}
@@ -878,14 +878,14 @@ and with respect to the state parameter:
 \begin{subequations}
  \label{e:dci_fall_de}
  \begin{align}
-  \lhs{dci_fall}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial V } + \frac{\partial P_{r, i} }{\partial V } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconp/} \\
-  \lhs{dci_fall}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial P } + \frac{\partial P_{r, i} }{\partial P } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconv/}
+  \lhs{dci_fall}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial V } + \frac{\partial P_{r, i} }{\partial V } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconp/,} \\
+  \lhs{dci_fall}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial P } + \frac{\partial P_{r, i} }{\partial P } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{\dconv/,}
  \end{align}
 \end{subequations}
 and finally the molar derivative:
 \begin{align}
  \label{e:dci_fall_dnj}
- \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{,}
+ \lhs{dci_fall}{\frac{\partial c_{i} }{\partial n_j}} &= \rhs{dci_fall}{\frac{1}{P_{r, i} + 1} \left(P_{r, i} \frac{\partial F_{i} }{\partial n[j] } + \frac{\partial P_{r, i} }{\partial n_j } \left(F_{i} - c_{i}\right)\right)} & \cond{dci_fall}{.}
 \end{align}
 
 
@@ -901,8 +901,8 @@ and for the state parameter derivative:
 \begin{subequations}
  \label{e:dci_chem_de}
  \begin{align}
-  \lhs{dci_chem}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial V } - \frac{\partial P_{r, i} }{\partial V } c_{i}\right)} & \cond{dci_chem}{\dconp/} \\
-  \lhs{dci_chem}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial P } - \frac{\partial P_{r, i} }{\partial P } c_{i}\right)} & \cond{dci_chem}{\dconv/}
+  \lhs{dci_chem}{\frac{\partial c_i }{\partial V }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial V } - \frac{\partial P_{r, i} }{\partial V } c_{i}\right)} & \cond{dci_chem}{\dconp/,} \\
+  \lhs{dci_chem}{\frac{\partial c_i }{\partial P }} &= \rhs{dci_chem}{\frac{1}{P_{r, i} + 1} \left(\frac{\partial F_{i} }{\partial P } - \frac{\partial P_{r, i} }{\partial P } c_{i}\right)} & \cond{dci_chem}{\dconv/,}
  \end{align}
 \end{subequations}
 and finally, the molar derivative:
@@ -916,19 +916,19 @@ and finally, the molar derivative:
 \label{s:dpr}
 
 Next the reduced pressure derivatives in~\crefrange{e:dci_fall_dt}{e:dci_chem_de} will be evaluated; these depend on the form of the third-body efficiency used in~\cref{e:pr}, thus we will first work out the derivatives for each third-body efficiency form, and then develop a generalized form for compact representation.
-For a third-body concentration based upon the entire mixture, (i.e.,~\cref{e:thd_mix}) the derivatives are:
+For a third-body concentration based upon the entire mixture, (i.e.,~\cref{e:thd_mix}) the temperature derivative is:
 \begin{align}
  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial T }} &= \rhs{dpr_mix}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru/} - \frac{E_{a, \infty}}{T \Ru/}\right) - \frac{[C] k_{0, i} \alpha_{\ns/,i}}{T k_{\infty, i}}} & \cond{dpr_mix}{,} \label{e:dpr_mix_dt}
 \end{align}
-and for the state parameter derivative:
+and the state parameter derivatives are:
 \begin{subequations}
  \label{e:dpr_mix_de}
  \begin{align}
-  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_mix}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \alpha_{\ns/,i}}{V k_{\infty, i}}} & \cond{dpr_mix}{\dconp/} \\
-  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_mix}{\frac{k_{0, i} \alpha_{\ns/,i}}{T k_{\infty, i} \Ru/}} & \cond{dpr_mix}{\dconv/}
+  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_mix}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \alpha_{\ns/,i}}{V k_{\infty, i}}} & \cond{dpr_mix}{\dconp/,} \\
+  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_mix}{\frac{k_{0, i} \alpha_{\ns/,i}}{T k_{\infty, i} \Ru/}} & \cond{dpr_mix}{\dconv/,}
  \end{align}
 \end{subequations}
-and:
+and finally, the molar derivative is given by:
 \begin{align}
  \lhs{dpr_mix}{\frac{\partial P_{r, i} }{\partial n_j }} &= \rhs{dpr_mix}{\frac{k_{0, i} \left(- \alpha_{\ns/,i} + \alpha_{j,i}\right)}{k_{\infty, i} V}} & \cond{dpr_mix}{.} \label{e:dpr_mix_dnj}
 \end{align}
@@ -938,15 +938,15 @@ For a unity third-body concentration (i.e., all $\alpha_{k,i}=1$):
 \begin{align}
  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial T }} &= \rhs{dpr_unity}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} - 1 + \frac{E_{a, 0}}{T \Ru/} - \frac{E_{a, \infty}}{T \Ru/}\right)} & \cond{dpr_unity}{,} \label{e:dpr_unity_dt}
 \end{align}
-and for the state parameter:
+and the state parameter derivatives are:
 \begin{subequations}
  \label{e:dpr_unity_de}
  \begin{align}
-  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_unity}{0} & \cond{dpr_unity}{\dconp/}\\
-  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_unity}{\frac{k_{0, i}}{k_{\infty, i}} \frac{1}{\Ru/ T}} & \cond{dpr_unity}{\dconv/}
+  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_unity}{0} & \cond{dpr_unity}{\dconp/,}\\
+  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_unity}{\frac{k_{0, i}}{k_{\infty, i}} \frac{1}{\Ru/ T}} & \cond{dpr_unity}{\dconv/,}
  \end{align}
 \end{subequations}
-and the molar derivative:
+and the molar derivative is:
 \begin{align}
  \lhs{dpr_unity}{\frac{\partial P_{r, i} }{\partial n_j }} &= \rhs{dpr_unity}{0} & \cond{dpr_unity}{.} \label{e:dpr_unity_dnj}
 \end{align}
@@ -956,12 +956,12 @@ Finally, for species-based third-body (i.e., the species $m$ alone acts as the t
 \begin{align}
  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial T }} &=\rhs{dpr_spec}{\frac{P_{r, i}}{T} \left(\beta_{0} - \beta_{\infty} + \frac{E_{a, 0}}{T \Ru/} - \frac{E_{a, \infty}}{T \Ru/}\right) - \frac{[C] k_{0, i} \delta_{\ns/ m}}{T k_{\infty, i}}} & \cond{dpr_spec}{,} \label{e:dpr_spec_dt}
 \end{align}
-for the state paramter derivative:
+for the state parameter derivative:
 \begin{subequations}
  \label{e:dpr_spec_de}
  \begin{align}
-  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_spec}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \delta_{\ns/ m}}{V k_{\infty, i}}} & \cond{dpr_spec}{\dconp/}\\
-  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_spec}{\frac{k_{0, i} \delta_{\ns/ m}}{T k_{\infty, i} \Ru/}} & \cond{dpr_spec}{\dconv/}
+  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial V }} &= \rhs{dpr_spec}{- \frac{P_{r, i}}{V} + \frac{[C] k_{0, i} \delta_{\ns/ m}}{V k_{\infty, i}}} & \cond{dpr_spec}{\dconp/,}\\
+  \lhs{dpr_spec}{\frac{\partial P_{r, i} }{\partial P }} &= \rhs{dpr_spec}{\frac{k_{0, i} \delta_{\ns/ m}}{T k_{\infty, i} \Ru/}} & \cond{dpr_spec}{\dconv/,}
  \end{align}
 \end{subequations}
 and the molar derivative:
@@ -978,8 +978,8 @@ and the state parameter:
 \begin{subequations}
  \label{e:dpr_de}
  \begin{align}
-  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial V}} &= \rhs{dpr_gen}{P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}} & \cond{dpr_gen}{\dconp/} \\
-  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial P}} &= \rhs{dpr_gen}{\bar{\theta}_{P_{r, i}, \partial P}} & \cond{dpr_gen}{\dconv/}
+  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial V}} &= \rhs{dpr_gen}{P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}} & \cond{dpr_gen}{\dconp/,} \\
+  \lhs{dpr_gen}{\frac{\partial P_{r, i} }{\partial P}} &= \rhs{dpr_gen}{\bar{\theta}_{P_{r, i}, \partial P}} & \cond{dpr_gen}{\dconv/,}
  \end{align}
 \end{subequations}
 and the molar derivative:
@@ -1029,7 +1029,7 @@ with:
  \begin{dcases}
   \rhs{theta_pr_bar_dnj}{- \alpha_{\ns/,i} + \alpha_{j,i}} & \text{if mix,} \\
   \rhs{theta_pr_bar_dnj}{0}[c] & \text{if unity,}  \\
-  \rhs{theta_pr_bar_dnj}{- \delta_{\ns/ m} + \delta_{j m}} & \text{if species,}
+  \rhs{theta_pr_bar_dnj}{- \delta_{\ns/ m} + \delta_{j m}} & \text{if species.}
  \end{dcases}
 \end{align}
 
@@ -1037,9 +1037,9 @@ with:
 \subsubsection{Falloff blending factor}
 \label{s:dfi}
 
-The falloff blending factor for all but Lindemann falloff reactions relies upon the reduced pressure derivatives developed in~\cref{s:dpr}.
+Derivatives of the falloff blending factor---except for for all but the Lindemann falloff blending factor, which is not a function of the reduced pressure---rely upon the reduced pressure derivatives developed in~\cref{s:dpr}.
 First, the blending factor for each falloff reaction type will be differentiated along with any subcomponents (e.g., the $F_{cent}$ term for Troe falloff reactions).
-Next, the reduced pressured derivatives given by~\cref{e:dpr_dt,e:dpr_dnj,e:dpr_de} will be substituted in, before finally deriving a generalized form for the falloff blending factor derivatives.
+Next, the reduced pressured derivatives given by~\cref{e:dpr_dt,e:dpr_dnj,e:dpr_de} will be substituted in and finally a generalized form for the falloff blending factor derivatives will be determined.
 
 For Lindemann falloff reactions:
 \begin{align}
@@ -1049,13 +1049,13 @@ and, for the state parameter:
 \begin{subequations}
  \label{e:dfi_lind_de}
  \begin{align}
-  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconp/} \\
-  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconv/}
+  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconp/,} \\
+  \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{\dconv/,}
  \end{align}
 \end{subequations}
 and the molar derivative:
 \begin{align}
- \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial n_j }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{,} \label{e:dfi_lind_dnj}
+ \lhs{dfi_lind}{\frac{\partial F_{i} }{\partial n_j }} &= \rhs{dfi_lind}{0} & \cond{dfi_lind}{.} \label{e:dfi_lind_dnj}
 \end{align}
 
 For Troe falloff reactions:
@@ -1066,24 +1066,25 @@ and the state parameter derivative:
 \begin{subequations}
  \label{e:dfi_troe_de}
  \begin{align}
- \lhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial V }} & \cond{dfi_troe_1}{\dconp/} \\
- \lhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial P }} & \cond{dfi_troe_1}{\dconv/}
+ \lhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial V }} & \cond{dfi_troe_1}{\dconp/,} \\
+ \lhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial P }} & \cond{dfi_troe_1}{\dconv/,}
  \end{align}
 \end{subequations}
 and:
 \begin{align}
  \lhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial n_j}} &= \rhs{dfi_troe_1}{\frac{\partial F_{i} }{\partial P_{r, i} } \frac{\partial P_{r, i} }{\partial n_j }} & \cond{dfi_troe_1}{.} \label{e:dfi_troe_dnj}
 \end{align}
-where:
+The Troe falloff blending factor derivative with respect to $F_{cent}$ is:
 \begin{align}
  \frac{\partial F_{i} }{\partial F_{cent} } &= \frac{F_{i}}{\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1} \left(\frac{2 A_{Troe} \log{\left (F_{cent} \right )}}{B_{Troe}^{2} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)} \left(\frac{A_{Troe}}{B_{Troe}} \frac{\partial B_{Troe} }{\partial F_{cent} } - \right. \right. & \nonumber \\
  & \mathindent[morespaceplease] \left. \frac{\partial A_{Troe} }{\partial F_{cent} }\right) + \frac{1}{F_{cent}} \left. \vphantom{\frac{F_{i}}{\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1}} \right) & \text{,} \label{e:dfi_troe_dfcent_partial} \\
+\intertext{and:}
 \frac{\text{d} F_{cent} }{\text{d} T } &= \frac{a}{T^{*}} \operatorname{exp}\left({- \frac{T}{T^{*}}}\right) - \frac{\operatorname{exp}\left({- \frac{T}{T^{***}}}\right)}{T^{***}} \left(- a + 1\right) + & \nonumber \\
  & \mathindent \frac{T^{**}}{T^{2}} \operatorname{exp}\left({- \frac{T^{**}}{T}}\right) & \text{,} \label{e:dfcent_dt} \\
 \intertext{and:}
-\frac{\partial F_{i} }{\partial P_{r, i} } &= \frac{2 F_{i} A_{Troe} \log{\left (F_{cent} \right )}}{B_{Troe}^{2} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)^{2}} \left(\frac{A_{Troe}}{B_{Troe}} \frac{\partial B_{Troe} }{\partial P_{r, i} } - \frac{\partial A_{Troe} }{\partial P_{r, i} }\right) \label{e:dfi_troe_dpr_partial}
+\frac{\partial F_{i} }{\partial P_{r, i} } &= \frac{2 F_{i} A_{Troe} \log{\left (F_{cent} \right )}}{B_{Troe}^{2} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)^{2}} \left(\frac{A_{Troe}}{B_{Troe}} \frac{\partial B_{Troe} }{\partial P_{r, i} } - \frac{\partial A_{Troe} }{\partial P_{r, i} }\right) \;. \label{e:dfi_troe_dpr_partial}
 \end{align}
-where the derivatives of $A_{Troe}$ and $B_{Troe}$ are:
+Finally, the derivatives of $A_{Troe}$ and $B_{Troe}$ are:
 \begin{align}
  \frac{\partial A_{Troe} }{\partial F_{cent} } &= - \frac{0.67}{F_{cent} \log{\left (10 \right )}} & \text{,} \label{e:datroe_dfcent} \\
 \frac{\partial B_{Troe} }{\partial F_{cent} } &= - \frac{1.1762}{F_{cent} \log{\left (10 \right )}} & \text{,} \label{e:dbtroe_dfcent} \\
@@ -1096,67 +1097,69 @@ Combining~\cref{e:datroe_dfcent,e:dbtroe_dfcent,e:datroe_dpr,e:dbtroe_dpr} with~
 \begin{align}
 \frac{\partial F_{i} }{\partial F_{cent} } &= - \frac{F_{i} B_{Troe}}{F_{cent} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \left(2 A_{Troe} \left( 1.1762 A_{Troe} - \right. \right . & \nonumber \\
 & \mathindent[s] \left. \left. 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\right) & \text{,} \label{e:dfi_troe_dfcent} \\
+\intertext{and:}
 \frac{\partial F_{i} }{\partial P_{r, i} } &= - \frac{2 F_{i} A_{Troe} \left(\frac{0.14 A_{Troe}}{B_{Troe}} + 1\right) \log{\left (F_{cent} \right )}}{B_{Troe}^{2} P_{r, i} \left(\frac{A_{Troe}^{2}}{B_{Troe}^{2}} + 1\right)^{2} \log{\left (10 \right )}} \label{e:dfi_troe_dpr} &
 \end{align}
 \Cref{e:dfcent_dt,e:dfi_troe_dfcent,e:dfi_troe_dpr} can then be substituted into~\cref{e:dfi_troe_dt,e:dfi_troe_dnj,e:dfi_troe_de} to obtain a final form for the Troe-falloff blending function derivatives, which will be given as a generalized form at the end of this section.
 
-For SRI falloff reactions:
+For SRI falloff reactions, the temperature derivative of the falloff blending factor is:
 \begin{align}
  \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial T }} &= \rhs{dfi_sri}{F_{i} \vast(\frac{X \left(- \frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} + \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + } & \nonumber \\
- & \rhs{dfi_sri}{\mathindent \frac{\partial P_{r, i} }{\partial T } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\biggl[}} & \nonumber \\
+ & \rhs{dfi_sri}{\mathindent[extras] \frac{\partial P_{r, i} }{\partial T } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\biggl[}} & \nonumber \\
  & \rhs{dfi_sri}{\mathindent[largerstill] a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \biggr] + \frac{e}{T} \vast)} & \cond{dfi_sri}{,} \label{e:dfi_sri_dt}
 \end{align}
-the state parameter derivative:
+and the state parameter derivatives:
 \begin{subequations}
  \label{e:dfi_sri_de}
  \begin{align}
- \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial V } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconp/} \\
- \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial P } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconv/}
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial V } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconp/,} \\
+ \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial P } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{\dconv/,}
  \end{align}
 \end{subequations}
-and:
+and finally, with respect to species moles:
 \begin{align}
  \lhs{dfi_sri}{\frac{\partial F_{i} }{\partial {n_j} }} &= \rhs{dfi_sri}{F_{i} \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} } \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}} & \cond{dfi_sri}{.} \label{e:dfi_sri_dnj}
 \end{align}
 
-where:
+The derivatives of the SRI exponent $X$ are:
 \begin{align}
  \frac{\text{d} X }{\text{d} P_{r, i} } &= - \frac{2 X^{2} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} &, \\
- \frac{\partial X}{\partial n_j} &= \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} }
+ \frac{\partial X}{\partial n_j} &= \frac{\partial P_{r, i} }{\partial {n_j} } \frac{\text{d} X }{\text{d} P_{r, i} } &.
 \end{align}
 
-As with the reduced-pressure derivatives,~\cref{e:dfi_lind_dt,e:dfi_lind_dnj,e:dfi_lind_de,e:dfi_troe_dt,e:dfi_troe_dnj,e:dfi_troe_de,e:dfi_sri_dt,e:dfi_sri_dnj,e:dfi_sri_de} may be represented in a general form via introduction of temporary variables $\Theta_{F_i, \partial \ldots}$:
+As with the reduced-pressure derivatives,~\cref{e:dfi_lind_dt,e:dfi_lind_dnj,e:dfi_lind_de,e:dfi_troe_dt,e:dfi_troe_dnj,e:dfi_troe_de,e:dfi_sri_dt,e:dfi_sri_dnj,e:dfi_sri_de} may be represented in a general form via introduction of temporary variables $\Theta_{F_i, \partial \ldots}$, giving for the temperature derivative:
 \begin{align}
 \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial T }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial T}} & \cond{dfi_gen}{,}
 \end{align}
-for the state parameter derivative:
+for the state parameter derivatives:
 \begin{subequations}
  \begin{align}
-  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial V}} & \cond{dfi_gen}{\dconp/} \\
-  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial P}} & \cond{dfi_gen}{\dconv/}
+  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial V }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial V}} & \cond{dfi_gen}{\dconp/,} \\
+  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial P }} &= \rhs{dfi_gen}{F_{i} \Theta_{F_i, \partial P}} & \cond{dfi_gen}{\dconv/,}
  \end{align}
 \end{subequations}
-and the molar derivative:
+and finally, for the molar derivative:
 \begin{align}
  \lhs{dfi_gen}{\frac{\partial F_{i} }{\partial {n_j}}} &= \rhs{dfi_gen}{\frac{F_{i} k_{0, i} \Theta_{F_i, \partial n_j}}{V k_{\infty, i}} \bar{\theta}_{P_{r, i}, \partial n_j}} & \cond{dfi_gen}{.}
 \end{align}
-where for Lindemann falloff reactions:
+
+For Lindemann falloff reactions:
 \begin{align}
 \label{e:dfi_lind_dt_prod}
-\lhs{dfi_lind_gen}{\Theta_{F_i, \partial T}} &= \rhs{dfi_lind_gen}{0}
+\lhs{dfi_lind_gen}{\Theta_{F_i, \partial T}} &= \rhs{dfi_lind_gen}{0} &,
 \end{align}
-and, for the state parameter derivative:
+and, for the state parameter derivatives:
 \begin{subequations}
  \label{e:dfi_lind_de_prod}
  \begin{align}
-  \lhs{dfi_lind_gen}{\Theta_{F_i, \partial V}} &= \rhs{dfi_lind_gen}{0} \\
-  \lhs{dfi_lind_gen}{\Theta_{F_i, \partial P}} &= \rhs{dfi_lind_gen}{0}
+  \lhs{dfi_lind_gen}{\Theta_{F_i, \partial V}} &= \rhs{dfi_lind_gen}{0} &, \\
+  \lhs{dfi_lind_gen}{\Theta_{F_i, \partial P}} &= \rhs{dfi_lind_gen}{0} &,
  \end{align}
 \end{subequations}
-and:
+and for the molar derivative:
 \begin{align}
 \label{e:dfi_lind_dnj_prod}
-\lhs{dfi_lind_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_lind_gen}{0}
+\lhs{dfi_lind_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_lind_gen}{0} &.
 \end{align}
 
 For Troe falloff reactions:
@@ -1168,21 +1171,21 @@ For Troe falloff reactions:
 &\rhs{dfi_troe_gen}{ 2 A_{Troe} F_{cent} \left(0.14 A_{Troe} + B_{Troe}\right) \times } \nonumber \\
 &\rhs{dfi_troe_gen}{\left( P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (F_{cent} \right )} + P_{r, i} \frac{\text{d} F_{cent} }{\text{d} T } \times \Bigl(} \nonumber \\
 &\rhs{dfi_troe_gen}{\mathindent 2 A_{Troe} \left(1.1762 A_{Troe} - 0.67 B_{Troe}\right) \log{\left (F_{cent} \right )} - } \nonumber \\
-&\rhs{dfi_troe_gen}{\mathindent B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\Bigr)\Biggr)}
+&\rhs{dfi_troe_gen}{\mathindent B_{Troe} \left(A_{Troe}^{2} + B_{Troe}^{2}\right) \log{\left (10 \right )}\Bigr)\Biggr)} \;,
 \end{align}
-and for the state parameter derivative:
+and for the state parameter derivatives:
 \begin{subequations}
  \label{e:dfi_troe_de_prod}
  \begin{align}
    \lhs{dfi_troe_gen}{\Theta_{F_i, \partial V}} &= \rhs{dfi_troe_gen}{- \frac{2 A_{Troe} B_{Troe} \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}} \times \bigl(} \nonumber \\
-					    & \rhs{dfi_troe_gen}{\mathindent[alittlebit] 0.14 A_{Troe} + B_{Troe}\bigr) \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right)} \\
-   \lhs{dfi_troe_gen}{\Theta_{F_i, \partial P}} &= \rhs{dfi_troe_gen}{- \frac{2 A_{Troe} B_{Troe} \bar{\theta}_{P_{r, i}, \partial P} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}
+					    & \rhs{dfi_troe_gen}{\mathindent[alittlebit] 0.14 A_{Troe} + B_{Troe}\bigr) \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right)} \;, \\
+   \lhs{dfi_troe_gen}{\Theta_{F_i, \partial P}} &= \rhs{dfi_troe_gen}{- \frac{2 A_{Troe} B_{Troe} \bar{\theta}_{P_{r, i}, \partial P} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}\;,
  \end{align}
 \end{subequations}
-and:
+and the molar derivative:
 \begin{align}
  \label{e:dfi_troe_dnj_prod}
-\lhs{dfi_troe_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_troe_gen}{- \frac{2 A_{Troe} B_{Troe} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}
+\lhs{dfi_troe_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_troe_gen}{- \frac{2 A_{Troe} B_{Troe} \left(0.14 A_{Troe} + B_{Troe}\right) \log{\left (F_{cent} \right )}}{P_{r, i} \left(A_{Troe}^{2} + B_{Troe}^{2}\right)^{2} \log{\left (10 \right )}}}\;.
 \end{align}
 where $\Theta_{P_{r,i}, \partial \ldots}$ and $\bar{\theta}_{P_{r, i}, \partial \ldots}$ are given by~\cref{e:dpr_theta_dt,e:dpr_theta_bar_dt,e:dpr_theta_bar_dnj,e:dpr_theta_dv,e:dpr_theta_bar_dv,e:dpr_theta_dp} respectively.
 
@@ -1192,7 +1195,7 @@ Finally, for SRI falloff reactions:
  \lhs{dfi_sri_gen}{\Theta_{F_i, \partial T}} &=
  \rhs{dfi_sri_gen}{- \frac{X \left(\frac{\operatorname{exp}\left({- \frac{T}{c}}\right)}{c} - \frac{a b}{T^{2}} \operatorname{exp}\left({- \frac{b}{T}}\right)\right)}{a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right)} + \frac{e}{T} - \Biggl(} \nonumber \\
  &\rhs{dfi_sri_gen}{\mathindent \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \times } \nonumber \\
- &\rhs{dfi_sri_gen}{\mathindent \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right ) \Biggr)}}
+ &\rhs{dfi_sri_gen}{\mathindent \left(P_{r, i} \Theta_{P_{r,i}, \partial T} + \bar{\theta}_{P_{r, i}, \partial T}\right) \log{\left (P_{r, i} \right ) \Biggr)}}\;,
 \end{align}
 and:
 \begin{subequations}
@@ -1200,15 +1203,15 @@ and:
  \begin{align}
   \lhs{dfi_sri_gen}{\Theta_{F_i, \partial V}} &=
   \rhs{dfi_sri_gen}{- \frac{2 X^{2} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \left(P_{r, i} \Theta_{P_{r,i}, \partial V} + \bar{\theta}_{P_{r, i}, \partial V}\right) \log \Biggl(} \nonumber \\
-& \rhs{dfi_sri_gen}{\mathindent \left( a \operatorname{exp}\left({\frac{T}{c}}\right) + \operatorname{exp}\left({\frac{b}{T}}\right)\right) \operatorname{exp}\left({- \frac{T}{c} - \frac{b}{T}}\right) \Biggr)} \\
+& \rhs{dfi_sri_gen}{\mathindent \left( a \operatorname{exp}\left({\frac{T}{c}}\right) + \operatorname{exp}\left({\frac{b}{T}}\right)\right) \operatorname{exp}\left({- \frac{T}{c} - \frac{b}{T}}\right) \Biggr)}\;, \\
   \lhs{dfi_sri_gen}{\Theta_{F_i, \partial P}} &=
-  \rhs{dfi_sri_gen}{- \frac{2 X^{2} \bar{\theta}_{P_{r, i}, \partial P} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}
+  \rhs{dfi_sri_gen}{- \frac{2 X^{2} \bar{\theta}_{P_{r, i}, \partial P} \log{\left (P_{r, i} \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}\;,
  \end{align}
 \end{subequations}
 and finally, for the molar derivative:
 \begin{align}
  \label{e:dfi_sri_dnj_prod}
- \lhs{dfi_sri_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_sri_gen}{- \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (P_{r, i} \right )}}
+ \lhs{dfi_sri_gen}{\Theta_{F_i, \partial n_j}} &= \rhs{dfi_sri_gen}{- \frac{2 X^{2} \log{\left (a \operatorname{exp}\left({- \frac{b}{T}}\right) + \operatorname{exp}\left({- \frac{T}{c}}\right) \right )}}{P_{r, i} \log^{2}{\left (10 \right )}} \log{\left (P_{r, i} \right )}}\;.
 \end{align}
 
 
@@ -1220,13 +1223,13 @@ Using the temporary products developed in~\cref{s:dpr,s:dfi}, the fall-off react
 \lhs{dci_fall_complete}{\frac{\partial c_{i}}{\partial T }} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1} + \biggl(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial T}}{P_{r, i} + 1} + \Theta_{F_i, \partial T} + } & \nonumber \\
 							     &  \rhs{dci_fall_complete}{\mathindent[largerindentpleas] \Theta_{P_{r,i}, \partial T} - \frac{\bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1}\biggr) c_{i}} & \cond{dci_fall_complete}{,}
 \end{align}
-for the state parameter derivative:
+and, for the state parameter derivatives:
 \begin{subequations}
  \label{e:dci_fall_de_final}
  \begin{align}
   \lhs{dci_fall_complete}{\frac{\partial c_{i}}{\partial V }} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1} + \biggl(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial V}}{P_{r, i} + 1} + \Theta_{F_i, \partial V} + } & \nonumber \\
-							       &  \rhs{dci_fall_complete}{\mathindent[largerindentpleas] \Theta_{P_{r,i}, \partial V} - \frac{\bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1} \biggr) c_{i}} & \cond{dci_fall_complete}{\dconp/} \\
-  \lhs{dci_fall_complete}{\frac{\partial c_{i}}{\partial P }} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1} + \left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_fall_complete}{\dconv/}
+							       &  \rhs{dci_fall_complete}{\mathindent[largerindentpleas] \Theta_{P_{r,i}, \partial V} - \frac{\bar{\theta}_{P_{r, i}, \partial V}}{P_{r, i} + 1} \biggr) c_{i}} & \cond{dci_fall_complete}{\dconp/,} \\
+  \lhs{dci_fall_complete}{\frac{\partial c_{i}}{\partial P }} &= \rhs{dci_fall_complete}{\frac{F_{i} \bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1} + \left(\Theta_{F_i, \partial P} - \frac{\bar{\theta}_{P_{r, i}, \partial P}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_fall_complete}{\dconv/,}
  \end{align}
 \end{subequations}
 and the molar derivative:
@@ -1242,7 +1245,7 @@ Similarly, the chemically-activated reaction derivatives in~\cref{e:dci_chem_dt,
 \label{e:dci_chem_dt_final}
 \lhs{dci_chem_complete}{\frac{\partial c_{i}}{\partial T }} &= \rhs{dci_chem_complete}{\left(- \frac{P_{r, i} \Theta_{P_{r,i}, \partial T}}{P_{r, i} + 1} + \Theta_{F_i, \partial T} - \frac{\bar{\theta}_{P_{r, i}, \partial T}}{P_{r, i} + 1}\right) c_{i}} & \cond{dci_chem_complete}{,}
 \end{align}
-and the state paramter derivative:
+and the state parameter derivatives:
 \begin{subequations}
  \label{e:dci_chem_de_final}
  \begin{align}
@@ -1294,10 +1297,11 @@ Next,~\cref{e:dEdotdE_nojac} is simplified via~\cref{e:dnkdotdE_compact,e:dTdotd
 \loadeq{dEdotdE}
 
 \subsubsection{Molar source term derivatives}
-To obtain a final form for the molar source term derivative with respect to the state paramter,~\cref{e:dnkdotdE_compact,e:dwdot_de} are combined:
+To obtain a final form for the molar source term derivative with respect to the state parameter,~\cref{e:dnkdotdE_compact,e:dwdot_de} are combined:
 \loadeq{dnkdotdE}
 
-The derivative of the net rate of progress with respect to the state paramter is given by~\cref{e:dropi_de} for arrhenius-based reactions,~\cref{e:dropi_plog_de,e:dropi_cheb_de} for P-Log and Chebyshev reactions for a \conv/ system, and~\cref{e:dropi_de} for a \conp/ system.
+The derivative of the net rate of progress with respect to the state parameter is given by~\cref{e:dropi_de} for arrhenius-based reactions.
+For P-Log and Chebyshev reactions in a \conv/ system~\cref{e:dropi_plog_de,e:dropi_cheb_de} are used, while~\cref{e:dropi_de} is used for a \conp/ system.
 The pressure modification term derivatives are given by~\cref{e:dci_thd_de,e:dci_thd_unity_de,e:dci_thd_spec_de} for third-body enhanced reactions, and~\cref{e:dci_fall_de_final,e:dci_chem_de_final} for falloff\slash chemically-activated reactions respectively.
 
 \subsection{Molar derivatives}
