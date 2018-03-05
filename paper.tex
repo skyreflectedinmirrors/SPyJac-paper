@@ -173,6 +173,7 @@ This work will build upon our previous analytical chemical kinetic Jacobian code
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
  \item Discuss future extensions to this work as well as the most promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations
 \end{itemize}
+To our knowledge, this is the first work that provides vectorized source term and Jacobian evaluation for any chemical model on the CPU, GPU and other accelerators.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
@@ -321,26 +322,19 @@ Validation of the complete (as opposed to the subcomponent testing discussed her
 
 
 \section{Results and Discussion}
-\subsection{Testing platforms and practical notes on OpenCL usage}
+\subsection{Testing platforms}
 
 The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
 \Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
 Additionally, \texttt{v5.0} of the LLVM\slash\texttt{clang}~\cite{Lattner:2004:LCF:977395.977673} compiler chain was installed on all machines to enable use of POCL.
 In addition,~\cref{t:gpus} lists the model, number of CUDA cores and NVIDIA driver of each of the GPUs used in this work.
 NVIDIA's OpenCL runtime is bundled with the NVIDIA driver~\cite{NVIDIA:2018}, hence we use driver version to specify the OpenCL runtime version.
-
 Finally,~\cref{t:platforms} lists the platforms and vectorization\slash execution patterns they are capable of running.
-It is important to note, that while OpenCL provides an easy way to enable cross-platform execution, there are some serious potential pit-falls in its use.
-Typically speaking, the closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain more bugs that result in compilation failures or simply incorrect vectorized machine code; further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIAs case, change-logs of bugfixes).
-As demonstration, we've created a minimum working example~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
-This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
-
-Further, the Intel and NVIDIA OpenCL runtimes lack a key feature---implementations of atomic operations on double precision variables---that are currently necessary for \texttt{pyJac} to run deep-vectorized code.
+The Intel and NVIDIA OpenCL runtimes lack implementations of atomic operations on double precision variables; these are currently necessary for \texttt{pyJac} to run deep-vectorized code.
 On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations; it is our experience that the POCL community is very responsive to bug reports and user outreach.
 However, POCL's implicit vectorization module---which utilizes the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to attempt to translate OpenCL code to vectorized machine code---typically fails to achieve much speedup, if any.
 Thus POCL is a particularly useful tool for validation, but not necessarily for performance studies.
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the only significant code change is building the wrapper that initializes\slash transfers memory and calls the kernel.
-Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py}) is a key priority going forwards.
 This discussion will be expanded upon in~\cref{s:future} to highlight the most promising future directions.
 
 
@@ -592,7 +586,7 @@ On both machines, the unvectorized OpenCL code is faster than the baseline paral
 Additionally, the shallow-vectorized OpenCL code is \textasciitilde\SIrange{2.5}{2.9}{$\times$} and \textasciitilde\SIrange{3.4}{4.1}{$\times$} faster than the OpenMP code for the \sse/ and \avx/ machines respectively.
 In contrast,~\cref{F:pocl_source} shows the runtime of deep, shallow and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU; indeed the OpenMP is faster in both cases.
-The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work; however, briefly speaking vectorization might be achieved on POCL via a combination of relaxed math (``\texttt{-cl-fast-relaxed-math}''), use of explicit OpenCL vector types and newer versions of LLVM\slash POCL (specifically, potential improvements to the vectorization module).
+The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work; however, briefly speaking vectorization might be achieved on POCL via a combination of fixed-array strides (rather than potentially varying with problem-size), use of relaxed math (``\texttt{-cl-fast-relaxed-math}''), explicit OpenCL vector types and newer versions of LLVM\slash POCL (specifically, potential improvements to the vectorization module).
 This will be explored more in future work, but for the moment POCL is still quite useful as a validation tool.
 
 \begin{figure}[htbp!]
@@ -879,9 +873,15 @@ Finally, in~\cref{F:v1_vs_v2} compares the performance for evaluation of the den
 \end{figure}
 
 
-\section{Future directions}
+\section{Future directions and practical notes on OpenCL usage}
 \label{s:future}
-NVIDIA 375.26 is a bad driver, yo.
+It is important to note, that while OpenCL provides an easy way to enable cross-platform execution, there are some serious potential pit-falls in its use.
+Typically speaking, the closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain more bugs that result in compilation failures or simply incorrect vectorized machine code; further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIAs case, change-logs of bugfixes).
+As demonstration, we've created a minimum working example~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
+This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
+
+Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py}) is a key priority going forwards.
+
 
 \section{Conclusions}
 In this work, automatically generated OpenCL codes for shallow SIMD-vectorized thermo-chemical source term evaluation were developed and validated against Cantera~\cite{Cantera} for a shallow range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr}.
