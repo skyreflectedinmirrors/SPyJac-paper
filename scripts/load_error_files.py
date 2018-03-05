@@ -41,9 +41,22 @@ def add_rxn_specific_inds(mech_info, rxn_type, rxn_str, path):
         if not isinstance(gas.reaction(fi), rxn_type)])
 
 
-def run_error_calcs(ftype, updater):
+def get_platform(file):
+    if 'nvidia' in file:
+        return 'nvidia'
+    elif 'portable' in file:
+        return 'pocl'
+    elif 'intel' in file:
+        return 'intel'
+    else:
+        assert '_c_' in file
+        return 'openmp'
+
+
+def run_error_calcs(ftype, updater, per_platform=False):
     files = get_error_files(ftype)
     err_dicts = {}
+    platforms = set()
     for mech in files:
         mech_name = os.path.basename(os.path.normpath(mech))
         err_dicts[mech_name] = defaultdict(lambda: 0)
@@ -60,15 +73,33 @@ def run_error_calcs(ftype, updater):
                                       mech)
 
         for file in files[mech]:
+            if per_platform:
+                platform = get_platform(file)
+                platforms.add(platform)
+                if platform not in err_dicts[mech_name]:
+                    err_dicts[mech_name][platform] = defaultdict(lambda: 0)
+                updater(err_dicts[mech_name][platform], np.load(file), filename=file,
+                    mech_info=mech_info)
+                continue
+
             updater(err_dicts[mech_name], np.load(file), filename=file,
                     mech_info=mech_info)
 
+    if per_platform:
+        return platforms, err_dicts
     return err_dicts
 
 
-def print_error(ftype, updater, printer):
-    err_dicts = run_error_calcs(ftype, updater)
+def print_error(ftype, updater, printer, per_platform=False):
+    err_dicts = run_error_calcs(ftype, updater, per_platform=per_platform)
+    if per_platform:
+        platforms, err_dicts = err_dicts
     mech_arr = ['H2', 'CH4', 'C2H4', 'IC5H11OH']
     for mech in mech_arr:
         print(mech)
+        if per_platform:
+            for platform in err_dicts:
+                print(platform)
+                printer(err_dicts[mech][platform])
+                continue
         printer(err_dicts[mech])

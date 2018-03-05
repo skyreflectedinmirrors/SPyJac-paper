@@ -45,4 +45,6 @@ def printer(err_dict):
     print('mean_threshold: {:.15e}'.format(mean_thr))
 
 
+
+print_error('jac', update, printer, True)
 print_error('jac', update, printer)
