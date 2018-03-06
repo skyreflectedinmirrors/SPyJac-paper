@@ -98,8 +98,8 @@ def print_error(ftype, updater, printer, per_platform=False):
     for mech in mech_arr:
         print(mech)
         if per_platform:
-            for platform in err_dicts:
+            for platform in err_dicts[mech]:
                 print(platform)
                 printer(err_dicts[mech][platform])
-                continue
+            continue
         printer(err_dicts[mech])
