@@ -7,7 +7,8 @@ atol = 1e-10
 
 def update(err_dict, err, filename=None, **kwargs):
     for name in err:
-        if ('amax' in name or 'value' in name) and name != 'jac_threshold_value':
+        if ('amax' in name or 'value' in name) and \
+                name != 'jac_threshold_value':
             continue
         assert 'fdjac' not in filename
         if err_dict['jac_thresholded_15'] > 1e0:
@@ -41,8 +42,8 @@ def printer(err_dict):
     print('\n'.join(
         ['{}: {:.3e}'.format(k, v) for k, v in sorted(err_dict.items())
          if 'thresholded' in k]))
+    print('jac_lapack', err_dict['jac_lapack'])
     print('mean_threshold: {:.15e}'.format(mean_thr))
-
 
 
 print_error('jac', update, printer, True)
