@@ -733,11 +733,17 @@ It is noted that this issue does not occur for a vector width of \num{4} on the 
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.48\linewidth}
+      \includegraphics[width=\textwidth]{source_crossover.pdf}
+      \caption{The mean runtime per-condition of OpenMP source term evaluation on different cores compared to a shallow-vectorized Intel OpenCL evaluation on \num{1} (solid lines) and \num{4} (dashed lines) cores on \avx/ machine.}
+      \label{F:source_crossover}
+  \end{subfigure}
+  \\
+  \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{source_simd_efficiency.pdf}
       \caption{The SIMD efficiency (\cref{e:simd_efficiency}) of source term evaluation for the Intel OpenCL runtime on a single core of the \avx/ CPU.}
       \label{F:source_simd_scaling}
   \end{subfigure}
-  \\
+  \hfill
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{source_sse_simd_efficiency.pdf}
       \caption{The SIMD efficiency (\cref{e:simd_efficiency}) of source term evaluation for the Intel OpenCL runtime on a single core of the \sse/ CPU.}
@@ -760,10 +766,12 @@ The strong parallel scaling efficiency measures the speedup due to the use of ad
 In general, the \ce{H2}\slash\ce{CO} mechanism has the worst scaling efficiency for Intel OpenCL; although the mechanism scalings vary somewhat for OpenMP, there is no clear trend.
 It is likely the poor scaling of the \ce{H2}\slash\ce{CO} for Intel OpenCL results from both its relatively small size, and few falloff\slash chemically activated reaction (in particular, the additional expensive logarithm and exponential evaluations that accompany them); i.e., there is simply not enough work to fully utilize the SIMD intructions.
 Additionally, OpenMP tends to have higher scalings then the shallow-vectorized OpenCL code, e.g., \textasciitilde\num{0.9} and \textasciitilde\num{0.75} for \num{4} and \num{8} CPU cores respectively, compared to just \numrange{0.66}{0.72} and \numrange{0.44}{0.48} for OpenCL; although not pictured (to keep the figure readable), the unvectorized Intel OpenCL code has only slightly worse scaling than the OpenMP code, hence the poorer scaling is unique to the shallow-vectorizated code.
-This is again likely due to relatively small amounts of work associated with source rate evaluation; the longest runtime (the isopentanol model on a single core) takes only \textasciitilde\SI{22}{\second} for OpenCL, and \textasciitilde\SI{90}{\second} for OpenMP.
-By the time \numrange{4}{8} CPU cores are utilized in the shallow-vectorized OpenCL code, the runtime is just \textasciitilde\SIrange{5}{8}{\sec} and parallel overhead begins to dominate, decreasing efficiency.
-In contrast, the OpenMP code running on \num{4} cores is as fast (\ce{H2}\slash\ce{CO}) or slightly slower than the shallow-vectorized OpenCL code on a single core, hence parallel overhead concerns become increasingly important for \numrange{8}{16} OpenMP cores; correspondingly, the OpenMP code's parallel efficiency drops to \num{0.64} for \num{16} cores, similar to the OpenCL code at \num{4} cores.
-Indeed, as will be investigated in~\cref{S:jacobian_results} the strong parallel scaling efficiency for sparse Jacobian evaluation---the most computationally intensive task in this work for which the efficiency will investigated---are far more similar between Intel OpenCL and OpenMP.
+This is due to better performance of the shallow-vectorized OpenCL code, coupled with the relatively small amounts of work associated with source rate evaluation.
+To illustrate this,~\cref{F:source_crossover} shows the mean runtime per-condition of the OpenMP source term evaluations for \numrange{2}{16} cores, compared to the shallow-vectorized OpenCL code on \num{1} (solid lines) and \num{4} (dashed lines) four cores on the \avx/ machine.
+For all chemical models, the mean runtime per-condition (and hence the computational work allocated per-core, one of the key-drivers of parallel scaling efficiency~\cite{strong_scaling}) of OpenMP running on \num{4} cores is roughly equal to that of the shallow-vectorized OpenCL code on a single core.
+Similarly, OpenMP running on \num{16} cores is roughly equivalent to the OpenCL code on \num{4} cores.
+Therefore, a more fair comparison of parallel scaling efficiencies is to compare OpenCL running on \num{4} cores, to OpenMP on \num{16}; the OpenMP code's parallel efficiency drops to \textasciitilde\num{0.64} for \num{16} cores, similar to OpenCL's parallel scaling efficiency of \numrange{0.66}{0.72} at \num{4} cores.
+Indeed, as will be investigated in~\cref{S:jacobian_results} the strong parallel scaling efficiency for sparse Jacobian evaluation---the most computationally intensive task in this work---are far more similar between Intel OpenCL and OpenMP.
 
 The SIMD efficiency is defined as:
 \begin{equation}
