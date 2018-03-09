@@ -313,11 +313,15 @@ and the moles of species $j$:
 \subsection{Code Generation and Testing Infrastructure}
 \label{s:unittest}
 Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner_loopy_2014}, which translates user specified psuedo-code and data to OpenCL\slash C-code.
-This allows for easy changes of program structure, e.g. data ordering, vectorization, threading patterns and switching of target-languages (and simpler extension to additional languages, e.g., CUDA).
-Additionally, \texttt{loo.py} can execute developed subroutines from python (natively for C-code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL-code), enabling unit-testing\slash validation for each component of the Jacobian or source terms.
-The source-terms and subcomponents thereof (e.g., rates of progress, pressure-modification terms, etc.) are directly compared to Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{adept-v11} is used to obtain reference answers for Jacobian subcomponents.
-The Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} are used to run OpenCL and C unit-testing, respectively, on the continous integration framework Travis CI~\cite{travis:2018}.
-Validation of the complete (as opposed to the subcomponent testing discussed here) generated source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
+As the name implies, \texttt{loo.py} generates code based on for-loops, this differs from the previous version of \texttt{pyJac}\cite{pyjac16} which generates static code (i.e., fully unrolled loops, with thermodynamic\slash reaction parameters written directly in code rather than stored in arrays).
+This caused some issues with large file sizes, long compilation times and even occasionally breaking the \texttt{gcc} and \texttt{nvcc} compilers (the latter issue necessitated breaking the Jacobian\slash source-term evaluations into separate files)\cite{Niemeyer:2016aa}.
+The implications of this change will be studied in~\cref{S:jacobian_results}, where the performance of the new version of~\texttt{pyJac} will be compared to the previous versions.
+
+In addition, \texttt{loo.py} allows the user to more easily make changes the structure of the generated program, e.g., data ordering, vectorization, threading patterns, as well as switching the target-language (and simpler extension to additional languages, e.g., CUDA).
+Further, \texttt{loo.py} can execute developed subroutines from python (natively for C-code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL-code), enabling unit-testing\slash validation for each component of the Jacobian or source terms.
+The source-terms and subcomponents thereof (e.g., rates of progress, pressure-modification terms, etc.) are directly compared to Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{adept-v11} is used to obtain reference answers for Jacobian sub-components.
+The Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} are used to run OpenCL and C unit-testing, respectively, on the continuous integration framework Travis CI~\cite{travis:2018}.
+Validation of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
 
 
 \section{Results and Discussion}
@@ -372,7 +376,7 @@ Again, the identifier field will be used as a shorthand descriptor during analys
 
 \Cref{t:platforms} lists the platforms and vectorization\slash execution patterns they are capable of running.
 The Intel and NVIDIA OpenCL runtimes lack implementations of atomic operations on double precision variables; these are currently necessary for \texttt{pyJac} to run deep-vectorized code.
-On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations; it is our experience that the POCL community is very responsive to bug reports and user outreach.
+On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations.
 However, POCL's implicit vectorization module---which utilizes the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to translate OpenCL code to vectorized machine code---typically fails to achieve much speedup, if any.
 Thus POCL is a particularly useful tool for validation, but not necessarily for performance studies.
 This discussion will be expanded upon in~\cref{s:future} to highlight the most promising future directions.
@@ -905,6 +909,14 @@ A comparison of the sparse analytical and finite-difference Jacobians is present
 The analytical Jacobian on the \gpunew/ shows large speedups, increasing with chemical model size, in the range of \SIrange{4.66}{17.43}{$\times$}; however, the \gpuold/ GPU shows almost no speedup, it is not clear why this is the case, it is possible that the finite-difference Jacobian evaluation does not function correctly on the \gpuold/ GPU.
 Although not pictured, the dense analytical-Jacobian on the \gpunew/ GPU has larger speedups compared with the dense finite-difference Jacobian: \SIrange{5.32}{44.87}{$\times$}.
 
+
+\Cref{F:v1_vs_v2} compares the performance for evaluation of the dense-analytical Jacobian of the new version of \texttt{pyJac} to the previous version~\cite{pyjac16} on the \sse/ CPU and \gpuold/ GPU; dense Jacobian evaluation was selected as it was the only type implemented in the previous version of \texttt{pyJac}.
+On the \sse/ CPU, the \texttt{pyJac-v2} is faster than \texttt{pyJac-v1} for OpenMP evaluation for the larger chemical models; the static code generated by \texttt{pyJac-v1} (see~\cref{s:unittest}) is \SI{1.79}{$\times$} faster for the \ce{H2}\slash\ce{CO} model, and only \SI{1.09}{$\times$} slower for the GRI-Mech 3.0 model.
+In contrast, the loop-based OpenMP code of \texttt{pyJac-v2} is \SIrange{3.37}{10.19}{$\times$} faster than \texttt{pyJac-v1} for the USC-Mech II and isopentanol models.
+The shallow-vectorized OpenCL code is faster than \texttt{pyJac-v1} in all cases, achieving speedups of \SI{1.37}{19.56}{$\times$} increasing with model size.
+In~\cref{F:v1_vs_v2_gpu}, the performance of the \texttt{pyJac-v2} dense-analytical Jacobian on the \gpuold/ GPU is compared to \texttt{pyJac-v1} on the same.
+As with the CPU, the static code of \texttt{pyJac-v1} is slightly faster for the \ce{H2}\slash\ce{CO} model, however \texttt{pyJac-v2} outperforms \texttt{pyJac-v1} by \SIrange{1.25}{2.84}{$\times$} for the other models; it is noted that the decrease in speedup for the isopentanol model is likely due to the limited number of conditions in dense-evaluation for \texttt{pyJac-v2}, as noted earlier.
+
 \begin{figure}[htbp]
    \centering
   \begin{subfigure}[t]{0.48\linewidth}
@@ -918,27 +930,30 @@ Although not pictured, the dense analytical-Jacobian on the \gpunew/ GPU has lar
       \caption{Speedup of dense Jacobian evaluation in \texttt{pyJac-v2} over \texttt{pyJac-v1} on the \gpuold/ GPU}
       \label{F:v1_vs_v2_gpu}
   \end{subfigure}
-  \caption{Performance comparison of the new version of \texttt{pyJac} (\texttt{v2}) and the previous verison, \texttt{v1}~\cite{pyjac16}.}
+  \caption{Performance comparison of the new version of \texttt{pyJac} (\texttt{v2}) and the previous version, \texttt{v1}~\cite{pyjac16}.}
   \label{F:v1_vs_v2}
 \end{figure}
-
-\Cref{F:v1_vs_v2} compares the performance for evaluation of the dense-analytical Jacobian of the new version of \texttt{pyJac} to the previous version~\cite{pyjac16} on the \sse/ CPU and \gpuold/ GPU; dense Jacobian evaluation was selected as it was the only type implemented in the previous version of \texttt{pyJac}.
-On the \sse/ CPU, the \texttt{pyJac-v2} is faster than \texttt{pyJac-v1} for OpenMP evaluation for the larger chemical models; the static code generated by \texttt{pyJac-v1} is \SI{1.79}{$\times$} faster for the \ce{H2}\slash\ce{CO} model, and only \SI{1.09}{$\times$} slower for the GRI-Mech 3.0 model.
-In contrast, the loop-based OpenMP code of \texttt{pyJac-v2} is \SIrange{3.37}{10.19}{$\times$} faster than \texttt{pyJac-v1} for the USC-Mech II and isopentanol models.
-The shallow-vectorized OpenCL code is faster than \texttt{pyJac-v1} in all cases, achieving speedups of \SI{1.37}{19.56}{$\times$} increasing with model size.
-
 
 
 
 \section{Future directions and practical notes on OpenCL usage}
 \label{s:future}
-It is important to note, that while OpenCL provides an easy way to enable cross-platform execution, there are some serious potential pit-falls in its use.
-Typically speaking, the closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain more bugs that result in compilation failures or simply incorrect vectorized machine code; further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIAs case, change-logs of bugfixes).
-As demonstration, we've created a minimum working example~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
-This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
+It is important to note that while OpenCL provides an easy way to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pit-falls in its use.
+Typically speaking, the closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain bugs that result in compilation failures, simply incorrect vectorized machine code or even segmentation faults; further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIA's case, changelogs\slash public records of bug-fixes).
+On the other hand, the open-source OpenCL runtime used in this work, POCL, has (in our experience) far fewer implementation bugs, and when issues arise the community is very responsive to bug reports and user outreach; however, POCL fails to achieve vectorization as noted in~\cref{S:source_results}.
 
-Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the only significant code change is building the wrapper that initializes\slash transfers memory and calls the kernel.
-Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py}) is a key priority going forwards.
+As demonstration of the type of issue we're discussing, a minimum working example has been created~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
+This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
+Further, as noted throughout this work certain transformations or code-generation patterns can break OpenCL execution\slash vectorization; e.g., the failure of POCL to achieve vectorization, Intel OpenCL's failure to vectorize the finite-difference Jacobian, the lack of speedup for the finite-difference Jacobian on the NVIDIA runtime for the \gpuold/ GPU.
+Indeed the vectorization attempted by the OpenCL runtimes (or reasons for incorrectly vectorized code) are not always obvious to the user.
+It is possible, particularly for the Intel OpenCL \slash POCL runtimes, that better performance might be achieved using so called ``explicit'' vectorization, i.e., through use of inbuilt vector types such as the \texttt{double8}.
+This will be investigated in future works.
+
+Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change is building the wrapper that initializes\slash transfers memory and calls the kernel.
+Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler pragmas) is a key priority going forwards.
+In addition, CUDA~\cite{NVIDIA:2018} and Intel's open-source OpenCL alternative ISPC~\cite{pharr2012ispc} have been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017} and (in the case of ISPC) initial testing.
+The current deep-vectorization formulation would be executable for a CUDA target---as CUDA implements atomic double-precision floating-point operations---further recommending its use.
+Extending execution to these targets to make CPU\slash GPU more reliable vectorization is also a future goal.
 
 
 \section{Conclusions}
