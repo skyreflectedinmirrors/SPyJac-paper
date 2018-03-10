@@ -947,16 +947,16 @@ On the other hand, the open-source OpenCL runtime used in this work, POCL, has (
 
 As demonstration of the type of issue we're discussing, a minimum working example has been created~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla K40m GPU; by simply changing to another runtime (e.g., Intel), with no other code changes, the correct result can be found.
 This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
-Further, as noted throughout this work certain transformations or code-generation patterns can break OpenCL execution\slash vectorization; e.g., the failure of POCL to achieve vectorization, Intel OpenCL's failure to vectorize the finite-difference Jacobian, the lack of speedup for the finite-difference Jacobian on the NVIDIA runtime for the \gpuold/ GPU.
+Further, as noted throughout this work certain transformations or code-generation patterns can break OpenCL execution\slash vectorization; e.g., the failure of POCL to achieve vectorization, Intel OpenCL's failure to vectorize the finite-difference Jacobian, the lack of speedup for the finite-difference Jacobian on the NVIDIA runtime for the \gpuold/ GPU\todo{this went away?}.
 Indeed the vectorization attempted by the OpenCL runtimes (or reasons for incorrectly vectorized code) are not always obvious to the user.
-It is possible, particularly for the Intel OpenCL \slash POCL runtimes, that better performance might be achieved using so called ``explicit'' vectorization, i.e., through use of inbuilt vector types such as the \texttt{double8}.
+It is possible, particularly for the Intel OpenCL \slash POCL runtimes, that better performance might be achieved using so called ``explicit'' vectorization, i.e., through use of built-in vector types such as the \texttt{double8}.
 This will be investigated in future works.
 
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change is building the wrapper that initializes\slash transfers memory and calls the kernel.
 Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler pragmas) is a key priority going forwards.
 In addition, CUDA~\cite{NVIDIA:2018} and Intel's open-source OpenCL alternative ISPC~\cite{pharr2012ispc} have been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017} and (in the case of ISPC) initial testing.
-The current deep-vectorization formulation would be executable for a CUDA target---as CUDA implements atomic double-precision floating-point operations---further recommending its use.
-Extending execution to these targets to make CPU\slash GPU more reliable vectorization is also a future goal.
+The current deep-vectorization formulation would be executable for both CUDA and ISPC targets, as these languages implement double-precision atomic operations, further recommending their use.
+Extending execution to these targets to make CPU\slash GPU more reliable vectorization is a future goal.
 
 
 \section{Conclusions}
