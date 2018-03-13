@@ -66,8 +66,8 @@ def run_error_calcs(ftype, updater, per_platform=False):
         with open(mech_info, 'r') as file:
             mech_info = yaml.load(file.read())
             if mech_info['n_cheb']:
-                add_rxn_specific_inds(mech_info, ct.ChebyshevReaction, 'cheb_inds',
-                                      mech)
+                add_rxn_specific_inds(mech_info, ct.ChebyshevReaction,
+                                      'cheb_inds', mech)
             if mech_info['n_plog']:
                 add_rxn_specific_inds(mech_info, ct.PlogReaction, 'plog_inds',
                                       mech)
@@ -78,8 +78,9 @@ def run_error_calcs(ftype, updater, per_platform=False):
                 platforms.add(platform)
                 if platform not in err_dicts[mech_name]:
                     err_dicts[mech_name][platform] = defaultdict(lambda: 0)
-                updater(err_dicts[mech_name][platform], np.load(file), filename=file,
-                    mech_info=mech_info)
+                updater(err_dicts[mech_name][platform], np.load(file),
+                        filename=file,
+                        mech_info=mech_info)
                 continue
 
             updater(err_dicts[mech_name], np.load(file), filename=file,
