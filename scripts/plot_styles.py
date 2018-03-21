@@ -95,7 +95,7 @@ def pretty_names(pname, short=False):
                                                  'haswell': r'\texttt{avx2}',
                                                  'gpu': r'\texttt{K40m}',
                                                  'v1': r'\texttt{sse4.2-v1}',
-                                                 'v1-gpu': r'\texttt{C2075.2-v1}'}),
+                                                 'v1-gpu': r'\texttt{C2075-v1}'}),
                   'rtype': dummy_formatter({'jac': 'Analytical',
                                             'fdjac': 'Finite Difference'})
                   }
