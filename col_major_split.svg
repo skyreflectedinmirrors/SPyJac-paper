@@ -44,7 +44,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -154,7 +154,7 @@
          style="font-size:4.23333311px;stroke-width:0.26458332"
          y="150.03287"
          x="173.04268"
-         sodipodi:role="line">(N,K)</tspan></text>
+         sodipodi:role="line">(K,N)</tspan></text>
     <flowRoot
        xml:space="preserve"
        id="flowRoot558"
