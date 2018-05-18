@@ -11,6 +11,17 @@
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
+\usepackage{ulem}
+
+\usepackage{xcolor}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+
+% \usepackage[xcolor]{changebar}
+% \newcommand{\add}[1]{{\sloppy\cbcolor{teal}\textcolor{teal}{\cbstart {#1}\cbend}}}  % add
+% \newcommand{\delete}[1]{\sloppy\cbcolor{red}\textcolor{red}{\cbdelete\sout{#1}}}
+
+\newcommand{\add}[1]{{\sloppy\textcolor{teal}{#1}}}  % add
+\newcommand{\delete}[1]{\sloppy\textcolor{red}{\sout{#1}}} %delete with no strikeout
 
 % shared equations in separate file
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
@@ -147,12 +158,14 @@ This phenomenon, known as thread-divergence, is a key consideration for SIMT-pro
 
 
 Recognizing the need to accelerate Jacobian evaluation and factorization, a number of recent works have been published on analytical chemical kinetic Jacobian evaluation; although as will be discussed at the end of this section, this work offers several key improvements over past efforts.
+\add{Schwer et al.~\cite{SCHWER2002270} were among the first to recognize the critical importance of a sparse analytical Jacobian to accelerate chemical kinetic simulations.}
 The \texttt{TChem} software package~\cite{Safta:2011vn} was one of the first codes developed providing analytical Jacobian evaluation, but has several limitations including: incompatibilities with modern reaction types---i.e., pressure dependent Arrhenius (or P-Log) and Chebyshev reactions---and lack of thread-safety to enable parallel execution~\cite{Curtis2017:tchem}. 
 Youssefi~\cite{Youssefi:2011tm} explored the importance of analytical Jacobian matrices for time-scale analysis techniques as well as their effect on computational efficiency in zero-dimensional homogeneous reactor simulations.
 Bisetti~\cite{Bisetti:2012jw} developed an isothermal, isobaric analytical Jacobian code-generation utility; although the chosen isothermal assumption is not typical in most combustion simulations, a significant increase in Jacobian sparsity was exhibited.
 Additionally, in the same work Bisetti provided a novel way to compute dense matrix-vector multiplications resulting from a change of system variables without need for storage of the full dense Jacobian.
 Perini et al.~\cite{Perini:2012gy} developed an analytical Jacobian code for constant-volume combustion, with additional options to increase sparsity (at expense of strict correctness), and enable tabulation of temperature dependent properties; an \SI{80}{\percent} speedup over a finite-difference-based Jacobian was reported when used in a multidimensional reactive-flow simulation.
 Dijkmans et al.~\cite{Dijkmans:2014bb} developed a GPU-based analytical Jacobian code with optional tabulation of temperature-dependent properties, and found speedups up to \SI{120}{$\times$} for zero-dimensional chemical kinetic integration with large chemical models (\textasciitilde\num{3000} species) using a Tesla C2075 GPU.
+\add{Bauer et al.~\cite{Bauer:2014} used warp-specialization to improve GPU-vectorization over a standard data-parallel vectorization approach; speedups up to \SIrange{2.81}{3.75}{$\times$}, \SIrange{1.91}{2.58}{$\times$}, and \SIrange{1.4}{1.5}{$\times$} were achieved on a Telsa K20c GPU for evaluation of viscosity, species diffusion and chemical source terms, respectively}.
 Niemeyer et al.~\cite{Niemeyer:2016aa} created and validated the open-source analytical chemical kinetic Jacobian code-generator, \texttt{pyJac}, supporting parallel execution on the CPU and SIMT execution on the GPU; a speedup of \SIrange{3}{7.5}{$\times$} over a finite-difference Jacobian was found on the CPU.
 Gao et al.~\cite{GAO2015287} derived a sparse analytical Jacobian, but it was not validated outside the context of use with an implicit-integration technique; in addition, since the Jacobian was based on an over-constrained system, the effect on strict conservation of mass\slash energy was not studied.
 
@@ -182,7 +195,7 @@ This work will build upon our previous analytical chemical kinetic Jacobian code
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
 \end{itemize}
-To our knowledge, this is the first effort that enables vectorized chemical-kinetic source-term and Jacobian evaluation for any chemical model on a wide-selection of platforms, i.e., the CPU, GPU and other accelerators.
+To our knowledge, this is the first open-source, validated effort that enables vectorized chemical-kinetic source-term and Jacobian evaluation for any chemical model on a wide-selection of platforms, i.e., the CPU, GPU and other accelerators.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
@@ -214,6 +227,7 @@ To our knowledge, this is the first effort that enables vectorized chemical-kine
 	\label{F:column_major}
     \end{subfigure}
   \end{minipage}
+  \caption{Simple data-layout patterns for 2-D arrays}
 \end{figure}
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
@@ -232,7 +246,7 @@ The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{sta
 In a \textit{deep}-SIMD\slash SIMT vectorization (also referred to as ``per-block'' in previous GPU works (e.g.,~\cite{Stone:2013aa,CurtisGPU:2017}), a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermo-chemical source-terms for a single thermo-chemical state; thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + N_v}$---the species concentrations for state 1, species $j \ldots j + N_v$---will access sequential memory locations if the data is stored in ``C''-order.
 Further, in ``C''-ordering the maximum distance between any two species concentrations within the same thermo-chemical state is $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU, but may lead to uncoalesced memory-accesses on the GPU.
 In addition, a deep vectorization requires both synchronization between SIMD-lanes\slash SIMT-threads via memory-fences\slash barriers (an expensive operation), and may result in SIMD-waste\slash SIMT thread-divergence, caused by different SIMD-lanes\slash SIMT-threads executing different instructions (e.g., resulting from different if\slash then branches).
-It is noted that generally speaking, shallow-vectorizations may also experience SIMD-waste\slash SIMT thread-divergence, e.g., in chemical kinetic integration due to varying internal solver time-step sizes~\cite{CurtisGPU:2017}; however, in this work shallow-vectorizations are largely unaffected by this concern.
+It is noted that generally speaking, shallow-vectorizations may also experience SIMD-waste\slash SIMT thread-divergence, e.g., in chemical kinetic integration due to varying internal solver time-step sizes~\cite{CurtisGPU:2017}; however, in this work shallow-vectorizations are largely unaffected by this concern \add{as the only major code-paths that differ between vector-lanes are high\slash low-temperature polynomial evaluations and differing pressures for P-Log reactions, a relatively small concern as compared to differing internal ODE integration time-steps~\cite{CurtisGPU:2017}}.
 
 \begin{figure}[htb]
   \centering
@@ -576,8 +590,9 @@ Similarly, if the last-species has a third-body efficiency not equal to the defa
 Either case will result in an undesirable fully dense Jacobian row for all species that have a non-zero net stoichiometic coefficient in such a reaction.
 
 However, the current \texttt{pyJac} allows the user to simply ignore these derivatives (via a command-line switch) and avoid any adverse effects on the Jacobian sparsity.
-The rational behind this choice is that many common implicit integration techniques (e.g., CVODE~\cite{Hindmarsh:2005}) used in solution of chemical kinetic initial value problems are formulated around the assumption that the supplied Jacobian is approximate; this allows the Jacobian and its LU factorization to be reused for multiple internal integration time-steps, accelerating the solution process.
+The rationale behind this choice is that many common implicit integration techniques (e.g., CVODE~\cite{Hindmarsh:2005}) used in solution of chemical kinetic initial value problems are formulated around the assumption that the supplied Jacobian is approximate; this allows the Jacobian and its LU factorization to be reused for multiple internal integration time-steps, accelerating the solution process.
 For such solvers, there is no need for the exact form of the Jacobian and the so-called ``approximate'' form is preferable.
+\add{Though this might be used as a crude form of preconditioning for such solvers, the primary purpose is merely to increase the resulting sparsity of the Jacobian; the reader is directed to~\cite{MCNENLY2015581} for a more thorough discussion of pre-conditioners.}
 Hence, in this section we will detail the sparsity of both forms of the Jacobian for the chemical models tested.
 
 In~\cref{F:jac_sparsity}, a graphical representation of the sparsity pattern for GRI-Mech 3.0 is displayed.
@@ -685,9 +700,9 @@ On both machines, the unvectorized OpenCL code is faster than the baseline paral
 Additionally, the shallow-vectorized OpenCL code is \SIrange{2.53}{2.92}{$\times$} and \SIrange{3.40}{4.08}{$\times$} faster than the OpenMP code for the \sse/ and \avx/ machines, respectively.
 
 In contrast,~\cref{F:pocl_source} shows the mean run time per condition of deep, shallow and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
-No speedup is achieved for either vectorization type on either CPU; indeed the OpenMP case is faster on both CPUs.
-The reasons for this lack of vectorization are quite technical and somewhat outside the scope of this work; however, briefly speaking vectorization might be achieved on POCL via a combination of fixed-array strides---rather than (potentially) varying with the number of initial conditions being evaluated, as currently is implemented---use of relaxed math (``\texttt{-cl-fast-relaxed-math}''), explicit OpenCL vector types and newer versions of LLVM\slash POCL (specifically, potential improvements to the vectorization module).
-This will be explored more in future work, but for the moment POCL is still quite useful as a validation tool.
+No speedup is achieved for either vectorization type on either CPU---\add{though we stress that Intel OpenCL runtime achieved vectorization using the exact same code and hardware}---indeed, the OpenMP case is faster on both CPUs.
+The reasons for this lack of vectorization are quite technical,~\delete{and somewhat outside the scope of this work}however \add{personal communications~\cite{pocl_communication} with the developers of POCL revealed that, briefly speaking, substantial changes are required to the way POCL prepares LLVM intermediate-representation code (specifically, to ensure LLVM properly recognizes uniform vectorization loop-bounds), use of relaxed math (i.e., ``\texttt{-cl-fast-relaxed-math}'') to allow LLVM's loop-vectorizer to prove a vector instruction is identical to the corresponding scalar version, LLVM's handling of branches (potentially within POCL instructions themselves) and memory access patterns in order to achieve vectorization.}
+As will be discussed in~\cref{s:future}, \add{it is hoped that use of explicit vector-types (to lessen demands on the LLVM-vectorization module) in combination with some of these changes might solve this issue}, but for the moment POCL is still quite useful as a validation tool.
 
 \Cref{F:gpu_source} shows the performance of the source-term evaluation on the GPUs listed in~\cref{t:gpus}.
 In~\cref{F:gpu_source_scaling}, the number of initial conditions over which the source-terms are evaluated on the \gpunew/ GPU is varied in order to determine the effect on the mean run time per condition; the run time continues to decrease until \textasciitilde\num{e4} conditions for all chemical models (except the \ce{H2}\slash\ce{CO} model, which is closer to \textasciitilde\num{3e4} conditions), at which point the GPU becomes saturated and performance levels off.
