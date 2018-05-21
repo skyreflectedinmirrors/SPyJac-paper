@@ -155,6 +155,7 @@ If some threads must execute a different instruction---e.g., due to if\slash the
 This phenomenon, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
 \subsection{Previous works and goals of this study}
+\label{S:Goals}
 
 
 Recognizing the need to accelerate Jacobian evaluation and factorization, a number of recent works have been published on analytical chemical kinetic Jacobian evaluation; although as will be discussed at the end of this section, this work offers several key improvements over past efforts.
@@ -195,7 +196,7 @@ This work will build upon our previous analytical chemical kinetic Jacobian code
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
 \end{itemize}
-To our knowledge, this is the first open-source, validated effort that enables vectorized chemical-kinetic source-term and Jacobian evaluation for any chemical model on a wide-selection of platforms, i.e., the CPU, GPU and other accelerators.
+To our knowledge, this is the first \add{open-source, validated} effort that enables vectorized chemical-kinetic source-term and Jacobian evaluation for any chemical model on a wide-selection of platforms, i.e., the CPU, GPU and other accelerators.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
@@ -227,7 +228,7 @@ To our knowledge, this is the first open-source, validated effort that enables v
 	\label{F:column_major}
     \end{subfigure}
   \end{minipage}
-  \caption{Simple data-layout patterns for 2-D arrays}
+  \caption{\add{Simple data-layout patterns for 2-D arrays}}
 \end{figure}
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
