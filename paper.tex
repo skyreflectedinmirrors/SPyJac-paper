@@ -571,7 +571,7 @@ Either case will result in an undesirable fully dense Jacobian row for all speci
 However, the current \texttt{pyJac} allows the user to simply ignore these derivatives (via a command-line switch) and avoid any adverse effects on the Jacobian sparsity.
 The rationale behind this choice is that many common implicit integration techniques (e.g., CVODE~\cite{Hindmarsh:2005}) used in solution of chemical kinetic initial value problems are formulated around the assumption that the supplied Jacobian is approximate; this allows the Jacobian and its LU factorization to be reused for multiple internal integration time-steps, accelerating the solution process.
 For such solvers, there is no need for the exact form of the Jacobian and the so-called ``approximate'' form is preferable.
-\add{Though this might be used as a crude form of preconditioning for such solvers, the primary purpose is merely to increase the resulting sparsity of the Jacobian; the reader is directed to~\cite{MCNENLY2015581} for a more thorough discussion of pre-conditioners.}
+\add{Though this might be used as a crude form of preconditioning for such solvers, the primary purpose is merely to increase the resulting sparsity of the Jacobian; the reader is directed to~\cite{MCNENLY2015581} for a more thorough discussion of preconditioners.}
 Hence, in this section we will detail the sparsity of both forms of the Jacobian for the chemical models tested.
 
 In~\cref{F:jac_sparsity}, a graphical representation of the sparsity pattern for GRI-Mech 3.0 is displayed.
@@ -681,7 +681,7 @@ Additionally, the shallow-vectorized OpenCL code is \SIrange{2.53}{2.92}{$\times
 In contrast,~\cref{F:pocl_source} shows the mean run time per condition of deep, shallow and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU---\add{though we stress that Intel OpenCL runtime achieved vectorization using the exact same code and hardware}---indeed, the OpenMP case is faster on both CPUs.
 The reasons for this lack of vectorization are quite technical,~\delete{and somewhat outside the scope of this work}however \add{personal communications~\cite{pocl_communication} with the developers of POCL revealed that, briefly speaking, substantial changes are required to the way POCL prepares LLVM intermediate-representation code (specifically, to ensure LLVM properly recognizes uniform vectorization loop-bounds), use of relaxed math (i.e., ``\texttt{-cl-fast-relaxed-math}'') to allow LLVM's loop-vectorizer to prove a vector instruction is identical to the corresponding scalar version, LLVM's handling of branches (potentially within POCL instructions themselves) and memory access patterns in order to achieve vectorization.}
-As will be discussed in~\cref{s:future}, \add{it is hoped that use of explicit vector-types (to lessen demands on the LLVM-vectorization module) in combination with some of these changes might solve this issue}, but for the moment POCL is still quite useful as a validation tool.
+As will be discussed in~\cref{S:future}, \add{it is hoped that use of explicit vector-types (to lessen demands on the LLVM-vectorization module) in combination with some of these changes might solve this issue}, but for the moment POCL is still quite useful as a validation tool.
 
 \Cref{F:gpu_source} shows the performance of the source-term evaluation on the GPUs listed in~\cref{t:gpus}.
 In~\cref{F:gpu_source_scaling}, the number of initial conditions over which the source-terms are evaluated on the \gpunew/ GPU is varied in order to determine the effect on the mean run time per condition; the run time continues to decrease until \textasciitilde\num{e4} conditions for all chemical models (except the \ce{H2}\slash\ce{CO} model, which is closer to \textasciitilde\num{3e4} conditions), at which point the GPU becomes saturated and performance levels off.
@@ -986,6 +986,7 @@ Finally, the performance of dense analytical-Jacobian evaluation in this new ver
 Similarly, evaluation on the \gpuold/ GPU was \SI{1.89}{$\times$} slower for the smallest model but \SIrange{1.25}{2.84}{$\times$} faster for the larger models.
 
 \subsection{\add{Future extensions to this work and practical notes on OpenCL usage}}
+\label{S:future}
 
 It is important to note that while OpenCL provides an simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pit-falls in its use.
 The closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain several bugs that result in compilation failures, simply incorrect vectorized machine code or even segmentation faults.
