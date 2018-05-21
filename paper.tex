@@ -321,32 +321,8 @@ where $\mathcal{R}$ is the ideal gas-constant in molar units, the volume and pre
 The Jacobian entries computed by \texttt{pyJac} are arranged such that entry ($i$, $j$) corresponds to the partial derivative of the $i$th source-term in~\cref{e:source_terms} by the $j$th state variable in~\cref{e:state}:
 \loadeq{jacgeneral}
 
-The derivative of the temperature source-term with respect to itself is:
-\loadeq{dTdotdT}
-with respect to the thermodynamic state-parameter source-term (the volume \slash pressure for \conp/\slash\conv/, respectively) it's derivative:
-\loadeq{dTdotdE}
-The derivative for the moles of species $j$:
-\loadeq{dTdotdnj}
-
-The derivative of the thermodynamic state parameter with respect to the temperature is:
-\loadeq{dEdotdT}
-and with respect to itself:
-\loadeq{dEdotdE}
-where $[C]$ is the total molar concentration:
-\begin{equation}
- [C] = \frac{P}{\mathcal{R} T}\;.
-\end{equation}
-Finally, the derivative with respect to the moles of species $j$:
-\loadeq{dEdotdnj}
-
-The molar source-terms are more complicated due to the derivatives of the net rate of progress---see~\cref{deriv-s:dropi}---and pressure modification terms---\cref{deriv-s:dci}---of the reactions.
-The reader is again encouraged to read the supplemental material covering the exact derivations and equations solved by \texttt{pyJac}.
-The derivative of the molar source-term with respect to temperature is:
-\loadeq{dnkdotdT}
-while, similarly the derivative with respect to the state parameter is:
-\loadeq{dnkdotdE}
-and the moles of species $j$:
-\loadeq{dnkdotdnj}
+\delete{The derivative of the temperature source-term with respect to itself is:\ldots}
+\add{The complete derivation of the Jacobian for \texttt{pyJac} is attached as supplemental material for the interested reader.}
 
 \subsection{Code Generation and Testing Infrastructure}
 \label{s:unittest}
