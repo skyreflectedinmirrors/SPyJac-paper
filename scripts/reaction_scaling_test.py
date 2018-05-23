@@ -244,7 +244,7 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                                       btype=build_type.species_rates,
                                       as_executable=True)
 
-            outname = '{}.txt'.format(active_reactions(reac_list))
+            outname = get_filename(wide)
             # and do runs
             with open(os.path.join(subdir, outname), 'w') as file:
                 for i in range(repeats):
