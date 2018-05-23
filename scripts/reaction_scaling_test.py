@@ -11,6 +11,7 @@ from pyjac import create_jacobian
 from pyjac.utils import create_dir
 from pyjac.libgen import build_type, generate_library
 from pyjac.tests.test_utils import data_bin_writer as dbw
+from pyjac.tests.test_utils import clean_dir
 
 path = os.path.abspath(os.path.dirname(__file__))
 
@@ -215,15 +216,17 @@ def run(gas, interval, num_states, work_dir, repeats=10):
     build = os.path.join(path, 'out')
     obj = os.path.join(path, 'obj')
     lib = os.path.join(path, 'lib')
-    create_dir(build)
-    create_dir(obj)
-    create_dir(lib)
 
     for wide in [True, False]:
         vsize = vecsize if wide else None
         # now, go through the various generated reactions lists and run
         # the test on each
         for reac_list in saved_reaction_lists:
+            # clean
+            clean_dir(build, remove=False)
+            clean_dir(obj, remove=False)
+            clean_dir(lib, remove=False)
+
             subdir = os.path.join(work_dir, str(active_reactions(reac_list)))
             create_dir(subdir)
             # generate the source rate evaluation
