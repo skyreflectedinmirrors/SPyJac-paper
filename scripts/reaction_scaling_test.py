@@ -8,6 +8,7 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
 from pyjac import create_jacobian
+from pyjac.utils import create_dir
 from pyjac.libgen import build_type, generate_library
 from pyjac.tests.test_utils import data_bin_writer as dbw
 
@@ -61,18 +62,19 @@ def run(gas, interval, num_states, work_dir, repeats=10):
             reacs[i].rate = ct.Arrhenius(A, b, Ea)
 
     # next, order the reactions by the number of distinct species
-    def get_reac_and_spec_maps(gas):
+    def get_reac_and_spec_maps(mygas):
         # first, create rxn->species maps
-        reac_nu = gas.reactant_stoich_coeffs()
-        prod_nu = gas.product_stoich_coeffs()
+        reac_nu = mygas.reactant_stoich_coeffs()
+        prod_nu = mygas.product_stoich_coeffs()
         # species -> rxn mappings
-        spec_masks = np.zeros((gas.n_species, gas.n_reactions), dtype=np.bool)
+        spec_masks = np.zeros((mygas.n_species, mygas.n_reactions),
+                              dtype=np.bool)
         # the reaction -> species mappings
         reac_masks = []
-        for i, reac in enumerate(reacs):
+        for i, reac in enumerate(mygas.reactions()):
             for spec in set(list(reac.reactants.keys()) + list(
                                  reac.products.keys())):
-                j = gas.species_index(spec)
+                j = mygas.species_index(spec)
                 if prod_nu[j, i] - reac_nu[j, i]:
                     # non-zero species
                     spec_masks[j, i] = True
@@ -210,23 +212,31 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                 vectype, platform, rate_spec,
                 split, num_cores, conp) + '.txt'
 
+    build = os.path.join(path, 'out')
+    obj = os.path.join(path, 'obj')
+    lib = os.path.join(path, 'lib')
+    create_dir(build)
+    create_dir(obj)
+    create_dir(lib)
+
     for wide in [True, False]:
         vsize = vecsize if wide else None
         # now, go through the various generated reactions lists and run
         # the test on each
-        build = os.path.join(path, 'out')
-        obj = os.path.join(path, 'obj')
-        lib = os.path.join(path, 'lib')
         for reac_list in saved_reaction_lists:
+            subdir = os.path.join(work_dir, str(active_reactions(reac_list)))
+            create_dir(subdir)
             # generate the source rate evaluation
             rgas = gas_from_reac_list(reac_list)
             create_jacobian('opencl', gas=rgas, vector_size=vsize,
                             wide=wide, build_path=build,
                             rate_specialization=rate_spec,
                             split_rate_kernels=split_rate_kernels,
-                            data_filename=os.join(work_dir, 'data.bin'),
-                            order=order,
-                            platform=platform)
+                            data_filename=os.path.abspath(
+                                os.path.join(work_dir, 'data.bin')),
+                            data_order=order,
+                            platform=platform,
+                            skip_jac=True)
 
             # first create the executable (via libgen)
             tester = generate_library(lang, build, obj_dir=obj, out_dir=lib,
@@ -236,7 +246,7 @@ def run(gas, interval, num_states, work_dir, repeats=10):
 
             outname = '{}.txt'.format(active_reactions(reac_list))
             # and do runs
-            with open(outname, 'w') as file:
+            with open(os.path.join(subdir, outname), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)
                     subprocess.check_call([os.path.join(lib, tester),
@@ -248,11 +258,6 @@ if __name__ == '__main__':
     parser = ArgumentParser('reaction_scaling_test.py -- tests SIMD '
                             'efficiency scaling of pyJac with differing'
                             ' numbers of reactions.')
-    parser.add_argument('-p', '--path',
-                        default=os.path.join(path, os.pardir, 'mech_data'),
-                        type=str,
-                        required=False,
-                        help='Path to the mechanism to test.')
     parser.add_argument('-m', '--mech',
                         default='Sarathy_ic5_mech_rev.cti',
                         required=False,
@@ -282,19 +287,20 @@ if __name__ == '__main__':
                              'mechanism size.')
     parser.add_argument('-w', '--working_directory',
                         type=str,
-                        required=True,
+                        required=False,
+                        default=os.getcwd(),
                         help='The directory to work in.')
     args = parser.parse_args()
-    gas = ct.Solution(os.path.join(args.path, args.mech))
+    gas = ct.Solution(os.path.join(args.data_path, args.mech))
 
     # get data
     num_conditions, data = dbw.load(
         [], directory=os.path.join(args.data_path))
     # rewrite data to file in 'C' order
-    dbw.write(args.work_dir, num_conditions=num_conditions, data=data)
+    dbw.write(args.working_directory, num_conditions=num_conditions, data=data)
 
     # normalize for vector width
     num_conditions = (num_conditions // 8) * 8
 
-    run(gas, args.test_interval, num_conditions, args.work_dir,
+    run(gas, args.test_interval, num_conditions, args.working_directory,
         repeats=args.repeats)
