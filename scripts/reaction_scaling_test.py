@@ -223,9 +223,9 @@ def run(gas, interval, num_states, work_dir, repeats=10):
         # the test on each
         for reac_list in saved_reaction_lists:
             # clean
-            clean_dir(build, remove=False)
-            clean_dir(obj, remove=False)
-            clean_dir(lib, remove=False)
+            clean_dir(build, remove_dir=False)
+            clean_dir(obj, remove_dir=False)
+            clean_dir(lib, remove_dir=False)
 
             subdir = os.path.join(work_dir, str(active_reactions(reac_list)))
             create_dir(subdir)
