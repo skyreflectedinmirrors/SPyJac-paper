@@ -42,8 +42,8 @@ def run(gas, interval, num_states, work_dir, repeats=10):
             # fit _something_ to it at a 10 bar, for 600-2200K
             T = np.linspace(600, 2200, num=1000)
             kf = np.zeros_like(T)
-            for i in range(T.size):
-                kf[i] = reac(T[i], 10 * 10*1e5)
+            for j in range(T.size):
+                kf[j] = reac(T[j], 10 * 10*1e5)
             A = 1e10
             b = 1
             Ea = 1200 * ct.gas_constant
@@ -63,7 +63,7 @@ def run(gas, interval, num_states, work_dir, repeats=10):
             reacs[i].rate = ct.Arrhenius(A, b, Ea)
     # and convert gas
     gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
-                      reacs=reacs,
+                      reactions=reacs,
                       species=gas.species())
 
     # next, order the reactions by the number of distinct species
