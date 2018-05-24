@@ -61,6 +61,10 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                 plt.show()
             reacs[i] = ct.ElementaryReaction(reac.reactants, reac.products)
             reacs[i].rate = ct.Arrhenius(A, b, Ea)
+    # and convert gas
+    gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+                      reacs=reacs,
+                      species=gas.species())
 
     # next, order the reactions by the number of distinct species
     def get_reac_and_spec_maps(mygas):
