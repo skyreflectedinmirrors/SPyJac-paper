@@ -213,6 +213,22 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                 vectype, platform, rate_spec,
                 split, num_cores, conp) + '.txt'
 
+    def check_file(file):
+        if not os.path.exists(file):
+            return repeats
+        with open(file, 'r') as f:
+            lines = f.readlines()
+        import re
+        todo = repeats
+        for line in lines:
+            line = line.split(',')
+            if len(line) > 1 and sum(
+                    1 if re.search(r'(?:\d+(?:\.\d+e[+-]\d+))', l) else 0
+                    for l in line) == 4:
+                # four doubles -> good line
+                todo -= 1
+        return todo
+
     build = os.path.join(path, 'out')
     obj = os.path.join(path, 'obj')
     lib = os.path.join(path, 'lib')
@@ -222,6 +238,8 @@ def run(gas, interval, num_states, work_dir, repeats=10):
         # now, go through the various generated reactions lists and run
         # the test on each
         for reac_list in saved_reaction_lists:
+            outname = get_filename(wide)
+            todo = check_file(outname)
             # clean
             clean_dir(build, remove_dir=False)
             clean_dir(obj, remove_dir=False)
@@ -247,11 +265,10 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                                       btype=build_type.species_rates,
                                       as_executable=True)
 
-            outname = get_filename(wide)
             # and do runs
-            with open(os.path.join(subdir, outname), 'w') as file:
-                for i in range(repeats):
-                    print(i, "/", repeats)
+            with open(os.path.join(subdir, outname), 'a+') as file:
+                for i in range(todo):
+                    print(i, "/", todo)
                     subprocess.check_call([os.path.join(lib, tester),
                                            str(num_states), str(1)],
                                           stdout=file)
