@@ -55,7 +55,8 @@ def dirs_in(path):
     return __listdir(path, False)
 
 
-def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance')):
+def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance'),
+               use_descriptor=None):
     # find all mechs
     mechs = [x for x in os.listdir(directory)
              if os.path.isdir(os.path.join(directory, x))]
@@ -67,9 +68,17 @@ def parse_data(rebuild=False, directory=os.path.join(script_dir, 'performance'))
         # read mechanism info
         with open(mech_meta_file, 'r') as f:
             mech_info = mechdata(**yaml.load(f))
-        for desc in dirs_in(path):
+        if use_descriptor:
+            descriptors = [path]
+        else:
+            descriptors = dirs_in(path)
+
+        for desc in descriptors:
             # get decriptor
-            descriptor = os.path.basename(os.path.normpath(desc))
+            if use_descriptor is None:
+                descriptor = os.path.basename(os.path.normpath(desc))
+            else:
+                descriptor = use_descriptor
             for file in files_in(desc):
                 # check for pickled data
                 pickle_file = file.replace('.txt', '.pickle')

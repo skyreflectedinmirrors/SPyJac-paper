@@ -289,7 +289,7 @@ if __name__ == '__main__':
                         help='The mechanism to test, defaults to the Sarathy '
                              'isopentanol model.')
     parser.add_argument('-i', '--test_interval',
-                        default=50,
+                        default=200,
                         type=int,
                         help='The interval (in # of reactions) at which to '
                              'run the performance tests to produce the '
