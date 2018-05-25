@@ -61,6 +61,9 @@ def run(gas, interval, num_states, work_dir, repeats=10):
                 plt.show()
             reacs[i] = ct.ElementaryReaction(reac.reactants, reac.products)
             reacs[i].rate = ct.Arrhenius(A, b, Ea)
+        # set all to reversible
+        reacs[i].reversible = True
+
     # and convert gas
     gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
                       reactions=reacs,
