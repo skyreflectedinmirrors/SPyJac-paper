@@ -13,6 +13,9 @@
 \usepackage{textcomp}
 \usepackage{ulem}
 
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
 \usepackage{xcolor}
 \definecolor{darkgreen}{rgb}{0,0.5,0}
 
@@ -34,6 +37,10 @@
 
 % load common macros / commands
 \usepackage{macros}
+% macro for small underscores for variable names in appendix
+\usepackage{xspace}
+\usepackage{relsize}
+\newcommand{\smallunderscore}{\textscale{.5}{\textunderscore}\xspace}
 
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % load after hyperref
@@ -344,6 +351,7 @@ Validation of the complete (as opposed to the sub-component testing discussed he
 
 \section{Results and Discussion}
 \subsection{Testing platforms}
+\label{s:test_platforms}
 
 \begin{table}[htb]
 \centering
@@ -359,7 +367,7 @@ OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 \bottomrule
 \end{tabular}
 \caption{The Intel CPU configurations used in this study.
-	 The vector-width reported in this table is reported in (ideal) number of double operations per SIMD instruction, as this will be used in measuring SIMD-efficiency; for reference, the vector-width in bits of the \sse/ and \avx/ machines are \SI{128}{\bit} and \SI{256}{\bit}, respectively.
+	 The vector-width reported in this table is reported in (ideal) number of double operations per SIMD instruction, as this will be used in measuring SIMD efficiency; for reference, the vector-width in bits of the \sse/ and \avx/ machines are \SI{128}{\bit} and \SI{256}{\bit}, respectively.
 	 The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
 \label{t:cpus}
 \end{table}
@@ -682,7 +690,7 @@ Additionally, the shallow-vectorized OpenCL code is \SIrange{2.53}{2.92}{$\times
 
 In contrast,~\cref{F:pocl_source} shows the mean run time per condition of deep, shallow and unvectorized OpenCL codes on the POCL runtime, as compared to OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU---\add{though we stress that Intel OpenCL runtime achieved vectorization using the exact same code and hardware}---indeed, the OpenMP case is faster on both CPUs.
-The reasons for this lack of vectorization are quite technical,~\delete{and somewhat outside the scope of this work}however \add{personal communications~\cite{pocl_communication} with the developers of POCL revealed that, briefly speaking, substantial changes are required to the way POCL prepares LLVM intermediate-representation code (specifically, to ensure LLVM properly recognizes uniform vectorization loop-bounds), use of relaxed math (i.e., ``\texttt{-cl-fast-relaxed-math}'') to allow LLVM's loop-vectorizer to prove a vector instruction is identical to the corresponding scalar version, LLVM's handling of branches (potentially within POCL instructions themselves) and memory access patterns in order to achieve vectorization.}
+The reasons for this lack of vectorization are quite technical,~\delete{and somewhat outside the scope of this work}however \add{personal communications~\cite{pocl_communication} with the developers of POCL revealed that, briefly speaking, substantial changes are required to the way POCL prepares LLVM intermediate-representation code (specifically, to ensure LLVM properly recognizes uniform vectorization loop-bounds), LLVM's handling of branches (potentially within POCL instructions themselves) and memory access patterns and potentially use of relaxed math (i.e., ``\texttt{-cl-fast-relaxed-math}'') to allow LLVM's loop-vectorizer to prove a vector instruction is identical to the corresponding scalar version, in order to achieve vectorization.}
 As will be discussed in~\cref{S:future}, \add{it is hoped that use of explicit vector-types (to lessen demands on the LLVM-vectorization module) in combination with some of these changes might solve this issue}, but for the moment POCL is still quite useful as a validation tool.
 
 \Cref{F:gpu_source} shows the performance of the source-term evaluation on the GPUs listed in~\cref{t:gpus}.
@@ -794,7 +802,7 @@ The strong parallel scaling efficiency measures the speedup due to the use of ad
 \end{figure}
 
 \Cref{F:source_parallel_scaling} shows the strong parallel scaling efficiency of source-term evaluation in \texttt{pyJac} on the \avx/ machine for both the shallow-vectorized Intel OpenCL and OpenMP codes.
-In general, the \ce{H2}\slash\ce{CO} mechanism has the worst scaling efficiency for both Intel OpenCL and OpenMP, likely resulting from both its relatively small size, and few falloff\slash chemically activated reaction (in particular, the additional expensive logarithm and exponential evaluations that accompany them); i.e., there is simply not enough work to fully utilize the SIMD instructions\slash multiple threads.
+In general, the \ce{H2}\slash\ce{CO} mechanism has the worst scaling efficiency for both Intel OpenCL and OpenMP, likely resulting from both its relatively small size, and few falloff\slash chemically activated reaction (in particular, the additional expensive logarithm and exponential evaluations that accompany them) \add{as demonstrated in~\cref{S:SIMD_scaling}}; i.e., there is simply not enough work to fully utilize the SIMD instructions\slash multiple threads.
 Additionally, OpenMP tends to have higher scalings than the shallow-vectorized OpenCL code, e.g., \textasciitilde\num{0.9} and \textasciitilde\num{0.75} for \num{4} and \num{8} CPU cores, respectively, compared to just \numrange{0.66}{0.72} and \numrange{0.44}{0.48} for OpenCL; although not pictured (to keep the figure readable), the unvectorized Intel OpenCL code has only slightly worse scaling than the OpenMP code, hence the poorer scaling is unique to the shallow-vectorizated code.
 This is due in large part to the superior performance of the shallow-vectorized OpenCL code, coupled with the relatively small amounts of work associated with source-term evaluation.
 To illustrate this,~\cref{F:source_crossover} shows the mean run time per-condition of the OpenMP source-term evaluations for \numrange{2}{16} cores, compared to the shallow-vectorized OpenCL code on \num{1} (solid line) and \num{4} (dashed line) cores on the \avx/ machine.
@@ -810,7 +818,7 @@ The SIMD efficiency is defined as:
 \end{equation}
 where $\bar{t}_{\text{unvec}}$ is the mean run time per condition of the unvectorized OpenCL code, $\bar{t}_{\text{shallow}}$ the same for the shallow-vectorized OpenCL code, and $W$, the vector-width reported in number of double operations in~\cref{t:cpus}.
 This measure compares the actual speedup due to shallow-vectorization compared to the nominal vector-width of the machine in question.
-\Cref{F:source_simd_scaling} shows the SIMD efficiency of source-term evaluation in \texttt{pyJac} on a single core of the \avx/ machine; the larger models (isopentanol and USC-Mech II) have higher SIMD-efficiency of \numrange{0.76}{0.78}, and the smaller models (\ce{H2}\slash\ce{CO}, GRI-Mech \num{3.0}) have lower SIMD-efficiency, \numrange{0.6}{0.66}.
+\Cref{F:source_simd_scaling} shows the SIMD efficiency of source-term evaluation in \texttt{pyJac} on a single core of the \avx/ machine; the larger models (isopentanol and USC-Mech II) have higher SIMD efficiency of \numrange{0.76}{0.78}, and the smaller models (\ce{H2}\slash\ce{CO}, GRI-Mech \num{3.0}) have lower SIMD efficiency, \numrange{0.6}{0.66}.
 This again demonstrates that the SIMD-vectorization becomes efficient as the amount of work to perform increases (with increasing model size).
 Interestingly,~\cref{F:source_sse_simd_scaling} shows the SIMD efficiency on the \sse/ machine as greater than one; this is likely caused by a combination of use of an OpenCL vector-width greater than the native CPU vector-width (i.e., \num{8} versus \num{2}), and the improved data-locality for the vectorized-data ordering, as discussed in~\cref{S:data}, and results in a modest \SIrange{7}{17}{\percent} improvement over the nominal vector-width.
 
@@ -977,7 +985,7 @@ Significant speedups in shallow SIMD-vectorized source-term evaluation over a pa
 Vectorized data-orderings specifically formulated for shallow\slash deep SIMD\slash SIMT vectorizations were proposed, resulting in a shallow-vectorized speedup of \SIrange{2.14}{2.58}{$\times$} over a more standard ``F''-ordered (column major) shallow-vectorization; when compared to the corresponding speedup of \SIrange{1.35}{2.09}{$\times$} for the ``C''-ordered (row major) OpenMP code over an ``F''-ordered equivalent, the value of the vectorized data-ordering is evident.
 In addition, the choice of \conp/\slash\conv/ formulation was determined to be negligible on source-term evaluations, while varying the OpenCL vector-width had only modest (\textasciitilde\SI{10}{$\percent$}) performance effects on both the CPU and GPU.
 The strong parallel scaling efficiency was also examined for source-term evaluation; the parallel OpenMP code generally had better efficiencies, but when compared to a shallow-vectorized code with roughly equivalent performance---e.g., source-term shallow-vectorized evaluation on \num{4} cores to \num{16} OpenMP cores---the scalings were similar.
-Examination of SIMD-efficiency revealed increasing speedups with chemical model-size for source-term evaluation on the \avx/ CPU, while on the \sse/ CPU speedups larger than the nominal vector-width were achieved.
+Examination of SIMD efficiency revealed increasing speedups with chemical model-size for source-term evaluation on the \avx/ CPU, while on the \sse/ CPU speedups larger than the nominal vector-width were achieved.
 
 The performance of sparse and dense Jacobian evaluation was also characterized on the CPU\slash GPU platforms.
 The sparse shallow-vectorized OpenCL code was \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.14}{5.03}{$\times$} faster than OpenMP evaluation on the \avx/ and \sse/ CPUs, respectively, while dense shallow-vectorized evaluation was \SIrange{3.03}{4.23}{$\times$} and \SIrange{1.92}{2.47}{$\times$} faster on the same.
@@ -1112,6 +1120,62 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
 \label{T:nv_error}
 \end{table}
 
+\section{SIMD efficiency Scaling Example}
+\label{S:SIMD_scaling}
+\add{This simple example demonstrates the dependency of SIMD efficiency for shallow-vectorized OpenCL source-term evaluation on the size of the chemical model in question, i.e., the amount of computational work per source-term evaluation.}
+\add{The base chemical model used in this example was the isopentanol model~\cite{Sarathy:2013jr} used throughout this work, and the same thermo-chemical state database described in~\cref{s:test_platforms} was used for source-term evaluation.}
+\add{As in~\cref{S:results} all reported results are based on \num{10} individual runs and in this example all cases were run on the \avx/ machine using the Intel OpenCL runtime.}
+
+\begin{algorithm}[htbp]
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\INPUT{\item[\algorithmicinput]}
+\begin{algorithmic}[0]
+  \caption{A greedy selection algorithm to remove reactions from a base chemical model $M$, while preserving the number of active species.}
+  \label{a:model_gen}
+  \INPUT{Base chemical model $M$ with reactions $R$ and species $S$}
+  \Function{Determine Species Count}{\text{active}}
+    \For {Species $S_k$ in model $M$}
+      \State  $\text{species\smallunderscore{}rxn\smallunderscore{}count}\left[k\right] \gets 0$
+      \For {Reaction $R_j$ in model $M$}
+	\If{$\text{active}[j]$ and $\left(\left\lvert \nu_{k, j}^{\prime}\right\rvert + \left\lvert \nu_{k, j}^{\prime\prime} \right\rvert \right) > 0$}
+	  \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}[k] \gets \text{species\smallunderscore{}rxn\smallunderscore{}count}[k] + 1$
+	\EndIf
+      \EndFor
+    \EndFor
+    \Return \text{species\smallunderscore{}rxn\smallunderscore{}count}
+  \EndFunction
+  \Procedure{Model Generation}{$M$}
+  \State $\text{active}[j] \gets \text{True}$ for all reactions $R_j$ in $M$
+  \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{active}$
+  \While {$\operatorname{min}\left(species\smallunderscore rxn\smallunderscore count\right) \ge 1$}
+     \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{active}$
+     \For {Reaction $R_j$ in model $M$}
+	\State $\text{rxn\smallunderscore{}count}[j] \gets \min_{\forall S_k \in R_j}{\left(\text{species\smallunderscore{}rxn\smallunderscore{}count}\left[k\right]\right)}$
+     \EndFor
+     \State $\text{remove\smallunderscore{}at} \gets \operatorname{argmax}\left(\text{rxn\smallunderscore{}count}\right)$
+     \State $\text{active}[\text{remove\smallunderscore{}at}] \gets \text{False}$
+  \EndWhile
+  \EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\add{First, the reactions in the isopentanol model were converted to simple reversible Arrhenius reactions by either simply dropping third-body efficiency calculations (third-body enhanced reactions), using the high pressure-limit coefficients (falloff\slash chemically-activated and P-Log reactions) or fitting Arrenhius parameters to the calculated rate constant at a fixed pressure (chebyshev reactions).}
+\add{This conversion made the cost of reaction rate evaluation roughly equivalent between all reactions in model, separating the effect of chemical model size from computational intensities of different reaction types on the SIMD efficiency.}
+\add{Next, a greedy reaction removal algorithm (\cref{a:model_gen}) was utilized to generated a number of models of varying size ranging from \numrange{2100}{186} reactions, in increments of 200 reactions (except the final increment from \num{200} to \num{186} reactions).}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\linewidth]{simd_efficiency_scaling}
+\caption{The effect on SIMD efficiency of varying chemical model size}
+\label{F:simd_vs_rxns}
+\end{figure}
+
+\add{In order to discern the effect of varying chemical model size on the SIMD efficiency, shallow-vectorized and unvectorized source-term evaluation performance tests were run.}
+\add{As demonstrated in~\cref{F:simd_vs_rxns} the SIMD efficiency is strongly dependent on the generated model size and and thus, amount of computational work per thermo-chemical state.}
+\add{In addition, the range of SIMD efficiency in this example (\numrange{0.56}{0.91}) is is larger than the SIMD efficiencies calculated for real chemical models, as seen in~\cref{F:source_simd_scaling}.}
+\add{For smaller models---e.g., \ce{H2}\slash\ce{CO} which had a SIMD efficiency of \num{0.6}---this suggests that the presence of more expensive fall-off\slash chemically activated reactions in model can increase the SIMD efficiency.}
+\add{However, the isopentanol model achieved a SIMD efficiency of only \num{0.78} in~\cref{S:source_results}, suggesting that more work could be done to optimize the source-term evaluations.}
+\add{In particular, it's likely that a reaction sorting method, such as suggested by Sewerin and Rigopoulos~\cite{Sewerin20151375}, would be particularly beneficial to reduce the number of vector-gather\slash scatter operations incurred during source-term evaluation.}
 
 \pagebreak
 \bibliography{paper}
