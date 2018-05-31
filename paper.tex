@@ -971,15 +971,15 @@ As with the CPU, the static code of \texttt{pyJac-v1} is slightly faster for the
 In this work, automatically generated OpenCL codes for SIMD\slash SIMT-vectorized thermo-chemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation were developed and validated for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
 \add{Reviewing the goals of this work, as discussed in~\cref{S:Goals}}:
 
-\subsection{\add{Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity}}
+\subsection{Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity}
 A new formulation resulted in highly sparse (\SIrange{28.6}{88.5}{\percent}) chemical kinetic Jacobians, with options to futher increase sparsity (to \SIrange{31.66}{92.0}{\percent}) at the expense of strict correctness.
 
-\subsection{\add{Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators}}
+\subsection{Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators}
 \add{Shallow-vectorized evaluation of \texttt{pyJac}'s chemical kinetic source-term and analytical Jacobian was demonstrated on both the CPU and GPU via OpenCL.}
 Deep-vectorization, though possible on the Portable OpenCL (POCL) platform~\cite{poclIJPP}, did not yield any performance benefit as POCL did not achieve vectorizations for any execution pattern studied; deep-vectorization deserves further study with other platforms (e.g., CUDA).
 \add{In addition, parallel OpenMP evaluation was demonstrated on the CPU.}
 
-\subsection{\add{Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}}}
+\subsection{Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}}
 
 Significant speedups in shallow SIMD-vectorized source-term evaluation over a parallel OpenMP code were demonstrated, up to \SIrange{2.53}{2.92}{$\times$} and \SIrange{3.40}{4.08}{$\times$} for \sse/ and \avx/ capable CPUs; in addition, source-term evaluation was \SIrange{1.40}{1.88}{$\times$} faster on a \gpunew/ GPU compared to a \gpuold/ GPU.
 Vectorized data-orderings specifically formulated for shallow\slash deep SIMD\slash SIMT vectorizations were proposed, resulting in a shallow-vectorized speedup of \SIrange{2.14}{2.58}{$\times$} over a more standard ``F''-ordered (column major) shallow-vectorization; when compared to the corresponding speedup of \SIrange{1.35}{2.09}{$\times$} for the ``C''-ordered (row major) OpenMP code over an ``F''-ordered equivalent, the value of the vectorized data-ordering is evident.
@@ -995,7 +995,7 @@ Analytical Jacobian evaluation was significantly faster than a first-order finit
 Finally, the performance of dense analytical-Jacobian evaluation in this new version of \texttt{pyJac} was compared to the previous version~\cite{pyjac16} on the \sse/\slash\gpuold/ CPU\slash GPU; OpenMP evaluation on the \sse/ CPU was \SI{1.79}{$\times$} slower for the smallest chemical model, but \SIrange{3.37}{10.19}{$\times$} faster for the larger models, while the shallow-vectorized OpenCL code was \SIrange{1.37}{19.56}{$\times$} faster than the previous version over all chemical models.
 Similarly, evaluation on the \gpuold/ GPU was \SI{1.89}{$\times$} slower for the smallest model but \SIrange{1.25}{2.84}{$\times$} faster for the larger models.
 
-\subsection{\add{Future extensions to this work and practical notes on OpenCL usage}}
+\subsection{Future extensions to this work and practical notes on OpenCL usage}
 \label{S:future}
 
 It is important to note that while OpenCL provides an simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pit-falls in its use.
