@@ -1122,8 +1122,8 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
 
 \section{SIMD efficiency Scaling Example}
 \label{S:SIMD_scaling}
-\add{This simple example demonstrates the dependency of SIMD efficiency for shallow-vectorized OpenCL source-term evaluation on the size of the chemical model in question, i.e., the amount of computational work per source-term evaluation.}
-\add{The base chemical model used in this example was the isopentanol model~\cite{Sarathy:2013jr} used throughout this work, and the same thermo-chemical state database described in~\cref{s:test_platforms} was used for source-term evaluation.}
+\add{This simple example demonstrates the dependency of the SIMD efficiency of shallow-vectorized OpenCL source-term evaluation on the size of the chemical model in question, i.e., the amount of computational work per source-term evaluation.}
+\add{The base chemical model for this example was the isopentanol model~\cite{Sarathy:2013jr} used throughout this work, and the same thermo-chemical state database described in~\cref{s:test_platforms} was used for source-term evaluation.}
 \add{As in~\cref{S:results} all reported results are based on \num{10} individual runs and in this example all cases were run on the \avx/ machine using the Intel OpenCL runtime.}
 
 \begin{algorithm}[htbp]
@@ -1146,9 +1146,9 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
   \EndFunction
   \Procedure{Model Generation}{$M$}
   \State $\text{active}[j] \gets \text{True}$ for all reactions $R_j$ in $M$
-  \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{active}$
-  \While {$\operatorname{min}\left(species\smallunderscore rxn\smallunderscore count\right) \ge 1$}
-     \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{active}$
+  \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{\text{active}}$
+  \While {$\operatorname{min}\left(\text{species\smallunderscore rxn\smallunderscore count}\right) \ge 1$}
+     \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{\text{active}}$
      \For {Reaction $R_j$ in model $M$}
 	\State $\text{rxn\smallunderscore{}count}[j] \gets \min_{\forall S_k \in R_j}{\left(\text{species\smallunderscore{}rxn\smallunderscore{}count}\left[k\right]\right)}$
      \EndFor
@@ -1161,7 +1161,7 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
 
 \add{First, the reactions in the isopentanol model were converted to simple reversible Arrhenius reactions by either simply dropping third-body efficiency calculations (third-body enhanced reactions), using the high pressure-limit coefficients (falloff\slash chemically-activated and P-Log reactions) or fitting Arrenhius parameters to the calculated rate constant at a fixed pressure (chebyshev reactions).}
 \add{This conversion made the cost of reaction rate evaluation roughly equivalent between all reactions in model, separating the effect of chemical model size from computational intensities of different reaction types on the SIMD efficiency.}
-\add{Next, a greedy reaction removal algorithm (\cref{a:model_gen}) was utilized to generated a number of models of varying size ranging from \numrange{2100}{186} reactions, in increments of 200 reactions (except the final increment from \num{200} to \num{186} reactions).}
+\add{Next, a greedy reaction removal algorithm (\cref{a:model_gen}) was utilized to generate a number of models ranging from \numrange{2100}{186} reactions, in increments of 200 reactions (except the final increment from \num{200} to \num{186} reactions).}
 
 \begin{figure}[htbp]
 \centering
@@ -1172,10 +1172,10 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
 
 \add{In order to discern the effect of varying chemical model size on the SIMD efficiency, shallow-vectorized and unvectorized source-term evaluation performance tests were run.}
 \add{As demonstrated in~\cref{F:simd_vs_rxns} the SIMD efficiency is strongly dependent on the generated model size and and thus, amount of computational work per thermo-chemical state.}
-\add{In addition, the range of SIMD efficiency in this example (\numrange{0.56}{0.91}) is is larger than the SIMD efficiencies calculated for real chemical models, as seen in~\cref{F:source_simd_scaling}.}
-\add{For smaller models---e.g., \ce{H2}\slash\ce{CO} which had a SIMD efficiency of \num{0.6}---this suggests that the presence of more expensive fall-off\slash chemically activated reactions in model can increase the SIMD efficiency.}
-\add{However, the isopentanol model achieved a SIMD efficiency of only \num{0.78} in~\cref{S:source_results}, suggesting that more work could be done to optimize the source-term evaluations.}
-\add{In particular, it's likely that a reaction sorting method, such as suggested by Sewerin and Rigopoulos~\cite{Sewerin20151375}, would be particularly beneficial to reduce the number of vector-gather\slash scatter operations incurred during source-term evaluation.}
+\add{In addition, the range of SIMD efficiency in this example (\numrange{0.56}{0.91}) is larger than the range of SIMD efficiencies calculated for real chemical models, as seen in~\cref{F:source_simd_scaling}.}
+\add{For smaller models---e.g., \ce{H2}\slash\ce{CO} which had a SIMD efficiency of \num{0.6} on the \avx/ CPU---this suggests that the presence of more computationally intensive fall-off\slash chemically activated reactions in model can increase the SIMD efficiency.}
+\add{However, the base isopentanol model achieved a SIMD efficiency of only \num{0.78} on the \avx/ machine in~\cref{S:source_results}, suggesting that more work could be done to optimize the source-term evaluations.}
+\add{In particular, it's likely that a reaction sorting method, such as suggested by Sewerin and Rigopoulos~\cite{Sewerin20151375}, would be particularly beneficial to reduce the number of vector-gather\slash scatter\slash masking operations incurred during source-term evaluation.}
 
 \pagebreak
 \bibliography{paper}
