@@ -98,13 +98,14 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-A code generation platform, \texttt{pyJac}, for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized constant-pressure (\conp/)\slash constant-volume (\conv/) thermo-chemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation has been developed.
+A code generation platform, \texttt{pyJac}, for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized constant-pressure\slash constant-volume thermo-chemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation has been developed.% Can you introduce this a bit more? good to start with at least one sentence of introduction. also, this is passive and quite long\slash complex
 Selected chemical kinetic models covering the range of sizes typically used in reactive-flow simulations were used for demonstration.
-A new formulation of the chemical kinetic governing equations was derived and validated, resulting Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
-Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation compared a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
-In addition, the performance of a NVIDIA \gpunew/ graphics processing unit (GPU) was compared to a NVIDIA \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse and dense Jacobian evaluation, respectively.
-Furthermore, the effect of data-ordering was investigated and an storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the \conp/\slash\conv/ assumptions and varying vector widths were studied on source-term evaluation performance.
-Speedups over a first-order finite-difference approach reached \SIrange{17.60}{45.13}{$\times$} and \SIrange{55.11}{245.63}{$\times$} for sparse\slash dense evaluation on the CPU\slash GPU respectively, while dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a \sse/ CPU and \gpuold/ GPU, respectively.
+A new formulation of the chemical kinetic governing equations was derived and validated, resulting in Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
+Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation compared with a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
+In addition, the performance of a NVIDIA \gpunew/ graphics processing unit (GPU) was compared to a NVIDIA \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively. %is this sentence necessary in the abstract?
+Furthermore, the effect of data-ordering was investigated and a storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the constant pressure\slash volume assumptions and varying vector widths were studied on source-term evaluation performance.
+Speedups over a first-order finite-difference approach reached \SIrange{17.60}{45.13}{$\times$} and \SIrange{55.11}{245.63}{$\times$} for sparse\slash dense evaluation on the CPU \slash GPU respectively,%not sure what numbers refer to- sparse, dense, CPU, GPU?
+while dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a CPU and GPU, respectively.
 Finally, future directions for vectorized chemical kinetic evaluation and sparse linear-algebra techniques were discussed.
 \end{abstract}
 
@@ -116,27 +117,33 @@ Finally, future directions for vectorized chemical kinetic evaluation and sparse
 \end{keyword}
 
 \end{frontmatter}
+\todo[inline]{abstract comments in source}
 
 %====================================================================
 \section{Introduction}
 %
 
-As the importance of detailed chemical kinetics for predictive reactive-flow simulations has become recognized~\cite{LU2009192}, the size and complexity of chemical kinetic models describing current and next-generation fuels relevant to transportation and power generation have increased greatly; e.g., a biodiesel model~\cite{WESTBROOK2011742} consists of \textasciitilde\num{3500} chemical species, and over \num{17000} reactions.
-Moreover, the cost of evaluating the chemical source-terms scales linearly with the size of the model, while evaluation and factorization of the chemical kinetic Jacobian---if naively implemented via finite-difference method---scale quadratically and cubically with the number of species in the model~\cite{LU2009192}.
-These factors often make the use of detailed chemical kinetics prohibitive in practice; e.g., in a direct numerical simulation~\cite{Spafford:2010aa} utilizing a 22-species model, evaluation of reaction rates consumed around half of the total run time.
-In addition, chemical kinetic Jacobian evaluation and factorization---utilized by most common implicit integration techniques to deal with numerical stiffness---is a bottleneck for even modestly-sized chemical models in realistic reactive flow simulations, necessitating use of other cost-reduction strategies~\cite{LU2009192}.
+As the combustion and reacting-flows community has recognized the
+importance of detailed chemical kinetics for predictive reactive-flow simulations~\cite{LU2009192},
+chemical kinetic models have grown in size and complexity to describe current and next-generation fuels relevant to transportation and power generation.
+For example, a recent biodiesel model~\cite{WESTBROOK2011742} consists of \textasciitilde\num{3500} chemical species and over \num{17000} reactions.
+Moreover, the cost of evaluating the chemical source-terms scales linearly with the size of the model, while evaluating and factorizing the chemical kinetic Jacobian respectively scale quadratically and cubically with the number of species in the model, if naively implemented via a finite-difference method~\cite{LU2009192}.
+These factors often prohibit using detailed chemical kinetics in practice; e.g., in a direct numerical simulation~\cite{Spafford:2010aa} using a 22-species model, evaluating reaction rates consumed around half of the total run time.
+In addition, most common implicit integration techniques need to evaluate and factorize the Jacobian matrix to deal with stiffness.
+As a result, these operations are bottlenecks when using even moderately sized chemical models in realistic reactive-flow simulations, necessitating other cost-reduction strategies~\cite{LU2009192}.
 
-A host of techniques have been developed to lessen the computational demand of chemical kinetic calculations while maintaining fidelity, these fall broadly into a few categories: removal of unimportant species and reactions~\cite{Lu:2006bb,Pepiot-Desjardins:2008,Hiremath:2010jw,Niemeyer:2010bt,Curtis:2015}, lumping of species with similar thermo-chemical properties~\cite{Lu:2007,Ahmed:2007fa,Pepiot:2008kq}, and time-scale methods that reduce numerical stiffness~\cite{Maas:1992ws,Lam:1994ws,Lu:2001ve,Gou:2010}.
-The interested reader is referred to the recent review of Tur\'anyi and Tomlin~\cite{turanyi2016analysis} for a comprehensive overview.
+A host of techniques have been developed to lessen the computational demand of chemical kinetic calculations while maintaining fidelity, falling broadly into a few categories: removal of unimportant species and reactions~\cite{Lu:2006bb,Pepiot-Desjardins:2008,Hiremath:2010jw,Niemeyer:2010bt,Curtis:2015}, lumping of species with similar thermo-chemical properties~\cite{Lu:2007,Ahmed:2007fa,Pepiot:2008kq}, and time-scale methods that reduce numerical stiffness~\cite{Maas:1992ws,Lam:1994ws,Lu:2001ve,Gou:2010}.
+We refer interested readers to the recent review by Tur\'anyi and Tomlin~\cite{turanyi2016analysis} for a comprehensive overview.
 
 In addition to the previously mentioned cost reduction methods, effort has gone into improving the integration algorithms and codes that evaluate the chemical kinetics~\cite{Gou:2010,SCHWER2002270,Niemeyer:2016aa,GAO2015287}.
-In particular, a carefully derived analytical formulation of the Jacobian can greatly increase the sparsity of the matrix~\cite{SCHWER2002270} and drop the cost of Jacobian evaluation to a to a linear dependence on the number of species in the model~\cite{LU2009192}; Jacobian factorization can be accelerated via sparse-matrix techniques~\cite{superlu99}.
-Use of Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processors to accelerate chemical kinetic simulations has also been studied, e.g., as in~\cite{CurtisGPU:2017,Sewerin20151375,Shi:2012aa,Niemeyer:2016aa}.
+In particular, a carefully derived analytical formulation of the Jacobian matrix can greatly increase sparsity~\cite{SCHWER2002270} and drop the cost of Jacobian evaluation to linearly depend on the number of species in the model~\cite{LU2009192}; Jacobian factorization can then be accelerated via sparse-matrix techniques~\cite{superlu99}.
+In addition, studies have shown that Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processors can accelerate chemical kinetic simulations~\cite{Shi:2012aa,Niemeyer:2014aa,Sewerin20151375,Niemeyer:2016aa,CurtisGPU:2017,stone2018}.
 
 SIMD and SIMT programming are two important vector-processing paradigms used increasingly in scientific computing.
-Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance, however as exponential growth in processing power---colloquially known as Moore's law---has slowed~\cite{khan2018science}, SIMD processors as well as SIMT processors, e.g., in the form of graphics processing units (GPUs), have gained recognition due to their increased floating operation throughput.
-The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector-processing based codes in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., CPU, GPU, or Intel's Many Integrated Core (MIC) architecture, etc.
-In this discussion, we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor type (e.g., CPUs and GPUs), however the concepts discussed herein are broadly applicable to SIMD\slash SIMT processing and not tied to OpenCL specifically.
+Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance; however, as exponential growth in processing power---colloquially known as Moore's law---has slowed~\cite{khan2018science}, SIMD processors as well as SIMT processors, e.g., in the form of graphics processing units (GPUs), have gained recognition due to their increased floating operation throughput.\todo{this isn't quite right; multicore parallelism is how CPUs have bypassed Moore's}{}
+The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector processing in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., CPU, GPU, or Intel's Many Integrated Core (MIC) architecture.
+Here we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor types (e.g., CPUs and GPUs).
+However, the concepts discussed herein broadly apply to SIMD\slash SIMT processing.
 
 \begin{figure}[htb]
   \centering
@@ -154,8 +161,9 @@ In this discussion, we will largely use OpenCL terminology to describe these pro
   \caption{Simple diagrams explaining the fundamentals of the SIMD and SIMT vector-processing paradigms.}
 \end{figure}
 
-A typical modern CPU has many compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions (\cref{F:SIMD}).
-A SIMD instruction utilizes the vector processor to execute the same floating point operation (e.g., multiplication, division, etc.) on a several different data concurrently; the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations.
+A typical modern CPU contains multiple compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions, as \cref{F:SIMD} depicts.
+A SIMD instruction uses the vector processor to execute the same floating-point operation (e.g., multiplication, division) on different data concurrently;
+the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations.
 Additionally, specialized hardware accelerators, e.g., Intel's Xeon Phi co-processor (MIC architecture) have been developed that have tens of cores with very wide vector-widths (e.g., \numrange{4}{8} double precision operations); these very wide vector-widths are also found on cutting-edge and forthcoming Intel CPUs; i.e., the Skylake Xeon and Cannon Lake architectures, respectively.
 
 SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large numbers of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
@@ -197,8 +205,8 @@ Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Ku
 In contrast, SIMD-based chemical kinetics evaluation\slash integration have been far less studied.
 Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock integrator for atmospheric chemical kinetics on the CPU, GPU and cell croadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
 Kroshko and Spiteri~\cite{kroshko2013efficient} implemented a SIMD-vectorized third-order stiff Rosenbrock integrator for atmospheric chemistry on the CBE and found a speedup of \SI{1.89}{$\times$} (a parallel scaling efficiency of \SI{94}{$\percent$}) over a serial version of the same code.
-Stone and Niemeyer~\cite{stone2016} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
-SIMD-vectorization improved the integrator performance over an OpenMP baseline (which was vectorized by simple compiler hints (i.e., \texttt{\#pragmas}) by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread-divergence concerns~\cite{stone2016}.
+Stone and Niemeyer~\cite{stone2018} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
+SIMD-vectorization improved the integrator performance over an OpenMP baseline (which was vectorized by simple compiler hints (i.e., \texttt{\#pragmas}) by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread-divergence concerns~\cite{stone2018}.
 
 This work will build upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}, in order to:
 \begin{itemize}
