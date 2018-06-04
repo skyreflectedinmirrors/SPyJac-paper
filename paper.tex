@@ -1,30 +1,28 @@
 \documentclass[12pt,number,sort&compress,preprint]{elsarticle}
 
 %======================================================================
-\usepackage{todonotes}
+
 \usepackage{graphicx}
-\usepackage[binary-units]{siunitx}
-\usepackage{gensymb}
-\usepackage[version=3]{mhchem} % Formula subscripts using \ce{}, e.g., \ce{H2SO4}
 \usepackage{booktabs,multicol} %better tables
 \usepackage{subcaption} %subfigs
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
+\usepackage{gensymb}
 \usepackage{ulem}
 
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 
-\usepackage{xcolor}
-\definecolor{darkgreen}{rgb}{0,0.5,0}
+\usepackage[usenames,dvipsnames]{xcolor}
 
-% \usepackage[xcolor]{changebar}
-% \newcommand{\add}[1]{{\sloppy\cbcolor{teal}\textcolor{teal}{\cbstart {#1}\cbend}}}  % add
-% \newcommand{\delete}[1]{\sloppy\cbcolor{red}\textcolor{red}{\cbdelete\sout{#1}}}
+\usepackage[xcolor]{changebar}
+\newcommand{\add}[1]{{\sloppy\cbcolor{teal}\textcolor{teal}{\cbstart {#1}\cbend}}}  % add
+\newcommand{\delete}[1]{\sloppy\cbcolor{red}\textcolor{red}{\cbdelete\sout{#1}}}
+\newcommand{\revise}[1]{{\sloppy\textcolor{Fuchsia}{#1}}}  % add
 
-\newcommand{\add}[1]{{\sloppy\textcolor{teal}{#1}}}  % add
-\newcommand{\delete}[1]{\sloppy\textcolor{red}{\sout{#1}}} %delete with no strikeout
+\newcommand{\addnl}[1]{{\sloppy\textcolor{teal}{#1}}}  % add
+\newcommand{\deletenl}[1]{\sloppy\textcolor{red}{\sout{#1}}} %delete with no strikeout
 
 % shared equations in separate file
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
@@ -33,7 +31,11 @@
 % external references https://tex.stackexchange.com/a/14365/56227
 \usepackage{xr-hyper}
 
+\usepackage[version=4]{mhchem} % Formula subscripts using \ce{}, e.g., \ce{H2SO4}
 \usepackage{amsmath,eqparbox,xparse,mathtools}
+\usepackage[binary-units]{siunitx}
+
+\usepackage{todonotes}
 
 % load common macros / commands
 \usepackage{macros}
@@ -81,7 +83,7 @@
 \graphicspath{{./figures/}}
 
 
-\title{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation}
+\title{Using SIMD and SIMT vectorization to evaluate sparse chemical kinetic Jacobian matrices and thermochemical source terms}
 
 \author[1]{Nicholas Curtis\corref{corr}}
 \author[2]{Kyle E.~Niemeyer}
@@ -98,12 +100,12 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-A code generation platform, \texttt{pyJac}, for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized constant-pressure\slash constant-volume thermo-chemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation has been developed.% Can you introduce this a bit more? good to start with at least one sentence of introduction. also, this is passive and quite long\slash complex
+A code generation platform, \texttt{pyJac}, for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized \revise{constant-pressure\slash volume} thermo-chemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation has been developed.% Can you introduce this a bit more? good to start with at least one sentence of introduction. also, this is passive and quite long\slash complex
 Selected chemical kinetic models covering the range of sizes typically used in reactive-flow simulations were used for demonstration.
-A new formulation of the chemical kinetic governing equations was derived and validated, resulting in Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
-Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation compared with a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
-In addition, the performance of a NVIDIA \gpunew/ graphics processing unit (GPU) was compared to a NVIDIA \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively. %is this sentence necessary in the abstract?
-Furthermore, the effect of data-ordering was investigated and a storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the constant pressure\slash volume assumptions and varying vector widths were studied on source-term evaluation performance.
+A new formulation of the chemical kinetic governing equations was derived and validated, \revise{resulting in} Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
+Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation \revise{compared with} a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
+In addition, the performance of a Nvidia \gpunew/ graphics processing unit (GPU) was compared to a Nvidia \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively. %is this sentence necessary in the abstract?
+Furthermore, the effect of data-ordering was investigated and \revise{a} storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the \revise{constant pressure\slash volume} assumptions and varying vector widths were studied on source-term evaluation performance.
 Speedups over a first-order finite-difference approach reached \SIrange{17.60}{45.13}{$\times$} and \SIrange{55.11}{245.63}{$\times$} for sparse\slash dense evaluation on the CPU \slash GPU respectively,%not sure what numbers refer to- sparse, dense, CPU, GPU?
 while dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a CPU and GPU, respectively.
 Finally, future directions for vectorized chemical kinetic evaluation and sparse linear-algebra techniques were discussed.
@@ -123,27 +125,29 @@ Finally, future directions for vectorized chemical kinetic evaluation and sparse
 \section{Introduction}
 %
 
-As the combustion and reacting-flows community has recognized the
+\revise{As the combustion and reacting-flows community has recognized the
 importance of detailed chemical kinetics for predictive reactive-flow simulations~\cite{LU2009192},
 chemical kinetic models have grown in size and complexity to describe current and next-generation fuels relevant to transportation and power generation.
-For example, a recent biodiesel model~\cite{WESTBROOK2011742} consists of \textasciitilde\num{3500} chemical species and over \num{17000} reactions.
-Moreover, the cost of evaluating the chemical source-terms scales linearly with the size of the model, while evaluating and factorizing the chemical kinetic Jacobian respectively scale quadratically and cubically with the number of species in the model, if naively implemented via a finite-difference method~\cite{LU2009192}.
-These factors often prohibit using detailed chemical kinetics in practice; e.g., in a direct numerical simulation~\cite{Spafford:2010aa} using a 22-species model, evaluating reaction rates consumed around half of the total run time.
-In addition, most common implicit integration techniques need to evaluate and factorize the Jacobian matrix to deal with stiffness.
-As a result, these operations are bottlenecks when using even moderately sized chemical models in realistic reactive-flow simulations, necessitating other cost-reduction strategies~\cite{LU2009192}.
+For example,} a recent biodiesel model~\cite{WESTBROOK2011742} consists of \textasciitilde\num{3500} chemical species and over \num{17000} reactions.
+Moreover, the cost of evaluating the chemical source-terms scales linearly with the size of the model, while evaluating and factorizing the chemical kinetic Jacobian respectively scale quadratically and cubically with the number of species in the model, \revise{if naively implemented via a finite-difference method~\cite{LU2009192}}.
+These factors often \revise{prohibit using} detailed chemical kinetics in practice; e.g., in a direct numerical simulation \revise{using} a 22-species model, \revise{evaluating} reaction rates consumed around half of the total run time~\cite{Spafford:2010aa}.
+\revise{In addition, most common implicit integration techniques need to evaluate and factorize the Jacobian matrix to deal with stiffness.
+As a result, these operations are bottlenecks when using even moderately sized chemical models in realistic reactive-flow simulations, necessitating other cost-reduction strategies~\cite{LU2009192}.}
 
-A host of techniques have been developed to lessen the computational demand of chemical kinetic calculations while maintaining fidelity, falling broadly into a few categories: removal of unimportant species and reactions~\cite{Lu:2006bb,Pepiot-Desjardins:2008,Hiremath:2010jw,Niemeyer:2010bt,Curtis:2015}, lumping of species with similar thermo-chemical properties~\cite{Lu:2007,Ahmed:2007fa,Pepiot:2008kq}, and time-scale methods that reduce numerical stiffness~\cite{Maas:1992ws,Lam:1994ws,Lu:2001ve,Gou:2010}.
-We refer interested readers to the recent review by Tur\'anyi and Tomlin~\cite{turanyi2016analysis} for a comprehensive overview.
+A host of techniques have been developed to lessen the computational demand of chemical kinetic calculations while maintaining fidelity, \revise{falling} broadly into \revise{three} categories: removal of unimportant species and reactions~\cite{Lu:2006bb,Pepiot-Desjardins:2008,Hiremath:2010jw,Niemeyer:2010bt,Curtis:2015},
+lumping of species with similar thermo-chemical properties~\cite{Lu:2007,Ahmed:2007fa,Pepiot:2008kq},
+and time-scale methods that reduce numerical stiffness~\cite{Maas:1992ws,Lam:1994ws,Lu:2001ve,Gou:2010}.
+\revise{We refer interested readers} to the recent review by Tur\'anyi and Tomlin~\cite{turanyi2016analysis} for a comprehensive overview.
 
 In addition to the previously mentioned cost reduction methods, effort has gone into improving the integration algorithms and codes that evaluate the chemical kinetics~\cite{Gou:2010,SCHWER2002270,Niemeyer:2016aa,GAO2015287}.
-In particular, a carefully derived analytical formulation of the Jacobian matrix can greatly increase sparsity~\cite{SCHWER2002270} and drop the cost of Jacobian evaluation to linearly depend on the number of species in the model~\cite{LU2009192}; Jacobian factorization can then be accelerated via sparse-matrix techniques~\cite{superlu99}.
-In addition, studies have shown that Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processors can accelerate chemical kinetic simulations~\cite{Shi:2012aa,Niemeyer:2014aa,Sewerin20151375,Niemeyer:2016aa,CurtisGPU:2017,stone2018}.
+In particular, a carefully derived analytical formulation of the Jacobian \revise{matrix can greatly increase sparsity}~\cite{SCHWER2002270} and drop the cost of Jacobian evaluation to \revise{linearly depend} on the number of species in the model~\cite{LU2009192}; \revise{sparse-matrix techniques can then reduce the cost of Jacobian factorization}~\cite{superlu99}.
+\revise{In addition, studies have shown that} Single-Instruction, Multiple-Data (SIMD) and the related Single-Instruction, Multiple-Thread (SIMT) processors can accelerate chemical kinetic simulations~\cite{Shi:2012aa,Niemeyer:2014aa,Sewerin20151375,Niemeyer:2016aa,CurtisGPU:2017,stone2018}.
 
 SIMD and SIMT programming are two important vector-processing paradigms used increasingly in scientific computing.
 Traditional multi-core parallelism is often used to increase central processing unit (CPU) performance; however, as exponential growth in processing power---colloquially known as Moore's law---has slowed~\cite{khan2018science}, SIMD processors as well as SIMT processors, e.g., in the form of graphics processing units (GPUs), have gained recognition due to their increased floating operation throughput.\todo{this isn't quite right; multicore parallelism is how CPUs have bypassed Moore's}{}
 The parallel programming standard OpenCL~\cite{stone2010opencl} has further enabled adoption of vector processing in scientific computing by providing a common application program interface (API) for execution on heterogeneous systems, e.g., CPU, GPU, or Intel's Many Integrated Core (MIC) architecture.
-Here we will largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor types (e.g., CPUs and GPUs).
-However, the concepts discussed herein broadly apply to SIMD\slash SIMT processing.
+\revise{Here we will} largely use OpenCL terminology to describe these processing paradigms, as it provides a convenient way to classify otherwise disparate processor types (e.g., CPUs and GPUs).
+However, the concepts discussed herein \revise{broadly apply} to SIMD\slash SIMT processing.
 
 \begin{figure}[htb]
   \centering
@@ -161,21 +165,23 @@ However, the concepts discussed herein broadly apply to SIMD\slash SIMT processi
   \caption{Simple diagrams explaining the fundamentals of the SIMD and SIMT vector-processing paradigms.}
 \end{figure}
 
-A typical modern CPU contains multiple compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions, as \cref{F:SIMD} depicts.
-A SIMD instruction uses the vector processor to execute the same floating-point operation (e.g., multiplication, division) on different data concurrently;
-the number of concurrent operations possible is known as the vector-width\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as will be studied in Sec.~\ref{S:results}} and is typically around 2--4 double precision operations.
-Additionally, specialized hardware accelerators, e.g., Intel's Xeon Phi co-processor (MIC architecture) have been developed that have tens of cores with very wide vector-widths (e.g., \numrange{4}{8} double precision operations); these very wide vector-widths are also found on cutting-edge and forthcoming Intel CPUs; i.e., the Skylake Xeon and Cannon Lake architectures, respectively.
+A typical modern CPU \revise{contains multiple} compute units (i.e., cores), each with specialized vector processing units capable of running SIMD instructions, \revise{as \cref{F:SIMD} depicts}.
+A SIMD instruction uses the vector processor to execute the same floating-point operation (e.g., multiplication, division) \revise{on different data} concurrently.
+\revise{The vector-width is the number of possible concurrent operations, typically around two to four in double precision.}\footnote{OpenCL allows for use of vector-widths different from the actual hardware vector-width via implicit conversion, and may provide some performance benefit as Sec.~\ref{S:results} \revise{discusses.}}
+Specialized hardware accelerators \revise{have also been developed, like Intel's Xeon Phi co-processor (i.e., the MIC architecture)}, that have tens of cores with wide vector-widths (e.g., \numrange{4}{8} double-precision operations).
+\revise{Cutting-edge and forthcoming Intel CPUs also include these wide vector-widths, like the Skylake Xeon and Cannon Lake architectures.}
 
-SIMT processing---the foundation of modern GPUs~\cite{lindholm2008nvidia}---is a related computing paradigm that hosts large numbers of threads on a single compute element (a streaming multiprocessor in NVIDIA terminology).
-A group of threads---typically \num{32}, known as a warp on NVIDIA GPUs---execute the same SIMD instruction on multiple data concurrently (\cref{F:SIMT}).
-If some threads must execute a different instruction---e.g., due to if\slash then branching or predication---they are forced to wait and execute later.
-This phenomenon, known as thread-divergence, is a key consideration for SIMT-processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
+\revise{Modern GPUs rely on the related computing paradigm of SIMT processing, where a single compute element hosts large
+numbers of threads (a streaming multiprocessor in Nvidia terminology)~\cite{lindholm2008Nvidia}.}
+\revise{Figure~\ref{F:SIMT} depicts a SIMT compute unit, where a group of threads---typically \num{32}, known as a warp on Nvidia GPUs---execute the same SIMT instruction on multiple data concurrently}.
+If some threads must execute a different instruction, they are forced to wait and execute later; \revise{this may occur due to if\slash then branching or predication.}
+This phenomenon, known as thread-divergence, is a key consideration for SIMT processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
-\subsection{Previous works and goals of this study}
-\label{S:Goals}
+\subsection{Related work}
+\label{S:related}
 
 
-Recognizing the need to accelerate Jacobian evaluation and factorization, a number of recent works have been published on analytical chemical kinetic Jacobian evaluation; although as will be discussed at the end of this section, this work offers several key improvements over past efforts.
+Recognizing the need to accelerate chemical-kinetic Jacobian evaluation and factorization, a number of recent works have been published on \revise{constructing analytical Jacobian matrices}; although as will be discussed at the end of this section, \revise{here we offer} several key improvements over past efforts.
 \add{Schwer et al.~\cite{SCHWER2002270} were among the first to recognize the critical importance of a sparse analytical Jacobian to accelerate chemical kinetic simulations.}
 The \texttt{TChem} software package~\cite{Safta:2011vn} was one of the first codes developed providing analytical Jacobian evaluation, but has several limitations including: incompatibilities with modern reaction types---i.e., pressure dependent Arrhenius (or P-Log) and Chebyshev reactions---and lack of thread-safety to enable parallel execution~\cite{Curtis2017:tchem}.
 Youssefi~\cite{Youssefi:2011tm} explored the importance of analytical Jacobian matrices for time-scale analysis techniques as well as their effect on computational efficiency in zero-dimensional homogeneous reactor simulations.
@@ -207,6 +213,10 @@ Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosen
 Kroshko and Spiteri~\cite{kroshko2013efficient} implemented a SIMD-vectorized third-order stiff Rosenbrock integrator for atmospheric chemistry on the CBE and found a speedup of \SI{1.89}{$\times$} (a parallel scaling efficiency of \SI{94}{$\percent$}) over a serial version of the same code.
 Stone and Niemeyer~\cite{stone2018} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
 SIMD-vectorization improved the integrator performance over an OpenMP baseline (which was vectorized by simple compiler hints (i.e., \texttt{\#pragmas}) by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread-divergence concerns~\cite{stone2018}.
+
+
+\subsection{Goals of this study}
+\label{S:Goals}
 
 This work will build upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}, in order to:
 \begin{itemize}
@@ -247,7 +257,7 @@ To our knowledge, this is the first \add{open-source, validated} effort that ena
 	\label{F:column_major}
     \end{subfigure}
   \end{minipage}
-  \caption{\add{Simple data-layout patterns for 2-D arrays}}
+  \caption{\addnl{Simple data-layout patterns for 2-D arrays}}
 \end{figure}
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
@@ -261,7 +271,7 @@ This ordering---along with the device (CPU, GPU, etc.\@) and vectorization patte
 
 In a \textit{shallow}-SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works~\cite{Stone:2013aa} using GPUs), each SIMD-lane (or SIMT-thread) in a compute-unit evaluates the thermo-chemical source-terms\slash chemical kinetic Jacobian for a different thermo-chemical state.
 If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{N_v, j}$---the concentration of species $j$ for states $1, 2,\ldots N_v$, where $N_v$ is the SIMD vector-width or the number of threads in a SIMT warp---will load sequential locations in memory.
-The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{NVIDIA:2018}.
+The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{Nvidia:2018}.
 
 In a \textit{deep}-SIMD\slash SIMT vectorization (also referred to as ``per-block'' in previous GPU works (e.g.,~\cite{Stone:2013aa,CurtisGPU:2017}), a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermo-chemical source-terms for a single thermo-chemical state; thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + N_v}$---the species concentrations for state 1, species $j \ldots j + N_v$---will access sequential memory locations if the data is stored in ``C''-order.
 Further, in ``C''-ordering the maximum distance between any two species concentrations within the same thermo-chemical state is $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU, but may lead to uncoalesced memory-accesses on the GPU.
@@ -383,14 +393,14 @@ OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
 \Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
 Additionally, \texttt{v5.0} of the LLVM\slash\texttt{clang}~\cite{Lattner:2004:LCF:977395.977673} compiler chain was installed on all machines to enable use of POCL.
-\Cref{t:gpus} lists the model, number of CUDA cores and NVIDIA driver of each of the GPUs used in this work.
-NVIDIA's OpenCL runtime is bundled with the NVIDIA driver~\cite{NVIDIA:2018}, hence the driver version is used to specify the OpenCL runtime version.
+\Cref{t:gpus} lists the model, number of CUDA cores and Nvidia driver of each of the GPUs used in this work.
+Nvidia's OpenCL runtime is bundled with the Nvidia driver~\cite{Nvidia:2018}, hence the driver version is used to specify the OpenCL runtime version.
 
 \begin{table}[htb]
 \centering
 \begin{tabular}{@{}l l l l l@{}}
 \toprule
-NVIDIA Model   & Tesla C2075    & Tesla K40m    \\
+Nvidia Model   & Tesla C2075    & Tesla K40m    \\
 \midrule
 Driver Version & \num{384.81}   & \num{387.26}  \\
 CUDA Cores     & \num{448}      & \num{2880}    \\
@@ -400,16 +410,16 @@ OpenCL Version & \num{1.1}	& \num{1.2}	\\
 Memory\footnotemark[\thefootnote] & \SI{6}{\giga\byte} & \SI{12}{\giga\byte} \\
 \bottomrule
 \end{tabular}
-\caption{The NVIDIA GPU configurations used in this study.  NVIDIA's OpenCL runtime is provided with the graphics driver, rather than any specific version of CUDA.
+\caption{The Nvidia GPU configurations used in this study.  Nvidia's OpenCL runtime is provided with the graphics driver, rather than any specific version of CUDA.
 Again, the identifier field will be used as a shorthand descriptor during analysis of the performance results.
 }
 \label{t:gpus}
 \end{table}
-\footnotetext{Due to a driver implementation issue~\cite{nvidia_memory}, the total memory used on the \gpuold/ and \gpunew/ GPUs were to limited to \SI{4}{\giga\byte} and \SI{10}{\giga\byte}, respectively.\addtocounter{footnote}{1}}
+\footnotetext{Due to a driver implementation issue~\cite{Nvidia_memory}, the total memory used on the \gpuold/ and \gpunew/ GPUs were to limited to \SI{4}{\giga\byte} and \SI{10}{\giga\byte}, respectively.\addtocounter{footnote}{1}}
 
 
 \Cref{t:platforms} lists the platforms and vectorization\slash execution patterns that they are capable of running.
-The Intel and NVIDIA OpenCL runtimes lack implementations of atomic operations on double precision variables; these are currently necessary for \texttt{pyJac} to run deep-vectorized code.
+The Intel and Nvidia OpenCL runtimes lack implementations of atomic operations on double precision variables; these are currently necessary for \texttt{pyJac} to run deep-vectorized code.
 On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations.
 However, POCL's implicit vectorization module---which utilizes the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to translate OpenCL code to vectorized machine code---typically fails to achieve much speedup, if any.
 Thus POCL is a particularly useful tool for validation, but not necessarily for performance studies.
@@ -424,7 +434,7 @@ Platform & Parallel & Shallow Vectorization & Deep Vectorization \\
 OpenMP & X & -- & -- \\
 POCL OpenCL & X & X & X \\
 Intel OpenCL & X & X & -- \\
-NVIDIA OpenCL & -- & X & -- \\
+Nvidia OpenCL & -- & X & -- \\
 \bottomrule
 \end{tabular}
 \caption{The various platforms used in this study and the execution \slash vectorization patterns that they are capable of running}
@@ -703,9 +713,9 @@ As will be discussed in~\cref{S:future}, \add{it is hoped that use of explicit v
 
 \Cref{F:gpu_source} shows the performance of the source-term evaluation on the GPUs listed in~\cref{t:gpus}.
 In~\cref{F:gpu_source_scaling}, the number of initial conditions over which the source-terms are evaluated on the \gpunew/ GPU is varied in order to determine the effect on the mean run time per condition; the run time continues to decrease until \textasciitilde\num{e4} conditions for all chemical models (except the \ce{H2}\slash\ce{CO} model, which is closer to \textasciitilde\num{3e4} conditions), at which point the GPU becomes saturated and performance levels off.
-\Cref{F:gpu_source_speedup} shows the speedup in source-term evaluations that the \gpunew/ GPU achieves over the \gpuold/ GPU for the maximum number of conditions in~\cref{F:gpu_source_scaling} with two different vector-widths (a.k.a., the block size in NVIDIA terminology), \num{64} and \num{128}; the fastest \gpunew/ case with a vector-width of 128 is \SIrange{1.40}{1.88}{$\times$} faster than the slowest case (\gpuold/ with a vector-width of \num{64}) depending on the chemical model in question.
+\Cref{F:gpu_source_speedup} shows the speedup in source-term evaluations that the \gpunew/ GPU achieves over the \gpuold/ GPU for the maximum number of conditions in~\cref{F:gpu_source_scaling} with two different vector-widths (a.k.a., the block size in Nvidia terminology), \num{64} and \num{128}; the fastest \gpunew/ case with a vector-width of 128 is \SIrange{1.40}{1.88}{$\times$} faster than the slowest case (\gpuold/ with a vector-width of \num{64}) depending on the chemical model in question.
 Additionally,~\cref{F:gpu_source_speedup} shows that varying the vector-width has minimal effect on performance for most of the \gpunew/ and \gpuold/ cases; the GRI-Mech 3.0 and USC-Mech II models show the largest improvements with a vector-width of \num{128}, \textasciitilde\SIrange{10}{18}{\percent} for both GPUs.
-This is likely caused by higher occupancy on the GPUs, however it is unclear exactly how NVIDIA's OpenCL runtime balances the registers\slash warps per streaming-multiprocessor, as controls occupancy in CUDA~\cite{occupancy}; use of even larger vector-widths (i.e., \num{256}\texttt{+}) on the GPU is a topic that merits future investigation.
+This is likely caused by higher occupancy on the GPUs, however it is unclear exactly how Nvidia's OpenCL runtime balances the registers\slash warps per streaming-multiprocessor, as controls occupancy in CUDA~\cite{occupancy}; use of even larger vector-widths (i.e., \num{256}\texttt{+}) on the GPU is a topic that merits future investigation.
 \begin{figure}[htbp]
    \centering
   \begin{subfigure}[t]{0.48\linewidth}
@@ -719,7 +729,7 @@ This is likely caused by higher occupancy on the GPUs, however it is unclear exa
       \caption{The speedup achieved on the \gpunew/ versus the \gpuold/ GPU; the names correspond to the identifiers listed in~\cref{t:gpus}}
       \label{F:gpu_source_speedup}
   \end{subfigure}
-  \caption{\texttt{pyJac} source-term evaluation performance on the NVIDIA GPUs}
+  \caption{\texttt{pyJac} source-term evaluation performance on the Nvidia GPUs}
   \label{F:gpu_source}
 \end{figure}
 
@@ -743,7 +753,7 @@ Generally speaking, the difference between the \conp/ and \conv/ formulations ha
   \\
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{source_gpu_cvsf.pdf}
-      \caption{The affect on performance of ``C'' vs ``F''-ordering for the shallow-vectorized NVIDIA OpenCL code on both GPUs with a vector-width of \num{128}.}
+      \caption{The affect on performance of ``C'' vs ``F''-ordering for the shallow-vectorized Nvidia OpenCL code on both GPUs with a vector-width of \num{128}.}
       \label{F:source_gpu_cvsf}
   \end{subfigure}
   \hfill
@@ -1007,18 +1017,18 @@ Similarly, evaluation on the \gpuold/ GPU was \SI{1.89}{$\times$} slower for the
 \label{S:future}
 
 It is important to note that while OpenCL provides an simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pit-falls in its use.
-The closed source OpenCL runtimes tested in this work (Intel and NVIDIA) contain several bugs that result in compilation failures, simply incorrect vectorized machine code or even segmentation faults.
-Further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in NVIDIA's case, lack of changelogs\slash public records of bug-fixes).
+The closed source OpenCL runtimes tested in this work (Intel and Nvidia) contain several bugs that result in compilation failures, simply incorrect vectorized machine code or even segmentation faults.
+Further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in Nvidia's case, lack of changelogs\slash public records of bug-fixes).
 On the other hand, the open-source OpenCL runtime used in this work, POCL, has (in our experience) far fewer implementation bugs, and when issues arise the community is very responsive to bug reports and user outreach; however, POCL fails to achieve vectorization as noted in~\cref{S:source_results}.
 
-As demonstration of the type of issue discussed, a minimum working example has been created~\cite{nvidia_mwe} that demonstrates a failure of NVIDIA's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla \gpunew/ GPU; by simply changing to another runtime (e.g., Intel)---with no code changes or recompilation---the correct result can be found.
+As demonstration of the type of issue discussed, a minimum working example has been created~\cite{Nvidia_mwe} that demonstrates a failure of Nvidia's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla \gpunew/ GPU; by simply changing to another runtime (e.g., Intel)---with no code changes or recompilation---the correct result can be found.
 This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
 Further, as noted throughout this work certain code-generation patterns can break OpenCL execution\slash vectorization, e.g., the failure of POCL to achieve vectorization or Intel OpenCL's failure to vectorize the finite-difference Jacobian.
 Indeed the vectorization process attempted by most OpenCL runtimes (and thus, reasons for incorrect\slash unvectorized code-output) is obscured from the user, making reasoning about errors or performance trends quite difficult.
 
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change requires building of the wrapper that initializes\slash transfers memory and calls the source-rate\slash Jacobian kernel.
 Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards as OpenMP is a standard library on most machines.
-In addition, CUDA~\cite{NVIDIA:2018} has been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017}, while Intel's open-source OpenCL alternative, ISPC~\cite{pharr2012ispc}, has been relatively stable and easy to work with during preliminary efforts with the unit-testing discussed in~\cref{s:unittest}.
+In addition, CUDA~\cite{Nvidia:2018} has been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017}, while Intel's open-source OpenCL alternative, ISPC~\cite{pharr2012ispc}, has been relatively stable and easy to work with during preliminary efforts with the unit-testing discussed in~\cref{s:unittest}.
 The current deep-vectorization formulation would be executable for both CUDA and ISPC targets, as these languages implement double-precision atomic operations, further recommending their use.
 It is also possible, particularly for the Intel OpenCL\slash POCL runtimes, that better performance\slash stability might be achieved using so-called ``explicit'' vectorization, i.e., through use of built-in vector types such as the \texttt{double8}; \add{specifically this change is hoped to enable vectorization on the POCL runtime} and might also enable deep-vectorization on the Intel OpenCL runtime.
 \add{Finally, future extensions of this work will include additional target-languages (vectorized OpenMP, CUDA, ISPC, etc.) to improve ease of use and reliability, as well as improvements to the existing OpenCL targets, e.g., to enable meaningful deep-vectorized evaluation, as well the implementation of reaction sorting~\cite{Sewerin20151375} to improve SIMD-efficiency (\cref{S:SIMD_scaling}).}
@@ -1046,8 +1056,8 @@ under grants ACI-1534688 (Curtis and Sung) and ACI-1535065 (Niemeyer).
 \label{A:per_platform}
 
 This section gives more detail on the results presented in~\cref{S:jac_valid}, breaking down the reported error statistics per test-platform\slash language.
-The error of the Intel OpenCL runtime is presented in~\cref{T:intel_error}, the Portable OpenCL (POCL) runtime in~\cref{T:pocl_error}, OpenMP in~\cref{T:omp_error} and the NVIDIA OpenCL runtime in~\cref{T:nv_error}.
-POCL and OpenMP tend to have the smallest error norms, while NVIDIA tends to have the largest; in particular the stringent filtered error norm $E_{\mathcal{C} = 10^{20}}$ is two orders of magnitude larger for the NVIDIA runtime than the other test platforms with the \ce{H2}\slash\ce{CO} and USC-Mech II models.
+The error of the Intel OpenCL runtime is presented in~\cref{T:intel_error}, the Portable OpenCL (POCL) runtime in~\cref{T:pocl_error}, OpenMP in~\cref{T:omp_error} and the Nvidia OpenCL runtime in~\cref{T:nv_error}.
+POCL and OpenMP tend to have the smallest error norms, while Nvidia tends to have the largest; in particular the stringent filtered error norm $E_{\mathcal{C} = 10^{20}}$ is two orders of magnitude larger for the Nvidia runtime than the other test platforms with the \ce{H2}\slash\ce{CO} and USC-Mech II models.
 
 \begin{table}[htbp]
 \sisetup{retain-zero-exponent=true}
@@ -1122,7 +1132,7 @@ USC-Mech II           & \num{1.174e-14}      & \num{1.119e-02}  & \num{1.983e-07
 \ce{iC5H11OH}         & \num{8.602e-15}      & \num{1.748e-05}  & \num{5.109e-07} \\
 \bottomrule
 \end{tabular}
-\caption{Summary of Jacobian matrix validation results for NVIDIA OpenCL execution.
+\caption{Summary of Jacobian matrix validation results for Nvidia OpenCL execution.
 The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
 The threshold for the filtered relative error is the same as reported in~\cref{S:jac_valid}.
 }
