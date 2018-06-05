@@ -38,14 +38,16 @@
 % https://tex.stackexchange.com/questions/51682/is-it-possible-to-pagebreak-aligned-equations
 \allowdisplaybreaks
 
-\title{Supplimental: A System of Equations and Derivation of Sparse Constant-Pressure\slash Constant-Volume Chemical Kinetic Jacobians for \texttt{pyJac}}
+\title{Supplemental: A System of Equations and Derivation of Sparse Constant-Pressure\slash Constant-Volume Chemical Kinetic Jacobians for \texttt{pyJac}}
 
 \author[1]{Nicholas Curtis\corref{corr}}
+\author[2]{Kyle E.~Niemeyer}
 \ead{nicholas.curtis@uconn.edu}
 \author[1]{Chih-Jen Sung}
 
 \address[1]{Department of Mechanical Engineering, University of Connecticut, Storrs, CT 06269, USA}
 \cortext[corr]{Corresponding author}
+\address[2]{School of Mechanical, Industrial, and Manufacturing Engineering, Oregon State University, Corvallis, OR 97331, USA}
 
 \begin{document}
 
@@ -53,7 +55,7 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-This document is a suppliment to the work, \textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation} and presents the system of chemical kinetic equations evaluated by the new version of code-generation platform, \texttt{pyJac-v2}.
+This document supplements the work, \textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation} and presents the system of chemical kinetic equations evaluated by the new version of code-generation platform, \texttt{pyJac-v2}.
 First, the thermo-chemical source terms for fixed-mass, adiabatic constant-pressure\slash constant-volume (\conp/\slash\conv/) reactors are given, followed by the derivation of the sparse analytical chemical kinetic Jacobian for both reactors.
 Finally, the resulting Jacobian equations are summarized using a generalized notation for a quick-reference.
 \end{abstract}
@@ -61,14 +63,14 @@ Finally, the resulting Jacobian equations are summarized using a generalized not
 % (Provide 2-4 keywords describing your research. Only abbreviations firmly
 % established in the field may be used. These keywords will be used for
 % sessioning/indexing purposes.)
-\begin{keyword}
-    Chemical Kinetics\sep SIMD\sep SIMT\sep Sparse\sep Jacobian
-\end{keyword}
+% \begin{keyword}
+%     Chemical Kinetics\sep SIMD\sep SIMT\sep Sparse\sep Jacobian
+% \end{keyword}
 
 \end{frontmatter}
 
 \section{Introduction}
-This document is a suppliment to the paper---\textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation}---and is provided as a reference guide to the equations evaluated by \texttt{pyJac} v2.0, a code-generation platform for the evaluatation of chemical source terms and analytical chemical kinetic Jacobians of constant-pressure\slash constant-volume, fixed-mass, adiabatic reactors.
+This document is a supplement to the paper---\textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation}---and is provided as a reference guide to the equations evaluated by \texttt{pyJac} v2.0, a code-generation platform for the evaluatation of chemical source terms and analytical chemical kinetic Jacobians of constant-pressure\slash constant-volume, fixed-mass, adiabatic reactors.
 Note that equations specific to the constant-pressure or constant-volume derivation will be marked with \conp/ or \conv/ respectively.
 The derivations in this document based upon the output of the script \href{https://github.com/arghdos/SPyJac-paper/blob/master/derivations/scripts/derivations.py}{derivations.py} in the GitHub repository for this paper.
 This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and was tested with versions 1.0 and 1.1.1
