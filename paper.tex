@@ -321,50 +321,50 @@ Conversely, the data-ordering in~\cref{F:column_major_split} \revise{enables} co
 \revise{We will discuss the} effects of these various data-ordering and vectorization patterns on performance in~\cref{S:results}.
 
 \subsection{Thermochemical Source Terms and Jacobian}
-This new version of \texttt{pyJac} is capable of evaluating the thermochemical source-terms for using both the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
-In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to the supplemental material for the complete derivations.
+This new version of \texttt{pyJac} is capable of evaluating the thermochemical source-terms for using the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
+In this section, we will outline a brief summary of the system evaluated by \texttt{pyJac}; \revise{the supplemental material contains the complete---and lengthy---derivations}.
 
 
-The thermochemical state vector derivation consists of the temperature, a non-constant thermodynamic state parameter (volume or pressure for \conp/ and \conv/, respectively), and the number of moles of all species except the last species in the chemical model which is typically taken to be the bath-gas (e.g., \ce{N2}):
+The thermochemical state vector consists of the temperature, a non-constant thermodynamic state parameter (volume or pressure for \conp/ and \conv/, respectively), and the number of moles of all species except the last species in the chemical model, typically taken to be the bath gas (e.g., \ce{N2}):
 \loadeq{state}
-where $T$ is the temperature, $V$ and $P$ the volume and pressure, respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns/$ total species).
+where $T$ is the temperature, $V$ and $P$ the volume and pressure respectively, and $n_j$ the number of moles of the $j$th species in the model (containing $\ns/$ total species).
 
-This state vector---inspired by~\cite{SCHWER2002270}---has a number of features that recommend its use.
-First, the state vector results in highly sparse chemical kinetic Jacobians as will be detailed in~\cref{S:sparsity}.
-Second, mass is explicitly conserved in this formulation owing to the fact that the moles of the final species is calculated from the ideal gas law, and the rate of change of the final species from conservation of mass (see \cref{deriv-s:state,deriv-s:source} of the supplemental material, respectively); additionally, system is not over-constrained~\cite{HANSEN2018257} and does not require use of a more complicated differential algebraic equation solver (as compared to an ODE integrator) for integration.
-Finally, the chemical kinetic Jacobian changes relatively little between the \conp/ and \conv/ forms, making maintaining the code-base much simpler.
-Although most current combustion codes do not use species moles as a state variable, conversion to\slash from more common mass\slash mole-fractions and moles is straightforward, and once inside integration of an chemical kinetic initial value problem (IVP), the choice of variables no longer matters.
+This state vector---inspired by Schwer et al.~\cite{SCHWER2002270}---has a number of \revise{beneficial features}.
+First, the state vector results in highly sparse chemical kinetic Jacobians, as will be detailed in~\cref{S:sparsity}.
+Second, \revise{this formulation explicitly conserves mass, because the number of moles and rate of change of the final species are calculated from the ideal gas law and conservation of mass, respectively}; \revise{see the supplemental material for the full details of the governing equations}.
+\revise{The system is} not over-constrained~\cite{HANSEN2018257} and does not require use of a more-complicated differential algebraic equation solver (as compared to an ODE integrator) for integration.
+Finally, the chemical kinetic Jacobian \revise{for this formulation} changes relatively little between the \conp/ and \conv/ forms, making maintaining the codebase much simpler.
+Although most current combustion codes do not use species moles as a state variable, conversion to\slash from the more-common mass\slash mole fractions and moles is straightforward, and \revise{the choice of variables no longer matters once inside the integration} of an chemical kinetic initial-value problem (IVP).
 
 The evolution of the thermochemical state vector is described by a set of chemical kinetic ordinary differential equations:
 \loadeq{dstate}
-
-For both \conp/ and \conv/, the molar source-terms are~\cite{TurnsStephenR2012Aitc}:
+For both \conp/ and \conv/, the molar source terms are~\cite{TurnsStephenR2012Aitc}:
 \loadeq{dmolar}
 where $\dot{\omega}_k$ is the $kth$ species' overall molar production rate:
 \begin{equation}
- \dot{\omega}_{k} = \sum_{i=1}^{\nr/} \nu_{k, i} R_{i} c_{i}
+ \dot{\omega}_{k} = \sum_{i=1}^{\nr/} \nu_{k, i} R_{i} c_{i} \;,
 \end{equation}
-with $\nu_{k, i}$ the net stoichiometic coefficient of species $k$ in reaction $i$, $R_{i}$ the net rate of progress of reaction $i$ (described in~\cref{deriv-s:rop_net} of the supplemental material), and $c_{i}$ the pressure-dependent modification term, i.e., for third-body (see~\cref{deriv-s:thdbody} of the supplemental material), or falloff\slash chemically-activated reactions (\cref{deriv-s:falloff} of the same); \texttt{pyJac} is capable of evaluating all modern reaction types, e.g., P-Log and Chebyshev reactions.
-In addition, $N_{reac}$ is the total number of reactions in the chemical kinetic model.
+$\nu_{k, i}$ is the net stoichiometric coefficient of species $k$ in reaction $i$, $N_{reac}$ is the total number of reactions, $R_{i}$ is the net rate of progress of reaction $i$, and $c_{i}$ is the pressure-dependent modification term, i.e., for third-body or falloff\slash chemically-activated reactions.
+\texttt{pyJac} is capable of evaluating all modern reaction types, e.g., P-Log and Chebyshev reactions.
 
 The temperature source-term~\cite{TurnsStephenR2012Aitc} is:
 \loadeq{dtemp}
-where $H_k$, $U_k$, $C_{p,k}$ and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure specific heat and constant-volume specific heat of species $k$ in molar units respectively, while $[C]_{k}$ is the concentration, given by:
+where $H_k$, $U_k$, $C_{p,k}$, and $C_{v, k}$ are the enthalpy, internal energy, constant-pressure specific heat, and constant-volume specific heat of species $k$ in molar units, respectively, while $[C]_{k}$ is the concentration, given by
 \begin{equation}
- [C]_{k} = \frac{n_{k}}{V}
+ [C]_{k} = \frac{n_{k}}{V} \;.
 \end{equation}
-By differentiating the ideal gas law:
+By differentiating the ideal gas law, given by
 \begin{equation}
- PV = n\mathcal{R}T \;,
+ PV = n\mathcal{R}T
 \end{equation}
-where $\mathcal{R}$ is the ideal gas-constant in molar units, the volume and pressure source-terms can be found (where $W_k$ and $W_{\ns/}$ are the molecular weights of species $k$ and $\ns/$, respectively):
+where $\mathcal{R}$ is the ideal-gas constant in molar units, \revise{we find} the volume and pressure source terms (where $W_k$ and $W_{\ns/}$ are the molecular weights of species $k$ and $\ns/$, respectively):
 \loadeq{dparam}
 
-The Jacobian entries computed by \texttt{pyJac} are arranged such that entry ($i$, $j$) corresponds to the partial derivative of the $i$th source-term in~\cref{e:source_terms} by the $j$th state variable in~\cref{e:state}:
+\revise{\texttt{pyJac} arranges the computed Jacobian entries} such that entry ($i$, $j$) corresponds to the partial derivative of the $i$th source-term in~\cref{e:source_terms} by the $j$th state variable in~\cref{e:state}:
 \loadeq{jacgeneral}
 
 \delete{The derivative of the temperature source-term with respect to itself is:\ldots}
-\add{The complete derivation of the Jacobian for \texttt{pyJac} is attached as supplemental material for the interested reader.}
+\add{The supplemental material for this article contains the complete derivation of the Jacobian used by \texttt{pyJac}, for interested readers.}
 
 \subsection{Code Generation and Testing Infrastructure}
 \label{s:unittest}
