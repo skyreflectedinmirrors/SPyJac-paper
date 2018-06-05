@@ -183,7 +183,7 @@ This phenomenon, known as thread-divergence, is a key consideration for SIMT pro
 
 Recognizing the need to accelerate chemical-kinetic Jacobian evaluation and factorization, a number of recent works have been published on \revise{constructing analytical Jacobian matrices}; although as will be discussed at the end of this section, \revise{here we offer} several key improvements over past efforts.
 \add{Schwer et al.~\cite{SCHWER2002270} were among the first to recognize the critical importance of a sparse analytical Jacobian to accelerate chemical kinetic simulations.}
-\revise{Later, Safta et al.~\cite{Safta:2011vn} developed the \texttt{TChem} software package}, which was one of the first developed that provides analytical Jacobian evaluation. However, \texttt{TChem} has several limitations, including incompatibility with modern reaction types---i.e., pressure dependent Arrhenius (or P-Log) and Chebyshev reactions---and its lack of thread-safety to enable parallel execution~\cite{Curtis2017:tchem}.
+\revise{Later, Safta et al.~\cite{Safta:2011vn} developed the \texttt{TChem} software package}, which was one of the first developed that provides analytical Jacobian evaluation. However, \texttt{TChem} has several limitations, including incompatibility with modern reaction types---i.e., pressure-dependent Arrhenius (or P-Log) and Chebyshev reactions---and its lack of thread-safety to enable parallel execution~\cite{Curtis2017:tchem}.
 Youssefi~\cite{Youssefi:2011tm} explored the importance of analytical Jacobian matrices for time-scale analysis techniques as well as their effect on computational efficiency in zero-dimensional homogeneous reactor simulations.
 Bisetti~\cite{Bisetti:2012jw} developed an isothermal, isobaric analytical Jacobian code-generation utility;
 \revise{this approach significantly increases Jacobian sparsity, although the chosen isothermal assumption is not typical in most combustion simulations.}
@@ -210,7 +210,7 @@ Niemeyer et al.~\cite{Niemeyer:2011aa} implemented an explicit solver for non-st
 Shi et al.~\cite{Shi:2012aa} proposed a strategy for chemical-kinetic integration in three-dimensional reactive-flow simulations, where a traditional implicit integrator handled the stiffest computational cells on a CPU and a stabilized-explicit solver \delete{on a Tesla C2050 GPU} solved the less-stiff cells on a GPU; this hybrid solution technique \revise{performs} \SIrange{11}{46}{$\times$} faster than the implicit CPU solver alone for simulation of a premixed diesel engine.
 Le et al.~\cite{Le2013596} found a \SIrange{30}{50}{$\times$} speedup for a GPU-based shock-capturing reactive-flow code\delete{ on a Tesla C2070} as compared with a sequential \add{CPU} version of the same\delete{on an Intel Xeon X5650 CPU}.
 Stone and Davis~\cite{Stone:2013aa} investigated a GPU-based version of a common implicit integrator (VODE~\cite{Brown:1989vl}), finding an order-of-magnitude speedup over a serial CPU implementation.
-Niemeyer and Sung~\cite{Niemeyer:2014aa} developed a GPU-based stabilized explicit integrator for use with moderately-stiff chemical kinetics, achieving an order of magnitude speedup\delete{on a Tesla C2075 GPU} over a multithreaded VODE solver on a six-core\delete{Intel X5650} CPU.
+Niemeyer and Sung~\cite{Niemeyer:2014aa} developed a GPU-based stabilized explicit integrator for use with moderately-stiff chemical kinetics, achieving an order of magnitude speedup\delete{on a Tesla C2075 GPU} over a multithreaded VODE solver on a six-core \delete{Intel X5650} CPU.
 Sewerin and Rigopoulos~\cite{Sewerin20151375} studied a fifth-order implicit Runge--Kutta solver on both consumer-grade and high-end GPUs\slash CPUs; the high-end GPU solver was at best \SI{1.8}{$\times$} slower than the high-end CPU version running on \num{16} cores.
 Yonkee and Sutherland~\cite{Yonkee2016} implemented GPU-accelerated evaluations of thermodynamic parameters, multicomponent transport properties, and species production rates for solving partial differential equations (PDEs) \delete{on an Intel Xeon E5-2680} \add{both the CPU} and \delete{a Tesla K20} GPU.
 In evaluating the thermochemical properties, speedups between \SIrange{8}{13}{$\times$} were found (over a serial version of the same code) while running on 16 CPU cores, and \SIrange{20}{40}{$\times$} on the GPU; they showed speedups of \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} when simulating a partially premixed methanol flame PDE on 16 CPU cores and the GPU, respectively.\todo{revise this sentence, fairly awkward}{}
@@ -230,7 +230,7 @@ They found that SIMD vectorization improves integrator performance over an OpenM
 This work builds upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}.
 In this article we
 \begin{itemize}
- \item Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity;
+ \item Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity: \revise{\texttt{pyJac v2}};
  \item Enable cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}; and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
@@ -279,14 +279,16 @@ The ``C'' (C row-major) format stores the concentrations of all species for a si
 Conversely, in the ``F'' (Fortran column-major) format the concentrations of a single species $j$ over all thermochemical states lie adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index 1, $[C]_{2, 1}$ in index 2, and so on, as shown in \cref{F:column_major}.
 This ordering \revise{strongly affects} the performance of SIMD\slash SIMT-vectorized algorithms, \revise{as does the device (CPU, GPU, etc.\@) and vectorization pattern in question.}
 
-In a \textit{shallow}-SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works using GPUs~\cite{Stone:2013aa}), each SIMD lane (or SIMT thread) in a compute unit evaluates the source terms or Jacobian for a different thermochemical state.
-If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{N_v, j}$---the concentration of species $j$ for states $1, 2,\ldots N_v$, where $N_v$ is the SIMD vector-width or the number of threads in a SIMT warp---will load sequential locations in memory.
-The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{Nvidia:2018}.
+In a \textit{shallow} SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works using GPUs~\cite{Stone:2013aa}), each SIMD lane or SIMT thread in a compute unit evaluates the source terms or Jacobian for a different thermochemical state.
+If the data is stored in ``F''-order, the SIMD lanes\slash SIMT thread accessing $[C]_{1, j}\ldots[C]_{N_v, j}$ will load sequential locations in memory, \revise{where $[C]_{i, j}$ is the concentration of species $j$ for state $i$ and $N_v$ is the SIMD vector-width or the number of threads in a SIMT warp}.
+The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache misses on the CPU~\cite{gray2000rules}, but conversely well matches the pattern of coalesced memory access on the GPU~\cite{Nvidia:2018}.
 
-In a \textit{deep}-SIMD\slash SIMT vectorization (also referred to as ``per-block'' in previous GPU works (e.g.,~\cite{Stone:2013aa,CurtisGPU:2017}), a compute-unit utilizes its SIMD-lanes\slash SIMT-threads cooperatively to evaluate the thermochemical source-terms for a single thermochemical state; thus SIMD-lanes loading $[C]_{1, j} \ldots [C]_{1, j + N_v}$---the species concentrations for state 1, species $j \ldots j + N_v$---will access sequential memory locations if the data is stored in ``C''-order.
-Further, in ``C''-ordering the maximum distance between any two species concentrations within the same thermochemical state is $N_{\text{sp}}$, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data-locality increases the chances of a cache-hit on the CPU, but may lead to uncoalesced memory-accesses on the GPU.
-In addition, a deep vectorization requires both synchronization between SIMD-lanes\slash SIMT-threads via memory-fences\slash barriers (an expensive operation), and may result in SIMD-waste\slash SIMT thread-divergence, caused by different SIMD-lanes\slash SIMT-threads executing different instructions (e.g., resulting from different if\slash then branches).
-It is noted that generally speaking, shallow-vectorizations may also experience SIMD-waste\slash SIMT thread-divergence, e.g., in chemical kinetic integration due to varying internal solver time-step sizes~\cite{CurtisGPU:2017}; however, in this work shallow-vectorizations are largely unaffected by this concern \add{as the only major code-paths that differ between vector-lanes are high\slash low-temperature polynomial evaluations and differing pressures for P-Log reactions, a relatively small concern as compared to differing internal ODE integration time-steps~\cite{CurtisGPU:2017}}.
+In a \textit{deep} SIMD\slash SIMT vectorization (also referred to as ``per-block'' in previous GPU works~\cite{Stone:2013aa,CurtisGPU:2017}), a compute unit uses its SIMD lanes\slash SIMT threads cooperatively to evaluate the thermochemical source terms for a single thermochemical state; thus SIMD lanes loading $[C]_{1, j} \ldots [C]_{1, j + N_v}$ will access sequential memory locations if the data is stored in ``C''-order.
+Further, in ``C'' ordering \revise{any two species concentrations within the same thermochemical state lie at most $N_{\text{sp}}$ locations away}, with $N_{\text{sp}} \ll N_{\text{state}}$ in most cases; this greatly improved data locality increases the chances of a cache hit on the CPU, but may lead to uncoalesced memory accesses on the GPU.
+In addition, deep vectorization requires both synchronization between SIMD lanes\slash SIMT threads via memory fences\slash barriers.
+\revise{This is an expensive operation, may result} in SIMD waste or SIMT thread divergence caused by different lanes\slash threads executing different instructions (e.g., resulting from different if\slash then branches).
+Shallow vectorization may also experience SIMD waste or SIMT thread divergence, e.g., in chemical kinetic integration due to varying internal solver time-step sizes~\cite{CurtisGPU:2017}.
+\revise{However, here this largely unaffects shallow vectorization} \add{as the only major code paths that differ between vector lanes are high\slash low-temperature polynomial evaluations and differing pressures for P-Log reactions, which cause far fewer issues compared with differing internal ODE integration time-steps~\cite{CurtisGPU:2017}}.
 
 \begin{figure}[htb]
   \centering
@@ -306,18 +308,19 @@ It is noted that generally speaking, shallow-vectorizations may also experience 
 	\label{F:column_major_split}
     \end{subfigure}
   \end{minipage}
-  \caption{Vectorized data ordering patterns}
+  \caption{Vectorized data-ordering patterns}
   \label{F:vector_data}
 \end{figure}
 
 Finally,~\cref{F:vector_data} shows a vectorized data-ordering that improves the caching patterns of a shallow, ``C''-ordered SIMD vectorization on the CPU (\cref{F:row_major_split}) and a deep, ``F''-ordered SIMT vectorization on the GPU (\cref{F:column_major_split}).
-This is accomplished by splitting the slower-varying axis of the data array---columns for ``C''-ordering, and rows for ``F''-ordering---into chunks of size $N_v$ (the SIMD vector-width, or SIMT warp-size) and laying these data out contiguously in memory.
-For example, using the shallow-vectorized ``C''-ordering pictured in~\cref{F:row_major_split}, the concentration of species $j$ for states $i\ldots i+N_v$, $[C]_{i, j} \ldots [C]_{i + N_v, j}$, are contiguous in memory and are followed by the concentration of species $j + 1$ for the same states, $[C]_{i, j + 1} \ldots [C]_{i + N_v, j + 1}$.
-This pattern, similar to OpenCL's native vector data-types---e.g., \texttt{double\num{8}} which treats \num{8} contiguous double precision floating point numbers as a single vector datum---ensures that any SIMD operation occurs on data that is contiguous in memory, greatly improving caching and SIMD-throughput.
-Conversely, the data-ordering in~\cref{F:column_major_split} is designed to enable coalesced memory accesses for ``F''-ordered, deep-SIMT vectorization on the GPU.
-The effects of these various data-ordering and vectorization patterns on performance will be studied in~\cref{S:results}.
+\revise{We accomplish this} by splitting the slower-varying axis of the data array---columns for ``C''-ordering, and rows for ``F''-ordering---into chunks of size $N_v$ (the SIMD vector width or SIMT warp size) and laying these data out contiguously in memory.
+For example, using the shallow-vectorized ``C''-ordering pictured in~\cref{F:row_major_split}, the concentrations of species $j$ for states $i$ to $i+N_v$ ($[C]_{i, j}, \ldots, [C]_{i + N_v, j}$) lie contiguously in memory and are followed by the concentrations of species $j + 1$ for the same states ($[C]_{i, j + 1}, \ldots, [C]_{i + N_v, j + 1}$).
+This pattern ensures that any SIMD operation occurs on data contiguous in memory, which greatly improves caching and SIMD throughput;
+\revise{it is also similar to OpenCL's native vector data-types, e.g., \texttt{double\num{8}} treats eight contiguous double-precision floating-point numbers as a single vector datum}.
+Conversely, the data-ordering in~\cref{F:column_major_split} \revise{enables} coalesced memory accesses for ``F''-ordered, deep SIMT vectorization on the GPU.
+\revise{We will discuss the} effects of these various data-ordering and vectorization patterns on performance in~\cref{S:results}.
 
-\subsection{thermochemical Source-Terms and Jacobian}
+\subsection{Thermochemical Source Terms and Jacobian}
 This new version of \texttt{pyJac} is capable of evaluating the thermochemical source-terms for using both the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
 In this section, we will only outline a brief summary of the system evaluated by \texttt{pyJac}; the interested reader is referred to the supplemental material for the complete derivations.
 
