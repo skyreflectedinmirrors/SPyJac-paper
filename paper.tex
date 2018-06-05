@@ -217,24 +217,25 @@ In evaluating the thermochemical properties, speedups between \SIrange{8}{13}{$\
 Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two fourth-order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} \delete{on a Tesla C2075} \add{on the GPU and CPU}.
 The \add{GPU-based} implicit Runge--Kutta method performs equivalently to a standard implicit integrator~\cite{Hindmarsh:2005} running on \numrange{12}{38} \delete{Intel Xeon E5-4640 v2} CPU cores for two relatively small chemical models \delete{with an integration time step of $10^{-6}$ s}.
 
-In contrast, SIMD-based chemical kinetics evaluation\slash integration have been far less studied.
-Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock integrator for atmospheric chemical kinetics on the CPU, GPU and cell croadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
+In contrast, SIMD-based chemical kinetics evaluation\slash integration have been studied far less.
+Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock integrator for atmospheric chemical kinetics on the CPU, GPU, and cell broadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
 Kroshko and Spiteri~\cite{kroshko2013efficient} implemented a SIMD-vectorized third-order stiff Rosenbrock integrator for atmospheric chemistry on the CBE and found a speedup of \SI{1.89}{$\times$} (a parallel scaling efficiency of \SI{94}{$\percent$}) over a serial version of the same code.
-Stone and Niemeyer~\cite{stone2018} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
-SIMD-vectorization improved the integrator performance over an OpenMP baseline (which was vectorized by simple compiler hints (i.e., \texttt{\#pragmas}) by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performance was only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread-divergence concerns~\cite{stone2018}.
+Stone et al.~\cite{stone2018} implemented a linearly-implicit fourth-order stiff Rosenbrock solver in the OpenCL for various platforms including CPUs, GPUs, and MICs.
+They found that SIMD vectorization improves integrator performance over an OpenMP baseline vectorized by simple compiler hints (i.e., \texttt{\#pragmas}) by \SIrange{2.5}{2.8}{$\times$} on the CPU and \SIrange{4.7}{4.9}{$\times$} on the MIC, while the GPU performs only \SIrange{1.4}{1.6}{$\times$} faster than the OpenMP baseline due to thread divergence~\cite{stone2018}.
 
 
 \subsection{Goals of this study}
 \label{S:Goals}
 
-This work will build upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}, in order to:
+This work builds upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}.
+In this article we
 \begin{itemize}
- \item Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity
- \item Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators
- \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}, and finally
+ \item Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity;
+ \item Enable cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
+ \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}; and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
 \end{itemize}
-To our knowledge, this is the first \add{open-source, validated} effort that enables vectorized chemical-kinetic source-term and Jacobian evaluation for any chemical model on a wide-selection of platforms, i.e., the CPU, GPU and other accelerators.
+To our knowledge, this is the first \add{open-source, validated} effort that vectorizes the evaluation of chemical-kinetic source terms and Jacobian matrices for any chemical model on a wide selection of platforms.
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
