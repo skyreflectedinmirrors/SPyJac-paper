@@ -275,7 +275,7 @@ When storing arrays for a chemical kinetic model, the data-storage layout and ve
 For example, the concentration of species $j$ for the $i$th thermochemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{\text{state}}$ (the number of thermochemical states considered for evaluation) and $1 \le j \le \ns/$ (the number of species in the model).
 The stored concentrations would then have $K = N_{\text{state}}$ rows and $N = \ns/$ columns.
 
-The ``C'' (C row-major) format stores the concentrations of all species for a single thermochemical condition $i$  sequentially in memory, i.e., with  $[C]_{1, 1}$ in index 1, $[C]_{1, 2}$ in index 2, and so on, as shown in \cref{F:row_major}.\todo{wouldn't these start at index 0?}{}
+The ``C'' (C row-major) format stores the concentrations of all species for a single thermochemical condition $i$  sequentially in memory, i.e., with  $[C]_{1, 1}$ in index 1 (\revise{using one-based index notation}), $[C]_{1, 2}$ in index 2, and so on, as shown in \cref{F:row_major}.
 Conversely, in the ``F'' (Fortran column-major) format the concentrations of a single species $j$ over all thermochemical states lie adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index 1, $[C]_{2, 1}$ in index 2, and so on, as shown in \cref{F:column_major}.
 This ordering \revise{strongly affects} the performance of SIMD\slash SIMT-vectorized algorithms, \revise{as does the device (CPU, GPU, etc.\@) and vectorization pattern in question.}
 
