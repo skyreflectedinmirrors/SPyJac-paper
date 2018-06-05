@@ -368,16 +368,17 @@ where $\mathcal{R}$ is the ideal-gas constant in molar units, \revise{we find} t
 
 \subsection{Code Generation and Testing Infrastructure}
 \label{s:unittest}
-Code generation is enabled by the python package \texttt{loo.py}~\cite{kloeckner_loopy_2014}, which translates pseudo-code and data to OpenCL\slash C-code.
-As the name implies, \texttt{loo.py} generates code based on for-loops; this differs from the previous version of \texttt{pyJac}~\cite{pyjac16} which generates static code (i.e., fully unrolled loops, with thermodynamic\slash reaction parameters written directly in code rather than stored in arrays).
-In our previous work~\cite{Niemeyer:2016aa}, this static code generation caused some issues with large file sizes, long compilation times and even occasionally breaking the \texttt{gcc} and \texttt{nvcc} compilers (the latter issue necessitated breaking the Jacobian\slash source-term evaluations into separate files).
-The implications of this change will be studied in~\cref{S:jacobian_results}, where the performance of the new version of~\texttt{pyJac} will be compared to the previous version.
 
-In addition, \texttt{loo.py} allows the user to more easily make changes to the structure of the generated program, e.g., the data ordering, vectorization, and threading patterns, as well as switching the target-language for code-generation (and simpler extension to additional languages, e.g., CUDA).
-Further, \texttt{loo.py} can execute developed subroutines from python (natively for C-code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL-code), enabling unit-testing\slash validation for each component of the Jacobian or source-terms.
-The source-terms and sub-components thereof (e.g., rates of progress, pressure-modification terms, etc.) are directly compared to Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{hogan2014fast,adept-v11} is used to obtain reference answers for Jacobian sub-components.
-The Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} are used to run OpenCL and C unit-testing, respectively, on the continuous integration framework Travis CI~\cite{travis:2018}.
-Validation of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes will be discussed in detail in~\cref{s:validation}.
+\revise{The new version of \texttt{pyJac} uses the Python package \texttt{loo.py}~\cite{kloeckner_loopy_2014} for code generation}, which translates pseudo-code and data to OpenCL\slash C code.
+As the name implies, \texttt{loo.py} generates code using for loops; this differs from the previous version of \texttt{pyJac}~\cite{pyjac16} that generates static code---i.e., fully unrolled loops, with thermodynamic\slash reaction parameters written directly in code rather than stored in arrays.
+In our previous work~\cite{Niemeyer:2016aa}, this static code generation caused some issues with large file sizes, long compilation times, and even occasionally broke the \texttt{gcc} and \texttt{nvcc} compilers (the latter issue necessitated splitting the Jacobian\slash source-term evaluations into separate files).
+\revise{We will discuss the implications of this change} in~\cref{S:jacobian_results}, where the performance of the new version of~\texttt{pyJac} will be compared with the previous version.
+
+In addition, \texttt{loo.py} allows the user to more easily make changes to the structure of the generated program, e.g., the data ordering, vectorization, and threading patterns, as well as switch the target language for code generation (and more simply extend to additional languages, e.g., CUDA).
+Further, \texttt{loo.py} can execute developed subroutines from Python (natively for C code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL), enabling unit testing\slash validation for each component of the Jacobian or source terms.
+The source terms and sub-components thereof (e.g., rates of progress, pressure-modification terms) are directly compared with Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{hogan2014fast,adept-v11} provides reference values for Jacobian sub-components.
+\revise{We use the} Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} to perform OpenCL and C unit testing, respectively, on the continuous-integration framework Travis CI~\cite{travis:2018}.
+\revise{We will discuss validation} of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes in detail in~\cref{s:validation}.
 
 
 \section{Results and Discussion}
