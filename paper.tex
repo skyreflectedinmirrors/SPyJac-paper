@@ -173,7 +173,7 @@ Specialized hardware accelerators \revise{have also been developed, like Intel's
 
 \revise{Modern GPUs rely on the related computing paradigm of SIMT processing, where a single compute element hosts large
 numbers of threads (a streaming multiprocessor in Nvidia terminology)~\cite{lindholm2008Nvidia}.}
-\revise{Figure~\ref{F:SIMT} depicts a SIMT compute unit, where a group of threads---typically \num{32}, known as a warp on Nvidia GPUs---execute the same SIMT instruction on multiple data concurrently}.
+\revise{\Cref{F:SIMT} depicts a SIMT compute unit, where a group of threads---typically \num{32}, known as a warp on Nvidia GPUs---execute the same SIMT instruction on multiple data concurrently}.
 If some threads must execute a different instruction, they are forced to wait and execute later; \revise{this may occur due to if\slash then branching or predication.}
 This phenomenon, known as thread-divergence, is a key consideration for SIMT processing and can cause serious performance degradation for complicated algorithms~\cite{CurtisGPU:2017}.
 
@@ -271,15 +271,15 @@ To our knowledge, this is the first \add{open-source, validated} effort that vec
 \end{figure}
 
 When storing arrays for a chemical kinetic model, the data-storage layout and vectorization patterns are critical to achieving high-performance code.
-\Cref{F:mem} depicts an example data array with $K$ rows and $N$ columns, and index ($i$, $j$) corresponding to the $i$th row and $j$th column.
-For example, the concentration of species $j$ for the $i$th thermochemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{state}$ (the number of thermochemical states considered for evaluation), and $1 \le j \le \ns/$ (the number of species in the model).
-The stored concentrations would then have $K = N_{\text{state}}$ rows, and $N = N_{\text{sp}}$ columns.
+\Cref{F:mem} depicts an example data array with $K$ rows and $N$ columns \revise{where} index ($i$, $j$) \revise{corresponds} to the $i$th row and $j$th column.
+For example, the concentration of species $j$ for the $i$th thermochemical state would be stored in $[C]_{i, j}$ with $1 \le i \le N_{\text{state}}$ (the number of thermochemical states considered for evaluation) and $1 \le j \le \ns/$ (the number of species in the model).
+The stored concentrations would then have $K = N_{\text{state}}$ rows and $N = \ns/$ columns.
 
-In the ``C'' (C row-major) format, the concentrations of all species for a single thermochemical condition $i$ would be stored sequentially in memory, i.e., with  $[C]_{1, 1}$ in index \num{1}, $[C]_{1, 2}$ in index \num{2}, etc., as shown in \cref{F:row_major}.
-Conversely in the ``F'' (Fortran column-major) format, the concentrations of a single species $j$ over all thermochemical states are adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index \num{1}, $[C]_{2, 1}$ in index \num{2} and so on, as shown in \cref{F:column_major}.
-This ordering---along with the device (CPU, GPU, etc.\@) and vectorization pattern in question---have a large effect on the performance of SIMD\slash SIMT-vectorized algorithms.
+The ``C'' (C row-major) format stores the concentrations of all species for a single thermochemical condition $i$  sequentially in memory, i.e., with  $[C]_{1, 1}$ in index 1, $[C]_{1, 2}$ in index 2, and so on, as shown in \cref{F:row_major}.\todo{wouldn't these start at index 0?}{}
+Conversely, in the ``F'' (Fortran column-major) format the concentrations of a single species $j$ over all thermochemical states lie adjacent in memory, corresponding to storing $[C]_{1, 1}$ in index 1, $[C]_{2, 1}$ in index 2, and so on, as shown in \cref{F:column_major}.
+This ordering \revise{strongly affects} the performance of SIMD\slash SIMT-vectorized algorithms, \revise{as does the device (CPU, GPU, etc.\@) and vectorization pattern in question.}
 
-In a \textit{shallow}-SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works~\cite{Stone:2013aa} using GPUs), each SIMD-lane (or SIMT-thread) in a compute-unit evaluates the thermochemical source-terms\slash chemical kinetic Jacobian for a different thermochemical state.
+In a \textit{shallow}-SIMD\slash SIMT vectorization (also referred to as ``per-thread'' in previous works using GPUs~\cite{Stone:2013aa}), each SIMD lane (or SIMT thread) in a compute unit evaluates the source terms or Jacobian for a different thermochemical state.
 If the data is stored in ``F''-order, the SIMD-lanes\slash SIMT-thread accessing $[C]_{1, j}\ldots[C]_{N_v, j}$---the concentration of species $j$ for states $1, 2,\ldots N_v$, where $N_v$ is the SIMD vector-width or the number of threads in a SIMT warp---will load sequential locations in memory.
 The first $(j+1)$th species concentration, $[C]_{1, j+1}$, will be $N_{\text{state}}$ memory locations away; this increases the likelihood of cache-misses on the CPU~\cite{gray2000rules}, but conversely is well suited to coalesced memory accesses on the GPU~\cite{Nvidia:2018}.
 
