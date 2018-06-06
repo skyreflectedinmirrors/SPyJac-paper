@@ -97,17 +97,18 @@
 \begin{document}
 
 \begin{frontmatter}
-
 %====================================================================
-\begin{abstract} % not to exceed 200 words
-A code generation platform, \texttt{pyJac}, for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized \revise{constant-pressure\slash volume} thermochemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation has been developed.% Can you introduce this a bit more? good to start with at least one sentence of introduction. also, this is passive and quite long\slash complex
+\begin{abstract}
+\revise{The accurate prediction of key combustion phenomena in reactive-flow simulations, e.g., lean blow-out, extinction\slash ignition limits and pollutant formation, necessitates the use of detailed chemical kinetics.}
+\revise{The large size and high levels of numerical stiffness typically present in chemical kinetic models relevant to transportation\slash power-generation applications make the efficient evaluation\slash factorization of the chemical kinetic Jacobian and thermochemical source-terms critical to the performance of reactive-flow codes.}
+\revise{Here we present} \texttt{pyJac}, \revise{a code generation platform} for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized \revise{constant-pressure\slash volume} thermochemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation.
 Selected chemical kinetic models covering the range of sizes typically used in reactive-flow simulations were used for demonstration.
 A new formulation of the chemical kinetic governing equations was derived and validated, \revise{resulting in} Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
 Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation \revise{compared with} a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
-In addition, the performance of a Nvidia \gpunew/ graphics processing unit (GPU) was compared to a Nvidia \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively. %is this sentence necessary in the abstract?
+%\delete{In addition, the performance of a Nvidia \gpunew/ graphics processing unit (GPU) was compared to a Nvidia \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively.}
 Furthermore, the effect of data-ordering was investigated and \revise{a} storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the \revise{constant pressure\slash volume} assumptions and varying vector widths were studied on source-term evaluation performance.
-Speedups over a first-order finite-difference approach reached \SIrange{17.60}{45.13}{$\times$} and \SIrange{55.11}{245.63}{$\times$} for sparse\slash dense evaluation on the CPU \slash GPU respectively,%not sure what numbers refer to- sparse, dense, CPU, GPU?
-while dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a CPU and GPU, respectively.
+Speedups over a first-order finite-difference \revise{Jacobian} approach \revise{reached up to} \SI{17.60}{$\times$} and \SI{45.13}{$\times$} for dense\slash sparse evaluation \revise{respectively on the GPU, and up to} \SI{55.11}{$\times$} and \SI{245.63}{$\times$} on the CPU.
+\revise{Further, }dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a CPU and GPU, respectively.
 Finally, future directions for vectorized chemical kinetic evaluation and sparse linear-algebra techniques were discussed.
 \end{abstract}
 
