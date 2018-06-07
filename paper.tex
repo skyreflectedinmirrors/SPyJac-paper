@@ -107,7 +107,7 @@ A new formulation of the chemical kinetic governing equations was derived and va
 Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation \revise{compared with} a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
 %\delete{In addition, the performance of a Nvidia \gpunew/ graphics processing unit (GPU) was compared to a Nvidia \gpuold/ GPU finding speedups of \SIrange{1.40}{1.88}{$\times$}, \SIrange{1.10}{1.59}{$\times$}, and \SIrange{1.36}{3.0}{$\times$} for source-rate, sparse, and dense Jacobian evaluation, respectively.}
 Furthermore, the effect of data-ordering was investigated and \revise{a} storage pattern specifically formulated for vectorized evaluation was proposed; as well, the effect of the \revise{constant pressure\slash volume} assumptions and varying vector widths were studied on source-term evaluation performance.
-Speedups over a first-order finite-difference \revise{Jacobian} approach \revise{reached up to} \SI{17.60}{$\times$} and \SI{45.13}{$\times$} for dense\slash sparse evaluation \revise{respectively on the GPU, and up to} \SI{55.11}{$\times$} and \SI{245.63}{$\times$} on the CPU.
+Speedups \revise{reached up to} \SI{17.60}{$\times$} and \SI{45.13}{$\times$} for dense and sparse evaluation \revise{on the GPU, and up to} \SI{55.11}{$\times$} and \SI{245.63}{$\times$} on the CPU \revise{over a first-order finite-difference  Jacobian approach}.
 \revise{Further, }dense Jacobian evaluation was up to \SI{19.56}{$\times$} and \SI{2.84}{$\times$} times faster than a previous version of \texttt{pyJac} on a CPU and GPU, respectively.
 Finally, future directions for vectorized chemical kinetic evaluation and sparse linear-algebra techniques were discussed.
 \end{abstract}
@@ -120,7 +120,6 @@ Finally, future directions for vectorized chemical kinetic evaluation and sparse
 \end{keyword}
 
 \end{frontmatter}
-\todo[inline]{abstract comments in source}
 
 %====================================================================
 \section{Introduction}
