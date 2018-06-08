@@ -20,6 +20,7 @@
 \newcommand{\add}[1]{{\sloppy\cbcolor{OliveGreen}\textcolor{OliveGreen}{\cbstart {#1}\cbend}}}  % add
 \newcommand{\delete}[1]{\sloppy\cbcolor{RedOrange}\textcolor{RedOrange}{\cbdelete\sout{#1}}}
 \newcommand{\revise}[1]{{\sloppy\textcolor{RoyalPurple}{#1}}}  % add
+\newcommand{\revisedelete}[1]{\sloppy\textcolor{RoyalPurple}{\sout{#1}}} %delete
 
 \newcommand{\addnl}[1]{{\sloppy\textcolor{OliveGreen}{#1}}}  % add
 \newcommand{\deletenl}[1]{\sloppy\textcolor{RedOrange}{\sout{#1}}} %delete with no strikeout
@@ -391,14 +392,14 @@ The source terms and sub-components thereof (e.g., rates of progress, pressure-m
 CPU Model        & Xeon X5650      & E5-2690 V3     \\
 \midrule
 Instruction Set  & SSE4.2 	   & AVX2 	    \\
-Vector Width     & \SI{2}{\doubles}&\SI{4}{\doubles}\\
+Vector Width     & two doubles & four doubles \\
 Cores            & $2 \times 6$    & $2 \times 12$  \\
 Identifier       & \sse/ 	   & \avx/  	    \\
 OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 \bottomrule
 \end{tabular}
 \caption{The Intel CPU configurations used in this study.
-	 The vector-width reported in this table is reported in (ideal) number of double operations per SIMD instruction, as this will be used in measuring SIMD efficiency; for reference, the vector-width in bits of the \sse/ and \avx/ machines are \SI{128}{\bit} and \SI{256}{\bit}, respectively.
+	 The vector widths are reported in (ideal) number of double operations per SIMD instruction, as this will be used in measuring SIMD efficiency; for reference, the vector widths of the \sse/ and \avx/ machines are \SI{128}{\bit} and \SI{256}{\bit}, respectively.
 	 The identifier field will be used as a shorthand descriptor in the performance plots to quickly identify the CPU type.}
 \label{t:cpus}
 \end{table}
