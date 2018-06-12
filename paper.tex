@@ -8,7 +8,7 @@
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
-\usepackage{gensymb}
+\usepackage{gensymb,amssymb}
 \usepackage{ulem}
 
 \usepackage{algorithm}
@@ -212,7 +212,7 @@ Le et al.~\cite{Le2013596} found a \SIrange{30}{50}{$\times$} speedup for a GPU-
 Stone and Davis~\cite{Stone:2013aa} investigated a GPU-based version of a common implicit integrator (VODE~\cite{Brown:1989vl}), finding an order-of-magnitude speedup over a serial CPU implementation.
 Niemeyer and Sung~\cite{Niemeyer:2014aa} developed a GPU-based stabilized explicit integrator for use with moderately-stiff chemical kinetics, achieving an order of magnitude speedup \revisedelete{on a Tesla C2075 GPU} over a multithreaded VODE solver on a six-core \revisedelete{Intel X5650} CPU.
 Sewerin and Rigopoulos~\cite{Sewerin20151375} studied a fifth-order implicit Runge--Kutta solver on both consumer-grade and high-end GPUs\slash CPUs; the high-end GPU solver was at best \SI{1.8}{$\times$} slower than the high-end CPU version running on \num{16} cores.
-Yonkee and Sutherland~\cite{Yonkee2016} implemented \revisedelete{GPU-}accelerated evaluations of thermodynamic parameters, multicomponent transport properties, and species production rates \revisedelete{on an Intel Xeon E5-2680} \revise{on both the CPU} and \revisedelete{a Tesla K20} GPU, \revise{achieving speedups over serial evaluation between \SIrange{8}{13}{$\times$} on a 16 core CPU, and \SIrange{20}{40}{$\times$} on the GPU}.
+Yonkee and Sutherland~\cite{Yonkee2016} implemented \revisedelete{GPU-}accelerated evaluations of thermodynamic parameters, multicomponent transport properties, and species production rates \revisedelete{on an Intel Xeon E5-2680} \revise{on both the CPU} and \revisedelete{a Tesla K20} GPU, \revise{achieving speedups over serial evaluation between \SIrange{8}{13}{$\times$} on a 16-core CPU and \SIrange{20}{40}{$\times$} on the GPU}.
 \revise{In addition, \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} speedups} were achieved for the simulation of a partially premixed methanol flame for solving partial differential equations (PDE) on 16 CPU cores and the GPU, respectively.
 Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two fourth-order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} \revisedelete{on a Tesla C2075} \revise{on the GPU and CPU}.
 The \revise{GPU-based} implicit Runge--Kutta method performs equivalently to a standard implicit integrator~\cite{Hindmarsh:2005} running on \numrange{12}{38} \revisedelete{Intel Xeon E5-4640 v2} CPU cores for two relatively small chemical models \revisedelete{with an integration time step of $10^{-6}$ s}.
@@ -404,10 +404,10 @@ OpenCL Version   & \num{1.2}       & \num{1.2}      \\
 \label{t:cpus}
 \end{table}
 
-The performance and validation studies for this work were run on a variety of CPU and GPU platforms.
-\Cref{t:cpus} shows the number of cores, vector instruction set and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, each enabling OpenCL \texttt{v1.2} execution.
+\revise{We ran the} performance and validation studies for this work on a variety of CPU and GPU platforms.
+\Cref{t:cpus} shows the number of cores, vector instruction set, and model of the CPUs used in this work; each CPU had both \texttt{v16.1.1} of the Intel OpenCL runtime~\cite{intelopencl:2018} and \texttt{v1.0} of the POCL~\cite{poclIJPP} runtime installed, both enabling OpenCL \texttt{v1.2} execution.
 Additionally, \texttt{v5.0} of the LLVM\slash\texttt{clang}~\cite{Lattner:2004:LCF:977395.977673} compiler chain was installed on all machines to enable use of POCL.
-\Cref{t:gpus} lists the model, number of CUDA cores and Nvidia driver of each of the GPUs used in this work.
+\Cref{t:gpus} lists the model, number of CUDA cores, and Nvidia driver of each GPU \revise{we used}.
 Nvidia's OpenCL runtime is bundled with the Nvidia driver~\cite{Nvidia:2018}, hence the driver version is used to specify the OpenCL runtime version.
 
 \begin{table}[htb]
@@ -420,24 +420,23 @@ Driver Version & \num{384.81}   & \num{387.26}  \\
 CUDA Cores     & \num{448}      & \num{2880}    \\
 Identifier     & \gpuold/ 	& \gpunew/	\\
 OpenCL Version & \num{1.1}	& \num{1.2}	\\
-\addtocounter{footnote}{1}
-Memory\footnotemark[\thefootnote] & \SI{6}{\giga\byte} & \SI{12}{\giga\byte} \\
+\addtocounter{footnote}{1}Memory\footnotemark[\thefootnote] & \SI{6}{\giga\byte} & \SI{12}{\giga\byte}  \\
 \bottomrule
 \end{tabular}
 \caption{The Nvidia GPU configurations used in this study.  Nvidia's OpenCL runtime is provided with the graphics driver, rather than any specific version of CUDA.
-Again, the identifier field will be used as a shorthand descriptor during analysis of the performance results.
+The identifier field will be used as a shorthand descriptor during analysis of the performance results.
 }
 \label{t:gpus}
 \end{table}
-\footnotetext{Due to a driver implementation issue~\cite{Nvidia_memory}, the total memory used on the \gpuold/ and \gpunew/ GPUs were to limited to \SI{4}{\giga\byte} and \SI{10}{\giga\byte}, respectively.\addtocounter{footnote}{1}}
+\footnotetext{A driver implementation issue limited total memory to \SI{4}{\giga\byte} and \SI{10}{\giga\byte} on the \gpuold/ and \gpunew/ GPUs, respectively~\cite{Nvidia_memory}.\addtocounter{footnote}{1}}
 
 
 \Cref{t:platforms} lists the platforms and vectorization\slash execution patterns that they are capable of running.
-The Intel and Nvidia OpenCL runtimes lack implementations of atomic operations on double precision variables; these are currently necessary for \texttt{pyJac} to run deep-vectorized code.
-On the other hand, POCL is an open source OpenCL runtime that works on all CPU types tested in this work, and does implement these atomic operations.
-However, POCL's implicit vectorization module---which utilizes the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to translate OpenCL code to vectorized machine code---typically fails to achieve much speedup, if any.
-Thus POCL is a particularly useful tool for validation, but not necessarily for performance studies.
-This discussion will be expanded upon in~\cref{S:future} to highlight future directions.
+The Intel and Nvidia OpenCL runtimes lack implementations of atomic operations on double-precision variables; \revise{\texttt{pyJac} currently needs these} to run deep-vectorized code.
+On the other hand, POCL is an open-source OpenCL runtime that works on all CPU types tested here, and does implement these atomic operations.
+However, POCL's implicit vectorization module---which uses the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to translate OpenCL code to vectorized machine code---typically fails to achieve much, if any, speedup.
+\revise{Thus POCL is useful for validation but not necessarily for performance studies.}\todo{should we emphasize here that it isn't needed for pyJac to function properly?}{}
+\revise{We will expand upon this discussion} in~\cref{S:future} to highlight future directions.
 
 \begin{table}[htb]
 \centering
@@ -445,18 +444,18 @@ This discussion will be expanded upon in~\cref{S:future} to highlight future dir
 \toprule
 Platform & Parallel & Shallow Vectorization & Deep Vectorization \\
 \midrule
-OpenMP & X & -- & -- \\
-POCL OpenCL & X & X & X \\
-Intel OpenCL & X & X & -- \\
-Nvidia OpenCL & -- & X & -- \\
+OpenMP & \checkmark & -- & -- \\
+POCL OpenCL & \checkmark & \checkmark & \checkmark \\
+Intel OpenCL & \checkmark & \checkmark & -- \\
+Nvidia OpenCL & -- & \checkmark & -- \\
 \bottomrule
 \end{tabular}
-\caption{The various platforms used in this study and the execution \slash vectorization patterns that they are capable of running}
+\caption{The platforms used in this study and the execution \slash vectorization patterns that they are capable of running.}
 \label{t:platforms}
 \end{table}
 
 Finally, \cref{t:models} displays the chemical kinetic models used in this work, as well as number of partially stirred reaction conditions (PaSR) used in the condition database for each.
-Creation of the PaSR databases is described in detail in our previous works~\cite{CurtisGPU:2017,Niemeyer:2016aa}.
+\revise{Our previous works describe the creation of the PaSR databases in detail works~\cite{CurtisGPU:2017,Niemeyer:2016aa}.}
 
 \begin{table}[htb]
 \centering
@@ -465,7 +464,7 @@ Creation of the PaSR databases is described in detail in our previous works~\cit
 Model &  Number of Conditions & Reference \\
 \midrule
 \ce{H2}\slash\ce{CO} & \num{900900} & \cite{Burke:2011fh} \\
-GRI-Mech.~3.0         & \num{450900} & \cite{smith_gri-mech_30} \\
+GRI-Mech 3.0         & \num{450900} & \cite{smith_gri-mech_30} \\
 USC-Mech II           & \num{91800}  & \cite{Wang:2007} \\
 \ce{iC5H11OH}         & \num{450900} & \cite{Sarathy:2013jr} \\
 \bottomrule
@@ -477,94 +476,99 @@ USC-Mech II           & \num{91800}  & \cite{Wang:2007} \\
 
 \subsection{Source-term validation}
 \label{s:validation}
-The reaction rates of progress (ROP), species and temperature rates in this study are validated by comparison with Cantera~\cite{Cantera}.
-However special care must be taken due floating point arithmetic issues.
+\revise{We validated the reaction rates of progress (ROP), species production rates, and temperature rates in this study by comparing with values calculated using Cantera~\cite{Cantera}.}
+However, special care must be taken due to floating-point arithmetic issues.
 
-For a direct comparison, a relative error norm of a quantity $X_{ij}$ over all states $j$, and reactions (or species) $i$ was computed using the $L^{\infty}$ norm:
+For a direct comparison, a relative error norm of a quantity $X_{ij}$ over all states $j$ and reactions (or species) $i$ was computed using the $L^{\infty}$ norm:
 \begin{equation}
-E_{X} = \left\lVert \frac{\left\lvert X_{ij,\text{CT}} - X_{ij}\right\rvert}{\num{e-10} + \num{e-6} * \left\lvert X_{ij,\text{CT}} \right\rvert} \right\rVert_{i,j,\infty}
+E_{X} = \left\lVert \frac{\left\lvert X_{ij,\text{CT}} - X_{ij}\right\rvert}{\num{e-10} + \num{e-6} \times \left\lvert X_{ij,\text{CT}} \right\rvert} \right\rVert_{i,j,\infty} \;,
 \label{e:rel_err}
 \end{equation}
-where the \text{CT} subscript indicates values from Cantera~\cite{Cantera}
+where the \text{CT} subscript indicates values from Cantera~\cite{Cantera}.
+\todo[inline]{the $i,j$ subscript for the overall norm looks a little strange to me, is that typical?}
 
-However, in computing the net ROP of reaction $i$ for state $j$ from the forward and reverse ROP: $R_{ij} = R_{ij}^{\prime} - R_{ij}^{\prime\prime}$, accuracy can easily be lost as the net ROP may be---particularly near chemical equilibrium---many orders of magnitude smaller than the forward and\slash or reverse rates.
-To quantify this phenomena, the error in forward ROP is first defined as:
+However, computing the net ROP of reaction $i$ for state $j$ from the forward and reverse ROP, i.e., $R_{ij} = R_{ij}^{\prime} - R_{ij}^{\prime\prime}$, can easily lose accuracy as the net ROP may be many orders of magnitude smaller than the forward and\slash or reverse rates---particularly near chemical equilibrium.
+To quantify this phenomena, we first define the error in forward ROP as
 \begin{equation}
-\varepsilon^{\prime}_{ij} = \left\lvert R_{ij}^{\prime} - R_{ij,\text{CT}}^{\prime} \right\rvert
+\varepsilon^{\prime}_{ij} = \left\lvert R_{ij}^{\prime} - R_{ij,\text{CT}}^{\prime} \right\rvert \;,
 \end{equation}
 while the error in reverse ROP, $\varepsilon^{\prime\prime}_{ij}$, can be defined analogously.
-Finally, for the reaction $i^{*}$ and the state $j^{*}$ that result in the largest error in net ROP, i.e. $E_{R}$, an estimate of the error attributable to floating point error accumulation from the forward and reverse ROPs can be obtained as:
+Finally, for the reaction $i^{*}$ and the state $j^{*}$ that result in the largest error in net ROP, i.e., $E_{R}$, an estimate of the error attributable to floating-point error accumulation from the forward and reverse ROPs can be obtained using
 \begin{equation}
-E_{\varepsilon} = \frac{\max(\varepsilon^{\prime}_{i^{*}j^{*}}\text{, }\varepsilon^{\prime\prime}_{i^{*}j^{*}})}{\num{e-10} + \num{e-6} * \left\lvert R_{i^{*}j^{*},\text{CT}} \right\rvert}
+E_{\varepsilon} = \frac{\max(\varepsilon^{\prime}_{i^{*}j^{*}}\text{, }\varepsilon^{\prime\prime}_{i^{*}j^{*}})}{\num{e-10} + \num{e-6} \times \left\lvert R_{i^{*}j^{*},\text{CT}} \right\rvert} \;.
 \end{equation}
-This estimate allows for direct comparison of the error in forward or reverse ROPs to the value of the net ROP itself, if they are of similar magnitude the error in net ROP will be large.
+This estimate allows for directly comparing the error in forward or reverse ROPs with the value of the net ROP itself; the error in net ROP will be large if these are similar in magnitude.
 
 \begin{table}[htbp]
 \sisetup{retain-zero-exponent=true}
 \centering
-\begin{tabular}{@{}l S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1]@{}}
+\begin{tabular}{@{}l S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] S[table-format=1.2e1] @{}}
 \toprule
-\multicolumn{1}{l}{Model} & \multicolumn{1}{l}{\ce{H2}\slash\ce{CO}} & \multicolumn{1}{l}{GRI-Mech.~3.0} & \multicolumn{1}{l}{USC-Mech II} & \multicolumn{1}{l}{\ce{iC5H11OH}} \\
+{Model} & {\ce{H2}\slash\ce{CO}} & {GRI-Mech.~3.0} & {USC-Mech II} & {\ce{iC5H11OH}} \\
 \midrule
-\multicolumn{1}{c}{$E_{R^{\prime}}$}                    & 1.56e-8 & 2.95e-8 & 9.42e-8 & 4.86e-4 \\
-\multicolumn{1}{c}{$E_{R^{\prime\prime}}$}              & 6.92e-8 & 6.53e-8 & 1.20e-7 & 5.07e-4 \\
-\multicolumn{1}{c}{$E_{R}$}                             & 1.49e1  & 1.11e0  & 2.80e0  & 4.82e-1 \\
-\multicolumn{1}{c}{$E_{\varepsilon}$}                   & 1.48e1  & 1.13e0  & 2.93e0  & 5.03e-1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} n}{\text{d} t}}$} & 2.53e1  & 2.60e0  & 7.62e0  & 1.58e1 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} T}{\text{d} t}}$} & 3.94e5  & 3.35e8  & 3.95e6  & 7.11e7 \\
-\multicolumn{1}{c}{$E_{\frac{\text{d} S}{\text{d} t}}$} & 3.52e12 & 3.46e12 & 3.44e12 & 3.38e12 \\
+$E_{R^{\prime}}$                    & 1.56e-8 & 2.95e-8 & 9.42e-8 & 4.86e-4 \\
+$E_{R^{\prime\prime}}$              & 6.92e-8 & 6.53e-8 & 1.20e-7 & 5.07e-4 \\
+$E_{R}$                             & 1.49e1  & 1.11e0  & 2.80e0  & 4.82e-1 \\
+$E_{\varepsilon}$                   & 1.48e1  & 1.13e0  & 2.93e0  & 5.03e-1 \\
+$E_{\frac{\text{d} n}{\text{d} t}}$ & 2.53e1  & 2.60e0  & 7.62e0  & 1.58e1 \\
+$E_{\frac{\text{d} T}{\text{d} t}}$ & 3.94e5  & 3.35e8  & 3.95e6  & 7.11e7 \\
+$E_{\frac{\text{d} S}{\text{d} t}}$ & 3.52e12 & 3.46e12 & 3.44e12 & 3.38e12 \\
 \bottomrule
 \end{tabular}
-\caption{Summary of rate of progress, species, temperature and thermodynamic state-parameter rate correctness.
+\caption{Summary of errors in rates of progress, species, temperature, and thermodynamic state-parameter rate \revise{compared with Cantera}.
 Error statistics are based on the infinity-norm of the relative error detailed in~\cref{e:rel_err} for each quantity.
 The ``S'' in $E_{\frac{\text{d} S}{\text{d} t}}$ refers to the thermodynamic state parameter, either $V$ or $P$ for \conp/ and \conv/, respectively.
 }
 \label{T:source_error}
 \end{table}
 
-In Table~\ref{T:source_error}, the results of this code's source-term evaluations are compared to Cantera~\cite{Cantera} on the library of PaSR conditions (\cref{t:models}).
-Very close agreement is observed for the forward and reverse ROPs for all models, however the error norm is \textasciitilde\numrange{3}{4} orders of magnitude larger for the isopentanol model.
-This results from differences in evaluation of P-Log reactions between \texttt{pyJac} and Cantera; namely \texttt{pyJac} computes the logarithm of the upper and lower reaction Arrhenius rates (see supplemental~\cref{deriv-s:pdep}) analytically while Cantera evaluates this term numerically.
-If the error from P-Log reactions are not considered in~\cref{e:rel_err}, the errors for the forward and reverse ROPs fall to \num{5.44e-08} and \num{1.59e-07}, respectively.
-We note that this discrepancy does not imply any incorrectness in either \texttt{pyJac} or Cantera---in fact, the error is still well within the proscribed tolerances in~\cref{e:rel_err}---but merely emphasizes the effect small code-changes can have on the accumulation of floating point errors.
+Table~\ref{T:source_error} compares \revise{\texttt{pyJac} v2's} source-term evaluations with Cantera's~\cite{Cantera} using the data set of PaSR conditions (\cref{t:models}).
+\revise{The forward and reverse ROPs agree closely} for all models, though the error norm is \textasciitilde\numrange{3}{4} orders of magnitude larger for the isopentanol model.
+This \revise{discrepancy} results from differences in evaluation of P-Log reactions between \texttt{pyJac} and Cantera: \texttt{pyJac} computes the logarithm of the upper and lower reaction Arrhenius rates analytically (see supplemental material) while Cantera evaluates this term numerically.
+If we neglect the errors from P-Log reactions in~\cref{e:rel_err}, the errors for the forward and reverse ROPs fall to \num{5.44e-08} and \num{1.59e-07}, respectively.
+This discrepancy does not imply any actual error in either \texttt{pyJac} or Cantera---in fact, the error still lies well within the proscribed tolerances in~\cref{e:rel_err}---but merely emphasizes
+\revise{how even small code changes can affect the accumulation of floating-point errors.}
 
-This point is further underscored by the error in the net ROP, which is \textasciitilde\numrange{3}{9} orders of magnitude (or \numrange{7}{9} orders of magnitude for the P-Log excluded error) larger than the error in either the forward or reverse ROP.
-In~\cref{T:source_error}, it is seen that $E_{\varepsilon}$ is very similar in magnitude to $E_R$ in all cases, indicating that this large increase in error is caused by the accumulation of floating point error from the forward and reverse ROPs, as previously discussed.
-The molar species production rate error norm is similar in magnitude to that of the net ROP, however the temperature and state-parameter rate errors again increase as the error in net species production rates is amplified by multiplication with thermodynamic properties.
-Again, we note that the above discussion does not imply that discrepancies in computation of the net ROP will cause large error in chemical kinetic integration---either in this code or Cantera~\cite{Cantera}---as this loss of accuracy only occurs when the forward and reverse ROPs are nearly equal, implying the reaction is in near-equilibrium.
+\revise{The error in the net ROP further underscores this point: it is}
+\textasciitilde\numrange{3}{9} orders of magnitude (or \numrange{7}{9} orders of magnitude when including P-Log reaction contributions) larger than the error in forward or reverse ROP.
+\revise{\Cref{T:source_error} shows that the magnitudes of $E_{\varepsilon}$ and $E_R$ agree} in all cases, indicating that the accumulation of floating-point error from the forward and reverse ROPs causes this large increase in error as previously discussed.
+\revise{The magnitudes of the errors in molar species production rate and net ROP agree, but
+thermodynamic properties amplify the error in net species production rates and lead to high discrepancies in temperature and state-parameter rates.}
+Again, these discrepancies in net ROP will not necessarily cause errors when integrating the chemical kinetics---either in \texttt{pyJac} or Cantera---as this loss of accuracy only occurs when the forward and reverse ROPs are nearly equal \revise{(i.e., near equilibrium)}.
 
-\subsection{Jacobian validation}
+\subsection{Jacobian verification}
 \label{S:jac_valid}
 
-As in our previous work~\cite{Niemeyer:2016aa}, the correctness of the Jacobian was determined by comparison to the Jacobian obtained by automatic differentiation of the source-terms kernel generated by \texttt{pyJac} via the \texttt{Adept} software library~\cite{adept-v11,hogan2014fast}.
-The reasons for this choice are explained fully in~\cite{Niemeyer:2016aa}, but broadly speaking automatic differentiation provides relatively fast, highly accurate Jacobian matrix evaluation with minimal additional programming effort.
-The discrepancy between the analytical and automatic differentiated Jacobians for thermochemical state $k$, denoted by $\mathcal{J}_k$ and $\hat{\mathcal{J}}_k$ respectively, is determined by the relative error Frobenius norm over all Jacobian indices $i, j$:
+As in our previous work~\cite{Niemeyer:2016aa}, we determined Jacobian matrix correctness by comparing with that obtained by automatic differentiation of the \texttt{pyJac}-generated source term, using the \texttt{Adept} software library~\cite{adept-v11,hogan2014fast}.
+We previously explained this choice fully~\cite{Niemeyer:2016aa}, but broadly speaking automatic differentiation provides relatively fast, highly accurate Jacobian matrix evaluation with minimal additional programming effort.
+\revise{(In contrast, it is challenging to obtain robust, accurate Jacobians using finite differences.)}
+The discrepancy between the analytical and automatic-differentiation Jacobians for thermochemical state $k$, denoted by $\mathcal{J}_k$ and $\hat{\mathcal{J}}_k$ respectively, is determined by the relative error Frobenius norm over all Jacobian indices $i, j$:
 \begin{equation}
  \label{e:jac_error_base}
- E_{\text{rel}, k} = \left\lVert \frac{\hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk}}{\hat{\mathcal{J}}_{ijk}} \right\rVert_{i,j,F}
+ E_{\text{rel}, k} = \left\lVert \frac{\hat{\mathcal{J}}_{ij,k} - \mathcal{J}_{ij,k}}{\hat{\mathcal{J}}_{ij,k}} \right\rVert_{ij,F} \;.
 \end{equation}
 
-To avoid large relative errors of very small nonzero Jacobian elements due to accumulation of floating point error, the Frobenius norm of the automatically differentiated Jacobian is calculated over all thermochemical states $k$:
+To avoid large relative discrepancies in small nonzero Jacobian elements due to accumulation of floating-point error, the Frobenius norm of the automatically differentiated Jacobian is calculated over all thermochemical states $k$:
 \begin{equation}
  \label{e:thresh}
- \mathcal{T} = \left\lVert \mathcal{\hat{J}} \right\rVert_{k, F}
+ \mathcal{T} = \left\lVert \mathcal{\hat{J}} \right\rVert_{k, F} \;.
 \end{equation}
-The error statistics reported in this section are then based only on matrix elements where $\mathcal{J}_{ijk} \ge \frac{\mathcal{T}}{\mathcal{C}}$, where $\mathcal{C}$ is the threshold parameter; this filtered form of~\cref{e:jac_error_base} is denoted $E_{\mathcal{C},k}$.
+The error statistics reported in this section are then based only on matrix elements where $\mathcal{J}_{ijk} \ge \frac{\mathcal{T}}{\mathcal{C}}$, where $\mathcal{C}$ is \revise{a tunable} threshold parameter; this filtered form of~\cref{e:jac_error_base} is denoted $E_{\mathcal{C},k}$.
 Finally, the Frobenius norm is calculated over all the states in the PaSR thermochemical condition database:
 \begin{equation}
  \label{e:thresholded_error}
- E_{\mathcal{C}} = \left\lVert E_{\mathcal{C},k} \right\rVert_{k, F}
+ E_{\mathcal{C}} = \left\lVert E_{\mathcal{C},k} \right\rVert_{k, F} \;.
 \end{equation}
 
-It is noted that this error norm is quite different from the relative error Frobenius norm suggested by Anderson et al.~\cite{Anderson:1999aa} for quantifying the error of matrices in LAPACK:
+This error norm is quite different from the relative error Frobenius norm suggested by Anderson et al.~\cite{Anderson:1999aa} for quantifying the error of matrices in LAPACK:
 \begin{align}
  \label{e:error_lapack}
- \lhs{lapack}{E_{\mathcal{L}, k}} &=  \rhs{lapack}{\frac{\left\lVert \hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk} \right\rVert_{i,j,F}}{\left\lVert \hat{\mathcal{J}}_{ijk} \right\rVert_{i,j,F}}} \nonumber \\
- \lhs{lapack}{E_{\mathcal{L}}} &= \rhs{lapack}{\left\lVert  E_{\mathcal{L}, k} \right\rVert_{k, F}}[c]
+ \lhs{lapack}{E_{\mathcal{L}, k}} &=  \rhs{lapack}{\frac{\left\lVert \hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk} \right\rVert_{ij,F}}{\left\lVert \hat{\mathcal{J}}_{ijk} \right\rVert_{i,j,F}}} \nonumber \quad \text{and} \\
+ \lhs{lapack}{E_{\mathcal{L}}} &= \rhs{lapack}{\left\lVert  E_{\mathcal{L}, k} \right\rVert_{k, F}}[c] \;.
 \end{align}
-In our experience, the LAPACK error norm is often dominated by the accuracy of the larger elements in the Jacobian, while the filtered error norm is useful for identifying errors in both large and small Jacobian entries.
-Further, with a tunable threshold parameter, $\mathcal{C}$, the error of different ranges of of element sizes can be assessed, and the effects of floating point error can be isolated.
-For reference, both our own error norm and the LAPACK error norm will be reported.
+In our experience, the accuracy of larger elements in a Jacobian often dominates the LAPACK error norm, while the filtered error norm can identify errors in both large and small Jacobian entries.
+Further, with the tunable threshold parameter $\mathcal{C}$, we can assess the error of different ranges of element sizes and isolate the effects of floating-point error.
+For reference, both our error norm and the LAPACK error norm will be reported.
 
 \begin{table}[htbp]
 \sisetup{retain-zero-exponent=true}
@@ -579,14 +583,14 @@ USC-Mech II           & \num{1.137e-14}      & \num{2.830e+21}      & \num{1.199
 \ce{iC5H11OH}         & \num{1.227e-10}      & \num{2.733e+26}      & \num{1.363e-3}  & \num{2.764e-5} \\
 \bottomrule
 \end{tabular}
-\caption{Summary of Jacobian matrix validation results.
-The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all test platforms, vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
-It is noted that the Frobenius norm described in~\cref{e:thresh} varies slightly between the \conp/ and \conv/ cases; the reported $\bar{\mathcal{T}}$ is the average of the two, however the appropriate value was used during calculations of the error statistics.
+\caption{Summary of Jacobian matrix verification results.
+The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all test platforms, vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/, and sparse\slash dense Jacobians.
+The Frobenius norm described in~\cref{e:thresh} varies slightly between the \conp/ and \conv/ cases; the reported $\bar{\mathcal{T}}$ is the average of the two, with the appropriate value used during calculations of the error statistics.
 }
 \label{T:error}
 \end{table}
 
-\Cref{T:error} reports the maximum $E_{\mathcal{C}}$ and $E_{\mathcal{L}}$ values over all test platforms\slash vectorization patterns (see~\cref{t:platforms}), sparse\slash dense (see~\cref{S:sparsity}) and \conp/\slash\conv/ Jacobians.
+\Cref{T:error} reports the maximum $E_{\mathcal{C}}$ and $E_{\mathcal{L}}$ values over all test platforms and vectorization patterns (see~\cref{t:platforms}), sparse and dense (see~\cref{S:sparsity}), as well as \conp/ and \conv/ formulations.
 The most stringent filtered error norm ($\mathcal{C} = 10^{20}$) ranges from \numrange[retain-zero-exponent=true]{e-7}{e0}; the largest error is for the \ce{H2}\slash\ce{CO} model.
 For this model, $\mathcal{T}$  is smaller than the tolerance of \num{e20}, and hence the error norm considers Jacobian entries smaller than $\mathcal{O}(1)$.
 It is noted that for GRI-Mech 3.0, which has a $\mathcal{T}$ roughly an order of magnitude larger, the stringent error norm is significantly smaller: $\mathcal{O}(\num{e-7})$.
