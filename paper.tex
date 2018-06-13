@@ -52,6 +52,8 @@
 % https://tex.stackexchange.com/a/146707/56227
 \crefname{appendix}{}{}
 
+\usepackage{placeins}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %      Custom Commands     %
@@ -972,66 +974,74 @@ This is likely due to the ability to fit many more sparse Jacobian matrices in t
 The speedup on the \gpunew/ decreases with increasing model size for the sparse formulation, but increases for larger models when dense; this likely results from the larger available memory of the \gpunew/, and hence fewer data-transfer operations to\slash from the GPU.
 
 
-In~\cref{F:fd_vs_analytical}, the performance of the sparse analytical-Jacobian is compared to a sparse first-order finite-difference Jacobian on both the \avx/ CPU and the \gpuold/ \gpunew/ GPUs.
-\Cref{F:fd_vs_analytical_cpu} shows large speedups for both the OpenMP code and shallow-vectorized OpenCL code; the analytical OpenMP Jacobian is \SIrange{3.92}{8.67}{$\times$} faster, while the analytical OpenCL Jacobian achieves speedups of \SIrange{17.22}{55.11}{$\times$}.
-It is noted that the isopentanol case was excluded here, as a single run of the sparse finite-difference Jacobian using either OpenCL or OpenMP took over \num{12} hours of run time.
-In addition the current finite-difference formulation breaks Intel's auto-vectorizer, hence the OpenCL speedup comparison is made against the unvectorized OpenCL code; it is not a high priority to fix this issue, as the finite-difference Jacobian was implemented for comparison purposes only.
-Although we do not display the dense finite-difference Jacobian speedup in~\cref{F:fd_vs_analytical_cpu}, the dense OpenCL and OpenMP analytical Jacobian codes out-perform the finite-difference variants by even larger margins; \SIrange{24.44}{245.63}{$\times$} for OpenCL, and \SIrange{9.68}{112.73}{$\times$} for OpenMP (these data do include the isopentanol model, though limited to \num{50000} conditions as discussed previously).
-A comparison of the sparse analytical and finite-difference Jacobians on the GPUs is presented in~\cref{F:fd_vs_analytical_gpu}.
-The analytical Jacobian on the \gpunew/ and \gpuold/ shows large speedups, increasing with chemical model size, in the range of \SIrange{3.81}{17.60}{$\times$}; the \gpunew/ has a larger speedup than the \gpuold/ (\SI{17.60}{$\times$} v.s., \SI{14.75}{$\times$}) for the isopentanol model due to its larger available memory.
-Although not pictured, the dense analytical-Jacobian on the \gpunew/ GPU has larger speedups compared with the dense finite-difference Jacobian: \SIrange{4.04}{45.13}{$\times$}; the \gpunew/ GPU again has a significantly larger speedup than the \gpuold/ for the isopentanol model (\SI{45.13}{$\times$} versus \SI{23.85}{$\times$}), further underscoring the effect of the larger available memory on the \gpunew/.
+\Cref{F:fd_vs_analytical} compares the performance of the sparse analytical Jacobian with a sparse first-order finite-difference Jacobian on both the \avx/ CPU and \gpuold/\slash \gpunew/ GPUs.
+\Cref{F:fd_vs_analytical_cpu} shows large speedups for both OpenMP and shallow-vectorized OpenCL; the analytical OpenMP Jacobian is \SIrange{3.92}{8.67}{$\times$} faster, while the analytical OpenCL Jacobian achieves speedups of \SIrange{17.22}{55.11}{$\times$}.
+We excluded the isopentanol case here, since a single run of the sparse finite-difference Jacobian using either OpenCL or OpenMP took over 12 hours of run time.
+In addition the current finite-difference formulation breaks Intel's auto-vectorizer, hence we compared OpenCL against the unvectorized OpenCL code (we did not prioritize fixing this issue, since we implemented the finite-difference Jacobian for comparison purposes only).
+Although we do not display the dense finite-difference Jacobian speedup in~\cref{F:fd_vs_analytical_cpu}, the dense OpenCL and OpenMP analytical Jacobian codes outperform the finite-difference variants by even larger margins: \SIrange{24.44}{245.63}{$\times$} for OpenCL and \SIrange{9.68}{112.73}{$\times$} for OpenMP (these data do include the isopentanol model, though limited to \num{50000} conditions as discussed previously).
+\Cref{F:fd_vs_analytical_gpu} compares the sparse analytical and finite-difference Jacobians on the GPUs.
+The analytical Jacobian on the \gpunew/ and \gpuold/ shows speedups of \SIrange{3.81}{17.60}{$\times$} that increase with chemical model size; the \gpunew/ has a larger speedup than the \gpuold/ for the isopentanol model (\SI{17.60}{$\times$} vs.\ \SI{14.75}{$\times$}) due to its larger available memory.
+Although not pictured, the dense analytical Jacobian on the \gpunew/ GPU has larger speedups compared with the dense finite-difference Jacobian: \SIrange{4.04}{45.13}{$\times$}.
+The \gpunew/ GPU again shows significantly larger speedups over the \gpuold/ for the isopentanol model (\SI{45.13}{$\times$} vs.\ \SI{23.85}{$\times$}), further underscoring the effect of more available memory on the \gpunew/.
 
 \begin{figure}[htbp]
    \centering
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{finite_difference_vs_analytical.pdf}
-      \caption{Speedup of the sparse analytical Jacobian versus finite-difference Jacobian evaluation on the \avx/ CPU, normalized per-language}
+      \caption{Speedup of the sparse analytical Jacobian versus finite-difference Jacobian evaluation on the \avx/ CPU, normalized per-language.}
       \label{F:fd_vs_analytical_cpu}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{finite_difference_vs_analytical_gpu.pdf}
-      \caption{Speedup of the analytical versus finite-difference Jacobian evaluation on both the \gpunew/ and \gpuold/ GPUs, normalized per-GPU}
+      \caption{Speedup of the analytical versus finite-difference Jacobian evaluation on both the \gpunew/ and \gpuold/ GPUs, normalized per-GPU.}
       \label{F:fd_vs_analytical_gpu}
   \end{subfigure}
   \caption{The performance of a sparse, first-order forward finite-difference Jacobian compared to the analytical Jacobian on the \avx/ CPU and both GPUs.}
   \label{F:fd_vs_analytical}
 \end{figure}
 
-\Cref{F:v1_vs_v2} compares the performance for evaluation of the dense-analytical Jacobian of the new version of \texttt{pyJac}, \texttt{pyJac-v2}, to the previous version, \texttt{pyJac-v1} \cite{pyjac16}, on the \sse/ CPU and \gpuold/ GPU; dense Jacobian evaluation was selected as it was the only type implemented in the previous version of \texttt{pyJac}.
-On the \sse/ CPU, the \texttt{pyJac-v2} is faster than \texttt{pyJac-v1} for OpenMP evaluation for the larger chemical models; the static OpenMP code generated by \texttt{pyJac-v1} (see~\cref{s:unittest}) is \SI{1.79}{$\times$} faster for the \ce{H2}\slash\ce{CO} model, and only \SI{1.09}{$\times$} slower for the GRI-Mech 3.0 model.
+\Cref{F:v1_vs_v2} compares the performance of evaluating the dense analytical Jacobian of \texttt{pyJac-v2} with that of the previous version, \texttt{pyJac-v1}~\cite{pyjac16}, on the \sse/ CPU and \gpuold/ GPU.
+(We selected dense Jacobian evaluation for this comparison since it was the only type implemented in the previous version of \texttt{pyJac}.)
+On the \sse/ CPU, the \texttt{pyJac-v2} evaluates faster than \texttt{pyJac-v1} for OpenMP for the larger chemical models; the static OpenMP code generated by \texttt{pyJac-v1} (see~\cref{s:unittest}) is \SI{1.79}{$\times$} faster for the \ce{H2}\slash\ce{CO} model, and only \SI{1.09}{$\times$} slower for the GRI-Mech 3.0 model.
 In contrast, the loop-based OpenMP code of \texttt{pyJac-v2} is \SIrange{3.37}{10.19}{$\times$} faster than \texttt{pyJac-v1} for the USC-Mech II and isopentanol models.
-The shallow-vectorized OpenCL code is faster than \texttt{pyJac-v1} in all cases, achieving speedups of \SIrange{1.37}{19.56}{$\times$} increasing with model size.
-In~\cref{F:v1_vs_v2_gpu}, the performance of the \texttt{pyJac-v2} dense-analytical Jacobian on the \gpuold/ GPU is compared to \texttt{pyJac-v1} on the same.
-As with the CPU, the static code of \texttt{pyJac-v1} is slightly faster for the \ce{H2}\slash\ce{CO} model, however \texttt{pyJac-v2} outperforms \texttt{pyJac-v1} by \SIrange{1.25}{2.84}{$\times$} for the other models; it is noted that the decrease in speedup for the isopentanol model is likely due to the limited number of conditions in dense-evaluation for \texttt{pyJac-v2}, as noted earlier.
+The shallow-vectorized OpenCL \texttt{pyJac-v2} code is faster than \texttt{pyJac-v1} in all cases, achieving speedups of \SIrange{1.37}{19.56}{$\times$} that increase with model size.
+\Cref{F:v1_vs_v2_gpu} compares the performance of the \texttt{pyJac-v2} with \texttt{pyJac-v1} for evaluating dense analytical Jacobians on the \gpuold/ GPU.
+As with the CPU, the static code of \texttt{pyJac-v1} is slightly faster for the \ce{H2}\slash\ce{CO} model, but \texttt{pyJac-v2} outperforms \texttt{pyJac-v1} by \SIrange{1.25}{2.84}{$\times$} for the other models.
+\revise{Performance likely drops for the isopentanol model} due to the limited number of conditions in dense evaluation for \texttt{pyJac-v2}, as noted earlier.
 
 \begin{figure}[htbp]
    \centering
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{v1_vs_v2.pdf}
-      \caption{Speedup of dense Jacobian evaluation in \texttt{pyJac-v2} over \texttt{pyJac-v1} on the \sse/ CPU}
+      \caption{\sse/ CPU}
       \label{F:v1_vs_v2_cpu}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.48\linewidth}
       \includegraphics[width=\textwidth]{v1_vs_v2_gpu.pdf}
-      \caption{Speedup of dense Jacobian evaluation in \texttt{pyJac-v2} over \texttt{pyJac-v1} on the \gpuold/ GPU}
+      \caption{\gpuold/ GPU}
       \label{F:v1_vs_v2_gpu}
   \end{subfigure}
-  \caption{Performance comparison of the new version of \texttt{pyJac} (\texttt{v2}) and the previous version, \texttt{v1}~\cite{pyjac16}.}
+  \caption{Performance comparison of dense Jacobian evaluation using \texttt{pyJac-v2} and \texttt{pyJac-v1}~\cite{pyjac16}.}
   \label{F:v1_vs_v2}
 \end{figure}
 
 \section{Conclusions}
-In this work, automatically generated OpenCL codes for SIMD\slash SIMT-vectorized thermochemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation were developed and validated for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
-\add{Reviewing the goals of this work, as discussed in~\cref{S:Goals}}:
+
+In this work, we developed automatically generated OpenCL codes for SIMD and SIMT-vectorized evaluations of thermochemical source-term and sparse\slash dense chemical kinetic Jacobian matrices.
+We also verified and investigated the performance of source-term and Jacobian evaluation for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
+
+\todo[inline]{So I think some of the rest of this is really long and overly detailed---you don't need to rewrite all of the results, but really just the overall contributions and takeaways. I sorta think subsections are not appropriate (and help encourage overwriting...)}
+\add{The main contributions of this work are:}:
 
 \subsection{Derive and validate a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity}
-A new formulation resulted in highly sparse (\SIrange{28.6}{88.5}{\percent}) chemical kinetic Jacobians, with options to futher increase sparsity (to \SIrange{31.66}{92.0}{\percent}) at the expense of strict correctness.
+A new formulation resulted in highly sparse (\SIrange{28.6}{88.5}{\percent}) chemical kinetic Jacobians, with options to further increase sparsity (to \SIrange{31.66}{92.0}{\percent}) at the expense of strict correctness.
 
 \subsection{Enable cross-platform SIMD\slash SIMT vectorization for the CPU, GPU and other accelerators}
 \add{Shallow-vectorized evaluation of \texttt{pyJac}'s chemical kinetic source-term and analytical Jacobian was demonstrated on both the CPU and GPU via OpenCL.}
-Deep-vectorization, though possible on the Portable OpenCL (POCL) platform~\cite{poclIJPP}, did not yield any performance benefit as POCL did not achieve vectorizations for any execution pattern studied; deep-vectorization deserves further study with other platforms (e.g., CUDA).
+Deep vectorization, though possible on the Portable OpenCL (POCL) platform~\cite{poclIJPP}, did not yield any performance benefit as POCL did not achieve vectorizations for any execution pattern studied.
+Deep vectorization deserves further study with other platforms (e.g., CUDA).
 \add{In addition, parallel OpenMP evaluation was demonstrated on the CPU.}
 
 \subsection{Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}}
@@ -1039,7 +1049,7 @@ Deep-vectorization, though possible on the Portable OpenCL (POCL) platform~\cite
 Significant speedups in shallow SIMD-vectorized source-term evaluation over a parallel OpenMP code were demonstrated, up to \SIrange{2.53}{2.92}{$\times$} and \SIrange{3.40}{4.08}{$\times$} for \sse/ and \avx/ capable CPUs; in addition, source-term evaluation was \SIrange{1.40}{1.88}{$\times$} faster on a \gpunew/ GPU compared to a \gpuold/ GPU.
 Vectorized data-orderings specifically formulated for shallow\slash deep SIMD\slash SIMT vectorizations were proposed, resulting in a shallow-vectorized speedup of \SIrange{2.14}{2.58}{$\times$} over a more standard ``F''-ordered (column major) shallow-vectorization; when compared to the corresponding speedup of \SIrange{1.35}{2.09}{$\times$} for the ``C''-ordered (row major) OpenMP code over an ``F''-ordered equivalent, the value of the vectorized data-ordering is evident.
 In addition, the choice of \conp/\slash\conv/ formulation was determined to be negligible on source-term evaluations, while varying the OpenCL vector-width had only modest (\textasciitilde\SI{10}{$\percent$}) performance effects on both the CPU and GPU.
-The strong parallel scaling efficiency was also examined for source-term evaluation; the parallel OpenMP code generally had better efficiencies, but when compared to a shallow-vectorized code with roughly equivalent performance---e.g., source-term shallow-vectorized evaluation on \num{4} cores to \num{16} OpenMP cores---the scalings were similar.
+The strong parallel scaling efficiency was also examined for source-term evaluation; the parallel OpenMP code generally had better efficiencies, but when compared to a shallow-vectorized code with roughly equivalent performance---e.g., source-term shallow-vectorized evaluation on \num{4} to \num{16} OpenMP cores---the scalings were similar.
 Examination of SIMD efficiency revealed increasing speedups with chemical model-size for source-term evaluation on the \avx/ CPU, while on the \sse/ CPU speedups larger than the nominal vector-width were achieved.
 
 The performance of sparse and dense Jacobian evaluation was also characterized on the CPU\slash GPU platforms.
@@ -1053,26 +1063,27 @@ Similarly, evaluation on the \gpuold/ GPU was \SI{1.89}{$\times$} slower for the
 \subsection{Future extensions to this work and practical notes on OpenCL usage}
 \label{S:future}
 
-It is important to note that while OpenCL provides an simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pit-falls in its use.
-The closed source OpenCL runtimes tested in this work (Intel and Nvidia) contain several bugs that result in compilation failures, simply incorrect vectorized machine code or even segmentation faults.
+\revisedelete{It is important to note that while }While OpenCL provides a simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pitfalls in its use.
+The closed-source OpenCL runtimes tested in this work (Intel and Nvidia) contain several bugs that result in compilation failures, simply incorrect vectorized machine code, or even segmentation faults.
 Further, these runtimes (in our experience) tend to be less responsive to fixing said bugs, with relatively infrequent new releases (or in Nvidia's case, lack of changelogs\slash public records of bug-fixes).
-On the other hand, the open-source OpenCL runtime used in this work, POCL, has (in our experience) far fewer implementation bugs, and when issues arise the community is very responsive to bug reports and user outreach; however, POCL fails to achieve vectorization as noted in~\cref{S:source_results}.
+On the other hand, the open-source OpenCL runtime used in this work, POCL, has far fewer implementation bugs, and when issues arise the community is very responsive to bug reports and user outreach; however, POCL fails to achieve vectorization as noted in~\cref{S:source_results}.
 
+\todo[inline]{Does the following really belong in the conclusions?}
 As demonstration of the type of issue discussed, a minimum working example has been created~\cite{Nvidia_mwe} that demonstrates a failure of Nvidia's OpenCL runtime corresponding to the GPU driver version \num{375.26} on a Tesla \gpunew/ GPU; by simply changing to another runtime (e.g., Intel)---with no code changes or recompilation---the correct result can be found.
 This provides a particularly vexing problem for the programmer, as there is often little that can be done to resolve the issue; thankfully, in this case we were able to upgrade the driver version to resolve the problem.
 Further, as noted throughout this work certain code-generation patterns can break OpenCL execution\slash vectorization, e.g., the failure of POCL to achieve vectorization or Intel OpenCL's failure to vectorize the finite-difference Jacobian.
-Indeed the vectorization process attempted by most OpenCL runtimes (and thus, reasons for incorrect\slash unvectorized code-output) is obscured from the user, making reasoning about errors or performance trends quite difficult.
+Indeed the vectorization process attempted by most OpenCL runtimes (and thus, reasons for incorrect\slash unvectorized code output) is obscured from the user, making reasoning about errors or performance trends quite difficult.
 
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change requires building of the wrapper that initializes\slash transfers memory and calls the source-rate\slash Jacobian kernel.
-Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel-execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards as OpenMP is a standard library on most machines.
+Indeed, the OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards as OpenMP is a standard library on most machines.
 In addition, CUDA~\cite{Nvidia:2018} has been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017}, while Intel's open-source OpenCL alternative, ISPC~\cite{pharr2012ispc}, has been relatively stable and easy to work with during preliminary efforts with the unit-testing discussed in~\cref{s:unittest}.
 The current deep-vectorization formulation would be executable for both CUDA and ISPC targets, as these languages implement double-precision atomic operations, further recommending their use.
 It is also possible, particularly for the Intel OpenCL\slash POCL runtimes, that better performance\slash stability might be achieved using so-called ``explicit'' vectorization, i.e., through use of built-in vector types such as the \texttt{double8}; \add{specifically this change is hoped to enable vectorization on the POCL runtime} and might also enable deep-vectorization on the Intel OpenCL runtime.
-\add{Finally, future extensions of this work will include additional target-languages (vectorized OpenMP, CUDA, ISPC, etc.) to improve ease of use and reliability, as well as improvements to the existing OpenCL targets, e.g., to enable meaningful deep-vectorized evaluation, as well the implementation of reaction sorting~\cite{Sewerin20151375} to improve SIMD-efficiency (\cref{S:SIMD_scaling}).}
+\add{Finally, future extensions of this work will include additional target languages (e.g., vectorized OpenMP, CUDA, ISPC) to improve ease of use and reliability, as well as improvements to the existing OpenCL targets, e.g., to enable meaningful deep-vectorized evaluation, as well the implementation of reaction sorting~\cite{Sewerin20151375} to improve SIMD-efficiency (\cref{S:SIMD_scaling}).}
 
-One key-component missing in this current version of \texttt{pyJac} is vectorized sparse\slash dense linear-algebra subroutines to maximize the performance of LU-factorization and matrix-vector multiplication (commonly used in implicit-integration techniques).
-Third-party\slash open-source options exist for some target-languages, e.g., cuBLAS~\cite{cublas}, clBLAS\slash clSPARSE~\cite{clmath} or SuperLU~\cite{superlu99}, but these do not necessarily cover all targets\slash required linear-algebra operations and, in the case of the CUDA\slash OpenCL libraries, are often optimized operation on one large matrix instead of many (relatively) smaller matrices.
-The extent to which these existing programs may be used needs to be assessed and missing operations should be implemented in \texttt{loo.py} to ensure easy switching between target-languages\slash vectorization types.
+One key component missing in the current version of \texttt{pyJac} is vectorized sparse\slash dense linear-algebra subroutines to maximize the performance of LU-factorization and matrix-vector multiplication (commonly used in implicit-integration techniques).
+Third-party\slash open-source options exist for some target languages, e.g., cuBLAS~\cite{cublas}, clBLAS\slash clSPARSE~\cite{clmath} or SuperLU~\cite{superlu99}, but these do not necessarily cover all targets\slash required linear-algebra operations and, in the case of the CUDA\slash OpenCL libraries, are often optimized operation on one large matrix instead of many (relatively) smaller matrices.
+The extent to which these existing programs may be used needs to be assessed and missing operations should be implemented in \texttt{loo.py} to ensure easy switching between target languages and vectorization types.
 
 \section{Acknowledgments}
 This material is based upon work supported by the National Science Foundation
@@ -1089,11 +1100,11 @@ under grants ACI-1534688 (Curtis and Sung) and ACI-1535065 (Niemeyer).
 % Fix for missing space between "Appendix" and letter
 \renewcommand*{\thesection}{\appendixname~\Alph{section}}
 
-\section{Jacobian error statistics per test-platform}
+\section{Jacobian error statistics per test platform}
 \label{A:per_platform}
 
-This section gives more detail on the results presented in~\cref{S:jac_valid}, breaking down the reported error statistics per test-platform\slash language.
-The error of the Intel OpenCL runtime is presented in~\cref{T:intel_error}, the Portable OpenCL (POCL) runtime in~\cref{T:pocl_error}, OpenMP in~\cref{T:omp_error} and the Nvidia OpenCL runtime in~\cref{T:nv_error}.
+This section gives more detail on the results presented in~\cref{S:jac_valid}, breaking down the reported error statistics per test platform\slash language.
+The error of the Intel OpenCL runtime is presented in~\cref{T:intel_error}, the Portable OpenCL (POCL) runtime in~\cref{T:pocl_error}, OpenMP in~\cref{T:omp_error}, and the Nvidia OpenCL runtime in~\cref{T:nv_error}.
 POCL and OpenMP tend to have the smallest error norms, while Nvidia tends to have the largest; in particular the stringent filtered error norm $E_{\mathcal{C} = 10^{20}}$ is two orders of magnitude larger for the Nvidia runtime than the other test platforms with the \ce{H2}\slash\ce{CO} and USC-Mech II models.
 
 \begin{table}[htbp]
@@ -1110,7 +1121,7 @@ USC-Mech II           & \num{9.632e-15}      & \num{5.567e-03}  & \num{1.704e-07
 \bottomrule
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results for the Intel OpenCL runtime.
-The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
+The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}), \conp/\slash \conv/, and sparse\slash dense Jacobians.
 The threshold for the filtered relative error is the same as reported in~\cref{S:jac_valid}.
 }
 \label{T:intel_error}
@@ -1130,7 +1141,7 @@ USC-Mech II           & \num{9.632e-15}      & \num{8.998e-04}  & \num{1.201e-08
 \bottomrule
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results for the Portable OpenCL (POCL) runtime.
-The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
+The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}), \conp/\slash \conv/, and sparse\slash dense Jacobians.
 The threshold for the filtered relative error is the same as reported in~\cref{S:jac_valid}.
 }
 \label{T:pocl_error}
@@ -1150,7 +1161,7 @@ USC-Mech II           & \num{9.630e-15}      & \num{4.185e-04}  & \num{6.746e-09
 \bottomrule
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results for OpenMP execution.
-The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
+The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/, and sparse\slash dense Jacobians.
 The threshold for the filtered relative error is the same as reported in~\cref{S:jac_valid}.
 }
 \label{T:omp_error}
@@ -1170,17 +1181,20 @@ USC-Mech II           & \num{1.174e-14}      & \num{1.119e-02}  & \num{1.983e-07
 \bottomrule
 \end{tabular}
 \caption{Summary of Jacobian matrix validation results for Nvidia OpenCL execution.
-The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/ and sparse\slash dense Jacobians.
+The reported error statistics are the maximum filtered relative error $E_\mathcal{C}$ and LAPACK error $E_{\mathcal{L}}$ over all vectorization patterns (\cref{t:platforms}),  \conp/\slash \conv/, and sparse\slash dense Jacobians.
 The threshold for the filtered relative error is the same as reported in~\cref{S:jac_valid}.
 }
 \label{T:nv_error}
 \end{table}
 
+\FloatBarrier
+
 \section{SIMD efficiency Scaling Example}
 \label{S:SIMD_scaling}
-\add{This simple example demonstrates the dependency of the SIMD efficiency of shallow-vectorized OpenCL source-term evaluation on the size of the chemical model in question, i.e., the amount of computational work per source-term evaluation.}
-\add{The base chemical model for this example was the isopentanol model~\cite{Sarathy:2013jr} used throughout this work, and the same thermochemical state database described in~\cref{s:test_platforms} was used for source-term evaluation.}
-\add{As in~\cref{S:results} all reported results are based on \num{10} individual runs and in this example all cases were run on the \avx/ machine using the Intel OpenCL runtime.}
+
+\add{This simple example demonstrates how the SIMD efficiency of shallow-vectorized OpenCL source-term evaluation depends on the size of the chemical model in question, i.e., the amount of computational work per source-term evaluation.
+The base chemical model for this example was the isopentanol model~\cite{Sarathy:2013jr} used throughout this article, and the same thermochemical state database described in~\cref{s:test_platforms} was used for source-term evaluation.
+As in~\cref{S:results} all reported results are based on \num{10} individual runs and in this example all cases were run on the \avx/ machine using the Intel OpenCL runtime.}
 
 \begin{algorithm}[htbp]
 \algnewcommand\algorithmicinput{\textbf{Input:}}
@@ -1215,23 +1229,23 @@ The threshold for the filtered relative error is the same as reported in~\cref{S
 \end{algorithmic}
 \end{algorithm}
 
-\add{First, the reactions in the isopentanol model were converted to simple reversible Arrhenius reactions by either simply dropping third-body efficiency calculations (third-body enhanced reactions), using the high pressure-limit coefficients (falloff\slash chemically-activated and P-Log reactions) or fitting Arrenhius parameters to the calculated rate constant at a fixed pressure (chebyshev reactions).}
-\add{This conversion made the cost of reaction rate evaluation roughly equivalent between all reactions in model, separating the effect of chemical model size from computational intensities of different reaction types on the SIMD efficiency.}
-\add{Next, a greedy reaction removal algorithm (\cref{a:model_gen}) was utilized to generate a number of models ranging from \numrange{2100}{186} reactions, in increments of 200 reactions (except the final increment from \num{200} to \num{186} reactions).}
+\add{First, the reactions in the isopentanol model were converted to simple reversible Arrhenius reactions by either simply dropping third-body efficiency calculations (third-body enhanced reactions), using the high-pressure-limit coefficients (falloff\slash chemically-activated and P-Log reactions) or fitting Arrhenius parameters to the calculated rate constant at a fixed pressure (Chebyshev reactions).
+This conversion made the cost of reaction rate evaluation roughly equivalent between all reactions in model, separating the effect of chemical model size from computational intensities of different reaction types on the SIMD efficiency.
+Next, a greedy reaction removal algorithm (\cref{a:model_gen}) generated a number of models ranging from \numrange{2100}{186} reactions, in increments of 200 reactions (except the final increment from \num{200} to \num{186} reactions).}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.5\linewidth]{simd_efficiency_scaling}
-\caption{The effect on SIMD efficiency of varying chemical model size}
+\caption{The effect on SIMD efficiency of varying chemical model size.}
 \label{F:simd_vs_rxns}
 \end{figure}
 
-\add{In order to discern the effect of varying chemical model size on the SIMD efficiency, shallow-vectorized and unvectorized source-term evaluation performance tests were run.}
-\add{As demonstrated in~\cref{F:simd_vs_rxns} the SIMD efficiency is strongly dependent on the generated model size and and thus, amount of computational work per thermochemical state.}
-\add{In addition, the range of SIMD efficiency in this example (\numrange{0.56}{0.91}) is larger than the range of SIMD efficiencies calculated for real chemical models, as seen in~\cref{F:source_simd_scaling}.}
-\add{For smaller models---e.g., \ce{H2}\slash\ce{CO} which had a SIMD efficiency of \num{0.6} on the \avx/ CPU---this suggests that the presence of more computationally intensive fall-off\slash chemically activated reactions in model can increase the SIMD efficiency.}
-\add{However, the base isopentanol model achieved a SIMD efficiency of only \num{0.78} on the \avx/ machine in~\cref{S:source_results}, suggesting that more work could be done to optimize the source-term evaluations.}
-\add{In particular, it's likely that a reaction sorting method, such as suggested by Sewerin and Rigopoulos~\cite{Sewerin20151375}, would be particularly beneficial to reduce the number of vector-gather\slash scatter\slash masking operations incurred during source-term evaluation.}
+\add{To discern the effect of varying chemical model size on the SIMD efficiency, shallow-vectorized and unvectorized source-term evaluation performance tests were run.
+As demonstrated in~\cref{F:simd_vs_rxns} the SIMD efficiency strongly depends on the generated model size and thus the amount of computational work per thermochemical state.
+In addition, the range of SIMD efficiency in this example (\numrange{0.56}{0.91}) is larger than the range of SIMD efficiencies calculated for real chemical models, as seen in~\cref{F:source_simd_scaling}.
+For smaller models---e.g., \ce{H2}\slash\ce{CO} which had a SIMD efficiency of \num{0.6} on the \avx/ CPU---this suggests that the presence of more computationally intensive fall-off\slash chemically activated reactions in model can increase the SIMD efficiency.
+However, the base isopentanol model achieved a SIMD efficiency of only \num{0.78} on the \avx/ machine in~\cref{S:source_results}, suggesting that more work could be done to optimize the source-term evaluations.
+In particular, it is likely that a reaction sorting method, such as suggested by Sewerin and Rigopoulos~\cite{Sewerin20151375}, would be particularly beneficial to reduce the number of vector gather\slash scatter\slash masking operations incurred during source-term evaluation.}
 
 \pagebreak
 \bibliography{paper}
