@@ -938,7 +938,7 @@ Although the plot is challenging to read since most of the data are clustered to
 The \ce{H2}\slash\ce{CO} model scales the worst for both codes, ranging from \numrange{0.94}{0.54} and \numrange{0.99}{0.82} efficiency for OpenCL and OpenMP respectively on \numrange{2}{16} cores.
 As the model size increases, the efficiency of the OpenCL code improves dramatically, reaching \numrange{0.997}{0.84} for the isopentanol model.
 
-\Cref{F:dense_jac_scaling} shows scaling for the shallow-vectorized dense Jacobian OpenCL code.\todo{OpenCP and OpenMP?}{}
+\Cref{F:dense_jac_scaling} shows scaling for the OpenMP and shallow-vectorized dense Jacobian OpenCL codes.
 In this case, the isopentanol model scales the worst for both cases.
 The sheer size of the dense isopentanol Jacobian limited the total number of states for the dense isopentanol Jacobian evaluation to \num{50000}---storing the dense matrix for a single thermochemical state takes over \SI{1}{\mega\byte} of data, so \num{50000} states requires over \SI{50}{\giga\byte} of memory); this greatly drops the computation cost for this case, and adversely affects the scaling efficiency as discussed in~\cref{S:source_results}.
 Excluding the isopentanol model, the dense shallow-vectorized OpenCL code scales slightly better than for source-term evaluation: \numrange{0.70}{0.78} and \numrange{0.52}{0.61} for four and eight cores, respectively (compared with \numrange{0.66}{0.72} and \numrange{0.44}{0.48} for shallow-vectorized OpenCL source-term evaluations).
