@@ -741,8 +741,7 @@ The performance plateaus slightly later for the \ce{H2}\slash\ce{CO} model compa
 \Cref{F:gpu_source_speedup} shows the speedup in source-term evaluation that the \gpunew/ GPU achieves over the \gpuold/ GPU for the maximum number of conditions in~\cref{F:gpu_source_scaling} with two vector widths (i.e., GPU block size), \num{64} and \num{128}.
 The best \gpunew/ case with a vector width of 128 is \SIrange{1.40}{1.88}{$\times$} faster than the slowest case (\gpuold/ with a vector-width of 64) depending on the chemical model in question.
 \Cref{F:gpu_source_speedup} also shows that varying the vector-width minimally affects performance for most of the \gpunew/ and \gpuold/ cases; the GRI-Mech 3.0 and USC-Mech II models show the largest improvements with a vector width of 128: \textasciitilde\SIrange{10}{18}{\percent} for both GPUs.
-This is likely caused by higher occupancy on the GPUs, but it is unclear exactly how Nvidia's OpenCL runtime balances the registers\slash warps per streaming-multiprocessor, as controls occupancy in CUDA~\cite{occupancy};\todo{this last fragment is missing something}{}
-use of even larger vector widths (i.e., $\geq$\num{256}) on the GPU is a topic that merits future investigation.\todo[inline]{I feel like we should pull this last bit, since someone could ask why you didn't just run with 256}
+This is likely caused by higher occupancy on the GPUs, but it is unclear exactly how Nvidia's OpenCL runtime balances the registers\slash warps per streaming-multiprocessor, as controls occupancy in CUDA~\cite{occupancy}.
 
 \begin{figure}[htbp]
    \centering
