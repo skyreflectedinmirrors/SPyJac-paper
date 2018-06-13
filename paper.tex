@@ -437,7 +437,7 @@ The identifier field will be used as a shorthand descriptor during analysis of t
 The Intel and Nvidia OpenCL runtimes lack implementations of atomic operations on double-precision variables; \revise{\texttt{pyJac} currently needs these} to run deep-vectorized code.
 On the other hand, POCL is an open-source OpenCL runtime that works on all CPU types tested here, and does implement these atomic operations.
 However, POCL's implicit vectorization module---which uses the LLVM compiler~\cite{Lattner:2004:LCF:977395.977673} to translate OpenCL code to vectorized machine code---typically fails to achieve much, if any, speedup.
-\revise{Thus POCL is useful for validation but not necessarily for performance studies.}\todo{should we emphasize here that it isn't needed for pyJac to function properly?}{}
+\revise{Thus POCL is useful for validation but not necessarily for performance studies; it is noted that although POCL is currently used for unit-testing purposes, it is not required by \texttt{pyJac}.}
 \revise{We will expand upon this discussion} in~\cref{S:future} to highlight future directions.
 
 \begin{table}[htb]
