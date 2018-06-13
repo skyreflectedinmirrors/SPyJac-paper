@@ -483,7 +483,7 @@ However, special care must be taken due to floating-point arithmetic issues.
 
 For a direct comparison, a relative error norm of a quantity $X_{ij}$ over all states $j$ and reactions (or species) $i$ was computed using the $L^{\infty}$ norm:
 \begin{equation}
-E_{X} = \left\lVert \frac{\left\lvert X_{ij,\text{CT}} - X_{ij}\right\rvert}{\num{e-10} + \num{e-6} \times \left\lvert X_{ij,\text{CT}} \right\rvert} \right\rVert_{i,j,\infty} \;,
+E_{X} = \left\lVert \frac{\left\lvert X_{ij,\text{CT}} - X_{ij}\right\rvert}{\num{e-10} + \num{e-6} \times \left\lvert X_{ij,\text{CT}} \right\rvert} \right\rVert_{\infty} \;,
 \label{e:rel_err}
 \end{equation}
 where the \text{CT} subscript indicates values from Cantera~\cite{Cantera}.
@@ -547,26 +547,27 @@ We previously explained this choice fully~\cite{Niemeyer:2016aa}, but broadly sp
 The discrepancy between the analytical and automatic-differentiation Jacobians for thermochemical state $k$, denoted by $\mathcal{J}_k$ and $\hat{\mathcal{J}}_k$ respectively, is determined by the relative error Frobenius norm over all Jacobian indices $i, j$:
 \begin{equation}
  \label{e:jac_error_base}
- E_{\text{rel}, k} = \left\lVert \frac{\hat{\mathcal{J}}_{ij,k} - \mathcal{J}_{ij,k}}{\hat{\mathcal{J}}_{ij,k}} \right\rVert_{ij,F} \;.
+ E_{\text{rel}, k} = \left\lVert \frac{\hat{\mathcal{J}}_{ij,k} - \mathcal{J}_{ij,k}}{\hat{\mathcal{J}}_{ij,k}} \right\rVert_{F} \;.
 \end{equation}
 
 To avoid large relative discrepancies in small nonzero Jacobian elements due to accumulation of floating-point error, the Frobenius norm of the automatically differentiated Jacobian is calculated over all thermochemical states $k$:
 \begin{equation}
  \label{e:thresh}
- \mathcal{T} = \left\lVert \mathcal{\hat{J}} \right\rVert_{k, F} \;.
+ \mathcal{T} = \left\lVert \mathcal{\hat{J}} \right\rVert_{F} \;.
 \end{equation}
 The error statistics reported in this section are then based only on matrix elements where $\mathcal{J}_{ijk} \ge \frac{\mathcal{T}}{\mathcal{C}}$, where $\mathcal{C}$ is \revise{a tunable} threshold parameter; this filtered form of~\cref{e:jac_error_base} is denoted $E_{\mathcal{C},k}$.
-Finally, the Frobenius norm is calculated over all the states in the PaSR thermochemical condition database:
+Finally, the Frobenius norm is calculated over all the states $k$ in the PaSR thermochemical condition database:
 \begin{equation}
  \label{e:thresholded_error}
- E_{\mathcal{C}} = \left\lVert E_{\mathcal{C},k} \right\rVert_{k, F} \;.
+ E_{\mathcal{C}} = \left\lVert E_{\mathcal{C},k} \right\rVert_{F} \;.
 \end{equation}
 
-This error norm is quite different from the relative error Frobenius norm suggested by Anderson et al.~\cite{Anderson:1999aa} for quantifying the error of matrices in LAPACK:
+This error norm is quite different from the relative error Frobenius norm suggested by Anderson et al.~\cite{Anderson:1999aa} for quantifying the error of matrices in LAPACK, \revise{e.g., over Jacobian indices $i, j$}:
 \begin{align}
  \label{e:error_lapack}
- \lhs{lapack}{E_{\mathcal{L}, k}} &=  \rhs{lapack}{\frac{\left\lVert \hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk} \right\rVert_{ij,F}}{\left\lVert \hat{\mathcal{J}}_{ijk} \right\rVert_{i,j,F}}} \nonumber \quad \text{and} \\
- \lhs{lapack}{E_{\mathcal{L}}} &= \rhs{lapack}{\left\lVert  E_{\mathcal{L}, k} \right\rVert_{k, F}}[c] \;.
+ \lhs{lapack}{E_{\mathcal{L}, k}} &=  \rhs{lapack}{\frac{\left\lVert \hat{\mathcal{J}}_{ijk} - \mathcal{J}_{ijk} \right\rVert_{F}}{\left\lVert \hat{\mathcal{J}}_{ijk} \right\rVert_{F}}} \nonumber \\
+\intertext{and states $k$:}
+ \lhs{lapack}{E_{\mathcal{L}}} &= \rhs{lapack}{\left\lVert  E_{\mathcal{L}, k} \right\rVert_{F}}[c] \;.
 \end{align}
 In our experience, the accuracy of larger elements in a Jacobian often dominates the LAPACK error norm, while the filtered error norm can identify errors in both large and small Jacobian entries.
 Further, with the tunable threshold parameter $\mathcal{C}$, we can assess the error of different ranges of element sizes and isolate the effects of floating-point error.
