@@ -32,9 +32,9 @@ def plot(mech, jac_type, out=''):
     if out:
         if out.endswith('.pdf'):
             out = out[:out.index('.pdf')]
-        out += '_' + str(jac_type)[str(jac_type).index('.') + 1:] + '.pdf'
+        out += '_' + str(jac_type)[str(jac_type).index('.') + 1:] + '.png'
         plt.tight_layout()
-        plt.savefig(out)
+        plt.savefig(out, dpi=1000)
     else:
         plt.show()
 
