@@ -866,9 +866,7 @@ The SIMD efficiency is defined as
  \varepsilon_{\text{SIMD}} = \frac{\bar{t}_{\text{unvec}}}{W \bar{t}_{\text{shallow}}} \;,
 \end{equation}
 where $\bar{t}_{\text{unvec}}$ is the mean run time per condition of the unvectorized OpenCL code, $\bar{t}_{\text{shallow}}$ the same for the shallow-vectorized OpenCL code, and $W$ is the vector width reported in number of double operations (see~\cref{t:cpus}).
-This measure compares the actual speedup due to shallow-vectorization compared to the nominal vector-width of the machine in question.\todo{this sentence needs work, see alternates in src}{}
-%% you have both ``compares'' and ``compared'' in this sentence... would the following be correct?
-% This measure compares the actual speedup due to shallow vectorization with the ideal speedup based on the nominal vector width of the machine.
+This measure compares the actual speedup due to shallow vectorization with the ideal speedup based on the nominal vector width of the machine.
 \Cref{F:source_simd_scaling} shows the SIMD efficiency of source-term evaluation in \texttt{pyJac} on a single core of the \avx/ machine; the larger models (isopentanol and USC-Mech II) have higher SIMD efficiencies of \numrange{0.76}{0.78}, and the smaller models (\ce{H2}\slash\ce{CO}, GRI-Mech \num{3.0}) have lower SIMD efficiencies of \numrange{0.6}{0.66}.
 This again demonstrates that the SIMD vectorization becomes more efficient with increasing amounts of work to perform (i.e., with increasing model size).
 Interestingly,~\cref{F:source_sse_simd_scaling} shows the SIMD efficiency on the \sse/ machine as greater than one.
