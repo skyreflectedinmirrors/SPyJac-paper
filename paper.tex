@@ -489,7 +489,6 @@ E_{X} = \left\lVert \frac{\left\lvert X_{ij,\text{CT}} - X_{ij}\right\rvert}{\nu
 \label{e:rel_err}
 \end{equation}
 where the \text{CT} subscript indicates values from Cantera~\cite{Cantera}.
-\todo[inline]{the $i,j$ subscript for the overall norm looks a little strange to me, is that typical?}
 
 However, computing the net ROP of reaction $i$ for state $j$ from the forward and reverse ROP, i.e., $R_{ij} = R_{ij}^{\prime} - R_{ij}^{\prime\prime}$, can easily lose accuracy as the net ROP may be many orders of magnitude smaller than the forward and\slash or reverse rates---particularly near chemical equilibrium.
 To quantify this phenomena, we first define the error in forward ROP as
