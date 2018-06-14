@@ -45,6 +45,7 @@
 \usepackage{relsize}
 \newcommand{\smallunderscore}{\textscale{.5}{\textunderscore}\xspace}
 
+\usepackage[hyphens]{url}
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
 % load after hyperref
 \usepackage[english,capitalise]{cleveref}
@@ -86,23 +87,24 @@
 \graphicspath{{./figures/}}
 
 
+\begin{document}
+
+\begin{frontmatter}
+
 \title{Using SIMD and SIMT vectorization to evaluate sparse chemical kinetic Jacobian matrices and thermochemical source terms}
 
-\author[1]{Nicholas Curtis\corref{corr}}
-\author[2]{Kyle E.~Niemeyer}
+\author[1]{Nicholas J.~Curtis\corref{corr}}
 \ead{nicholas.curtis@uconn.edu}
+\author[2]{Kyle E.~Niemeyer}
 \author[1]{Chih-Jen Sung}
 
 \address[1]{Department of Mechanical Engineering, University of Connecticut, Storrs, CT 06269, USA}
 \cortext[corr]{Corresponding author}
 \address[2]{School of Mechanical, Industrial, and Manufacturing Engineering, Oregon State University, Corvallis, OR 97331, USA}
 
-\begin{document}
-
-\begin{frontmatter}
 %====================================================================
 \begin{abstract}
-\revise{The accurate prediction of key combustion phenomena in reactive-flow simulations, e.g., lean blow-out, extinction\slash ignition limits and pollutant formation, necessitates the use of detailed chemical kinetics.}
+\revise{Accurately predicting key combustion phenomena in reactive-flow simulations, e.g., lean blow-out, extinction\slash ignition limits and pollutant formation, necessitates the use of detailed chemical kinetics.}
 \revise{The large size and high levels of numerical stiffness typically present in chemical kinetic models relevant to transportation\slash power-generation applications make the efficient evaluation\slash factorization of the chemical kinetic Jacobian and thermochemical source-terms critical to the performance of reactive-flow codes.}
 \revise{Here we present} \texttt{pyJac}, \revise{a code generation platform} for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized \revise{constant-pressure\slash volume} thermochemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation.
 Selected chemical kinetic models covering the range of sizes typically used in reactive-flow simulations were used for demonstration.
