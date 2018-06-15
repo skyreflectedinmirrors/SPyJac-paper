@@ -55,7 +55,7 @@
 
 %====================================================================
 \begin{abstract} % not to exceed 200 words
-This document supplements the work, \textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation} and presents the system of chemical kinetic equations evaluated by the new version of code-generation platform, \texttt{pyJac-v2}.
+This document supplements the work, \textit{Using SIMD and SIMT vectorization to evaluate sparse chemical kinetic Jacobian matrices and thermochemical source terms} and presents the system of chemical kinetic equations evaluated by the new version of code-generation platform, \texttt{pyJac-v2}.
 First, the thermo-chemical source terms for fixed-mass, adiabatic constant-pressure\slash constant-volume (\conp/\slash\conv/) reactors are given, followed by the derivation of the sparse analytical chemical kinetic Jacobian for both reactors.
 Finally, the resulting Jacobian equations are summarized using a generalized notation for a quick-reference.
 \end{abstract}
@@ -70,7 +70,7 @@ Finally, the resulting Jacobian equations are summarized using a generalized not
 \end{frontmatter}
 
 \section{Introduction}
-This document is a supplement to the paper---\textit{SIMD\slash SIMT-vectorized Sparse Chemical Kinetic Jacobian\slash Thermo-chemical Source-Term Evaluation}---and is provided as a reference guide to the equations evaluated by \texttt{pyJac} v2.0, a code-generation platform for the evaluatation of chemical source terms and analytical chemical kinetic Jacobians of constant-pressure\slash constant-volume, fixed-mass, adiabatic reactors.
+This document is a supplement to the paper---\textit{Using SIMD and SIMT vectorization to evaluate sparse chemical kinetic Jacobian matrices and thermochemical source terms}---and is provided as a reference guide to the equations evaluated by \texttt{pyJac} v2.0, a code-generation platform for the evaluatation of chemical source terms and analytical chemical kinetic Jacobians of constant-pressure\slash constant-volume, fixed-mass, adiabatic reactors.
 Note that equations specific to the constant-pressure or constant-volume derivation will be marked with \conp/ or \conv/ respectively.
 The derivations in this document based upon the output of the script \href{https://github.com/arghdos/SPyJac-paper/blob/master/derivations/scripts/derivations.py}{derivations.py} in the GitHub repository for this paper.
 This script depends on the symbolic mathematics library SymPy~\cite{sympy}, and was tested with versions 1.0 and 1.1.1
