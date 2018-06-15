@@ -1060,11 +1060,12 @@ We also demonstrated source-term and Jacobian evaluation for a range of chemical
 Deep vectorization is possible on the Portable OpenCL (POCL) platform~\cite{poclIJPP}, but it yields no performance benefit as POCL did not achieve vectorizations for any execution pattern studied.
 Deep vectorization deserves further study with other platforms (e.g., CUDA).
 
-\todo{kyle double check that this paragraph reads well}
-\revise{Significant speedups in shallow SIMD-vectorized execution over a parallel OpenMP code were demonstrated for evaluations of the chemical kinetic source-term and sparse\slash dense Jacobian: up to \SI{4.09}{$\times$}, \SI{9.44}{$\times$}, and \SI{4.23}{$\times$}, respectively, on an \avx/-capable CPU.}
-\revise{Sparse Jacobian evaluation was slower than dense evaluation on all CPU\slash GPU platforms due to indirect lookup requirements in array indexing, however the shallow-vectorized OpenCL code was less adversely affected than OpenMP.}
-\revise{Further, analytical Jacobian evaluation was significantly faster than a first-order finite-difference based approach on all platforms.}
-\revise{Finally, the performance of dense analytical-Jacobian evaluation in this new version of \texttt{pyJac} was compared to the previous version~\cite{pyjac16}; OpenMP evaluation on the CPU was moderately slower for the smallest chemical model (e.g., \SI{1.79}{$\times$} on the \avx/ CPU), but significantly faster (up to \SI{10.19}{$\times$}) for the larger models, while the shallow-vectorized OpenCL code was faster than the previous version over all chemical models, reaching speedups of \SI{19.56}{$\times$}.}
+\revise{We demonstrated significant speedups in shallow SIMD-vectorized execution over a parallel OpenMP code for evaluating the chemical-kinetic source terms and sparse\slash dense Jacobian: up to \SI{4.09}{$\times$}, \SI{9.44}{$\times$}, and \SI{4.23}{$\times$}, respectively, on an \avx/-capable CPU.
+Sparse Jacobians evaluate more slowly than dense Jacobians on all CPU\slash GPU platforms due to indirect lookup requirements in array indexing, but this adversely affects the shallow-vectorized OpenCL code less than OpenMP.
+Further, analytical Jacobians evaluate significantly faster than a first-order finite-difference-based approach on all platforms.
+Finally, we compared the performance of evaluating dense, analytical Jacobians in this new version of \texttt{pyJac} with the previous version~\cite{pyjac16}.
+The OpenMP version evaluates moderately slower on the CPU for the smallest chemical model (e.g., \SI{1.79}{$\times$} on the \avx/ CPU), but significantly faster for the larger models---up to \SI{10.19}{$\times$}.
+The shallow-vectorized OpenCL code runs faster than the previous version over all chemical models, reaching speedups of \SI{19.56}{$\times$}.}
 
 The OpenMP code-generation built into \texttt{pyJac} is currently only capable of parallel execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards as OpenMP is a standard library on most machines.
 In addition, CUDA~\cite{Nvidia:2018} has been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017}, while Intel's open-source OpenCL alternative, ISPC~\cite{pharr2012ispc}, has been relatively stable and easy to work with during preliminary efforts with the unit-testing discussed in~\cref{s:unittest}.
