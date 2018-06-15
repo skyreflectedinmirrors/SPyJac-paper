@@ -1,29 +1,28 @@
 pyJac: analytical Jacobian generator for chemical kinetics
 ==========================================================
 
-This repository contains the source for our paper describing an analytical Jacobian generator for chemical kinetic models.
-It makes use of the [`pyJac`](http://github.com/kyleniemeyer/pyjac/) package, which has been developed concurrently. The paper has been submitted to *Computer Physics Communication*, and a preprint is available at [`arXiv:1605.03262 [physics.comp-ph]`](http://arxiv.org/abs/1605.03262).
+This repository contains the source for our paper describing an analytical sparse Jacobian generator for chemical kinetic models, using SIMD and SIMT vectorization.
+It makes use of the [`pyJac`](http://github.com/slackha/pyjac/) package, Version 2, which has been developed concurrently. The paper has been submitted to *Combustion and Flame*, and a preprint will soon be available..
 
-To see a current build of the paper from the master branch of this repository, refer to http://kyleniemeyer.github.io/pyJac-paper/ (powered by [gh-publisher](https://github.com/ewanmellor/gh-publisher) and inspired by the [multiband_LS repository](http://jakevdp.github.io/multiband_LS)).
+To see a current build of the paper from the master branch of this repository, you may use your favorite latex editor to build the paper.tex and derivations.tex source files.
 
-This paper has now
-
-Feel free to submit comments or feedback via the Issues tab on this repository.
+Feel free to submit comments or feedback via the Issues tab [on this repository](https://github.com/arghdos/SPyJac-paper).
 
 Reproducing the Paper
 ---------------------
 The LaTeX source of the paper is in the top directory.
 
-To reproduce all of the figures in the paper, first install packages from the standard Python scientific stack: [numpy](http://numpy.org), [scipy](http://scipy.org), and [matplotlib](http://matplotlib.org).
-Then, from the top directory, the five figures in the paper can be generated using our data by:
+To reproduce all of the figures in the paper, first install packages from the standard Python scientific stack: [numpy](http://numpy.org), [scipy](http://scipy.org), and [matplotlib](http://matplotlib.org) and [jupyter notebook](http://jupyter.org/).
+Then, then download the [data used for this paper](https://figshare.com/s/0130c6e0e2e840eefc3b): (doi:10.6084/m9.figshare.6534146) and extract the "scripts" folder into the top level directory.
+
+Finally, start `jupyter notebook` and navigate to the `performance_plots.ipynb` file in the scripts directory where the figures may be reproduced. One exeception this is the Jacobian sparsity plotter, which is a standalone script (`sparse_plotter.py`) that takes a cantera formatted mechanism as an arguement.
+
+Error statistics reported in the paper can be determined by running:
 
 ```
-$ python plotting_scripts/plot_cpu_comparison.py
-$ python plotting_scripts/plot_gpu_scaling.py
-$ python plotting_scripts/plot_gpu_comparison.py
-$ python plotting_scripts/plot_ch4_pasr_data.py
+python source_term_error.py
+python jac_error.py
 ```
-
 
 License
 -------
