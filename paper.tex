@@ -622,7 +622,7 @@ Either case will result in a fully dense Jacobian row for all species with a non
 However, \texttt{pyJac} v2 allows the user to ignore these derivatives (via a command-line switch) and avoid the adverse effects on Jacobian sparsity.\footnote{Alternatively, one may choose the last species as one that does not participate in any reactions.}
 The rationale behind this choice is that many common implicit integration techniques (e.g., CVODE~\cite{Hindmarsh:2005}) used to solve chemical-kinetic initial-value problems are formulated around the assumption that the supplied Jacobian is approximate; this allows the Jacobian and its LU factorization to be reused for multiple internal integration time steps, accelerating the solution process.
 \revise{Such solvers do not need the} exact form of the Jacobian and thus the so-called ``approximate'' form is preferable.
-\add{Though this might be used as a crude form of preconditioning for such solvers, the primary purpose is merely to increase Jacobian sparsity; McNenly et al.~\cite{MCNENLY2015581} more thorough investigated preconditioners.}
+\add{Though this might be used as a crude form of preconditioning for such solvers, the primary purpose is merely to increase Jacobian sparsity; McNenly et al.~\cite{MCNENLY2015581} more thoroughly investigated preconditioners.}
 Hence, in this section we will detail the sparsity of both forms of the Jacobian for the chemical models tested.
 
 \Cref{F:jac_sparsity} graphically represents the Jacobian sparsity of GRI-Mech 3.0.
@@ -1059,7 +1059,7 @@ Deep vectorization, though possible on the Portable OpenCL (POCL) platform~\cite
 Deep vectorization deserves further study with other platforms (e.g., CUDA).
 
 \todo{kyle double check that this paragraph reads well}
-\revise{Significant speedups in shallow SIMD-vectorized execution over a parallel OpenMP code were demonstrated for evaluations of the chemical kinetic source-term and sparse\slash dense Jacobian: up to \SI{4.09}{$\times$}, \SI{4.23}{$\times$} and \SI{9.44}{$\times$}, respectively, on an \avx/-capable CPU.}
+\revise{Significant speedups in shallow SIMD-vectorized execution over a parallel OpenMP code were demonstrated for evaluations of the chemical kinetic source-term and sparse\slash dense Jacobian: up to \SI{4.09}{$\times$}, \SI{9.44}{$\times$} and \SI{4.23}{$\times$}, respectively, on an \avx/-capable CPU.}
 \revise{Sparse Jacobian evaluation was slower than dense evaluation on all CPU\slash GPU platforms due to indirect lookup requirements in array indexing, however the shallow-vectorized OpenCL code was less adversely affected than OpenMP.}
 \revise{Further, analytical Jacobian evaluation was significantly faster than a first-order finite-difference based approach on all platforms.}
 \revise{Finally, the performance of dense analytical-Jacobian evaluation in this new version of \texttt{pyJac} was compared to the previous version~\cite{pyjac16}; OpenMP evaluation on the CPU was moderately slower for the smallest chemical model (e.g., \SI{1.79}{$\times$} on the \avx/ CPU), but significantly faster (up to \SI{10.19}{$\times$}) for the larger models, while the shallow-vectorized OpenCL code was faster than the previous version over all chemical models, reaching speedups of \SI{19.56}{$\times$}.}
