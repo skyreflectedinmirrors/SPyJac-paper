@@ -1050,8 +1050,10 @@ In this work, we developed automatically generated OpenCL codes for SIMD and SIM
  \item \revise{Achieving significant speedups over a strictly parallel Jacobian and source-term evaluation on SIMD-enabled processors (e.g., CPUs).}
 \end{itemize}
 
-\revise{The new formulation for \texttt{pyJac}, including both constant-volume and constant-pressure assumptions, resulted in highly sparse chemical kinetic Jacobians.
-Though the Jacobian approximation discussed in~\cref{S:sparsity} is not a key feature of this work, future efforts to develop more sophisticated Jacobian approximations would be a worthwhile endeavor.}
+\revise{The new molar-concentration-based formulation for \texttt{pyJac} resulted in highly sparse chemical kinetic Jacobians,
+and allows selection of either the constant-volume or constant-pressure approximation.
+In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity};
+this approximation is not a key feature of this work, and future efforts to develop more sophisticated Jacobian approximations based on the \texttt{pyJac} software would be a worthwhile endeavor.}
 
 We also demonstrated source-term and Jacobian evaluation for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
 \revise{In addition to parallel OpenMP evaluation on the CPU, the new version of \texttt{pyJac} enables the shallow-vectorized evaluation of \texttt{pyJac}'s chemical kinetic source-term and analytical Jacobian on both the CPU and GPU via OpenCL.}
