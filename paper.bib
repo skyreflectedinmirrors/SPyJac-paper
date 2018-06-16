@@ -124,8 +124,8 @@ author = {Andrew Kroshko and Raymond J. Spiteri}
   author={Pharr, Matt and Mark, William R},
   booktitle={Innovat. Parallel Comput. (InPar), 2012},
   pages={1--13},
-  year={2012},
-  organization={IEEE}
+  year=2012,
+  doi = {10.1109/InPar.2012.6339601}
 }
 
 @misc{Curtis2017:tchem,
@@ -148,7 +148,7 @@ author = {Andrew Kroshko and Raymond J. Spiteri}
 
 
 @misc{pyjac16,
-  author       = {Nicholas J Curtis and Kyle Niemeyer},
+  author       = {Nicholas J Curtis and Kyle E Niemeyer},
   title        = {\texttt{pyJac} v1.0.6},
   month        = feb,
   year         = 2018,
@@ -206,7 +206,9 @@ author = {Andrew Kroshko and Raymond J. Spiteri}
     Publisher = {IEEE},
     Title = {{OpenMP}: an industry standard {API} for shared-memory programming},
     Volume = {5},
-    Year = {1998}}
+    Year = 1998,
+    doi = {10.1109/99.660313}
+}
 
 @article{poclIJPP,
 year={2015},
@@ -337,8 +339,10 @@ keywords = {Chemical kinetics, Sparse matrix, Preconditioner, Ordinary different
 	journal={IEEE micro},
 	volume={28},
 	number={2},
-	year={2008},
-	publisher={IEEE}
+    pages = {39--55},
+	year=2008,
+	publisher={IEEE},
+    doi = {10.1109/MM.2008.31}
 }
 
 @misc{NVIDIA:2018,
@@ -458,7 +462,8 @@ keywords = {Chemical kinetics, Sparse matrix, Preconditioner, Ordinary different
     year    = {1999},
     volume  = {20},
     number  = {3},
-    pages   = {720-755}
+    pages   = {720--755},
+    doi = {10.1137/S0895479895291765}
 }
 
 @article{Lu:2001ve,
@@ -504,7 +509,7 @@ keywords = {Chemical kinetics, Sparse matrix, Preconditioner, Ordinary different
 	Journal = {Combust. Flame},
 	Number = {1-2},
 	Pages = {24--36},
-	Title = {Linear time reduction of large kinetic mechanisms with directed relation graph: \emph{n}-heptane and iso-octane},
+	Title = {Linear time reduction of large kinetic mechanisms with directed relation graph: \textit{n}-heptane and iso-octane},
 	Volume = {144},
 	Year = {2006},
 	Doi = {10.1016/j.combustflame.2005.02.015}}
@@ -529,7 +534,7 @@ keywords = {Chemical kinetics, Sparse matrix, Preconditioner, Ordinary different
 	Journal = {Phys. Chem. Chem. Phys.},
 	Number = {9},
 	Pages = {1107--1126},
-	Title = {A comprehensive and compact \emph{n}-heptane oxidation model derived using chemical lumping},
+	Title = {A comprehensive and compact \textit{n}-heptane oxidation model derived using chemical lumping},
 	Volume = {9},
 	Year = {2007}}
 
@@ -800,8 +805,9 @@ author = {Douglas A Schwer and John E Tolsma and William H Green and Paul I Bart
 
 @misc{nvidia_mwe,
     author = {Nicholas J Curtis},
-    howpublished = {\url{https://github.com/arghdos/nvidia_failure_mwe}},
-	month = feb,
+    doi = {10.6084/m9.figshare.6533915},
+    howpublished = {\url{https://figshare.com/s/03aa9064aa6fe3508d3d}},
+	month = {jun},
 	title = {{A minimum working example showing the failure of simple OpenCL code on the NVIDIA Linux x64 Tesla 375.26 Driver}},
 	year = 2018}
 
@@ -838,18 +844,18 @@ author = {Douglas A Schwer and John E Tolsma and William H Green and Paul I Bart
   journal={Nat. Electron.},
   volume={1},
   number={1},
-  pages={14},
-  year={2018},
-  publisher={Nature Publishing Group}
+  pages={14--21},
+  year=2018,
+  doi = {10.1038/s41928-017-0005-9}
 }
 
 @misc{pocl_communication,
 title={Debugging auto vectorizer},
 author={Babej, Michal and J\"a\"askel\"ainen, Pekka},
-howpublished={private communication},
+howpublished={Private Communication},
 year={2018},
 month={Feb.},
-note={Archived on \href{https://sourceforge.net/p/pocl/mailman/pocl-devel/thread/CACZgdAj7A70PbFcbjfMF1xDYsaP692PkP\%2BZa8AgMYhmoiDdgdQ\%40mail.gmail.com/\#msg36218233}{pocl mailing list}}
+note={Archived on \href{https://sourceforge.net/p/pocl/mailman/pocl-devel/thread/CACZgdAj7A70PbFcbjfMF1xDYsaP692PkP\%2BZa8AgMYhmoiDdgdQ\%40mail.gmail.com/\#msg36218233}{POCL mailing list}}
 }
 
 @misc{intelvectortypes,
@@ -900,4 +906,19 @@ issn = {0010-2180},
 doi = {j.combustflame.2018.03.017},
 author = {Michael A. Hansen and James C. Sutherland},
 keywords = {Combustion chemistry, Analytical Jacobian, Sparse linear algebra, Newton-Krylov methods, Chemical explosive mode analysis}
+}
+
+@misc{data,
+title={Data, plotting scripts, and figures for ``Using SIMD and SIMT vectorization to evaluate sparse chemical kinetic Jacobian matrices and thermochemical source terms
+''},
+author={Curtis, Nicholas J and Niemeyer, Kyle E and Sung, Chih-Jen},
+doi={10.6084/m9.figshare.6534146},
+}
+
+@misc{pyjac2,
+  author       = {Nicholas J Curtis and Kyle E Niemeyer},
+  title        = {\texttt{pyJac} v2.0.0-beta.0},
+  month        = jun,
+  year         = 2018,
+  doi          = {10.5281/zenodo.1289979},
 }
