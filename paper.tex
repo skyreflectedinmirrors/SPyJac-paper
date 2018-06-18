@@ -16,14 +16,36 @@
 
 \usepackage[usenames,dvipsnames]{xcolor}
 
-\usepackage[xcolor]{changebar}
-\newcommand{\add}[1]{{\sloppy\cbcolor{OliveGreen}\textcolor{OliveGreen}{\cbstart {#1}\cbend}}}  % add
-\newcommand{\delete}[1]{\sloppy\cbcolor{RedOrange}\textcolor{RedOrange}{\cbdelete\sout{#1}}}
-\newcommand{\revise}[1]{{\sloppy\textcolor{RoyalPurple}{#1}}}  % add
-\newcommand{\revisedelete}[1]{\sloppy\textcolor{RoyalPurple}{\sout{#1}}} %delete
+% https://tex.stackexchange.com/a/5896/56227
+\usepackage{etoolbox}
+\newtoggle{markup}
+\togglefalse{markup}
+%\toggletrue{markup}
 
-\newcommand{\addnl}[1]{{\sloppy\textcolor{OliveGreen}{#1}}}  % add
-\newcommand{\deletenl}[1]{\sloppy\textcolor{RedOrange}{\sout{#1}}} %delete with no strikeout
+\usepackage[xcolor]{changebar}
+
+% macro for small underscores for variable names in appendix
+\usepackage{xspace}
+\usepackage{relsize}
+\newcommand{\smallunderscore}{\textscale{.5}{\textunderscore}\xspace}
+
+\iftoggle{markup}{
+\newcommand{\add}[1]{{\sloppy\cbcolor{OliveGreen}\textcolor{OliveGreen}{\cbstart {#1}\cbend}}\xspace}  % add
+\newcommand{\delete}[1]{\sloppy\cbcolor{RedOrange}\textcolor{RedOrange}{\cbdelete\sout{#1}}\xspace}
+\newcommand{\revise}[1]{{\sloppy\textcolor{RoyalPurple}{#1}}\xspace}  % add
+\newcommand{\revisedelete}[1]{\sloppy\textcolor{RoyalPurple}{\sout{#1}}\xspace} %delete
+
+\newcommand{\addnl}[1]{{\sloppy\textcolor{OliveGreen}{#1}}\xspace}  % add
+\newcommand{\deletenl}[1]{\sloppy\textcolor{RedOrange}{\sout{#1}}\xspace} %delete with no strikeout
+}{
+\newcommand{\add}[1]{#1\xspace}  % dummy add
+\newcommand{\delete}[1]{\xspace} % dummy delete
+\newcommand{\revise}[1]{#1\xspace}  % dummy add
+\newcommand{\revisedelete}[1]{\xspace} %dummy delete
+
+\newcommand{\addnl}[1]{#1\xspace}  % dummy add
+\newcommand{\deletenl}[1]{\xspace} % dummy delete
+}
 
 % shared equations in separate file
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
@@ -40,10 +62,6 @@
 
 % load common macros / commands
 \usepackage{macros}
-% macro for small underscores for variable names in appendix
-\usepackage{xspace}
-\usepackage{relsize}
-\newcommand{\smallunderscore}{\textscale{.5}{\textunderscore}\xspace}
 
 \usepackage[hyphens]{url}
 \usepackage[breaklinks=true, linkcolor=blue, citecolor=blue, colorlinks=true]{hyperref}
@@ -54,7 +72,6 @@
 \crefname{appendix}{}{}
 
 \usepackage{placeins}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %      Custom Commands     %
@@ -208,18 +225,18 @@ On the other hand, linearly implicit algorithms like Rosenbrock methods and anal
 }
 
 A number of recent works have investigated \revise{using} high-performance SIMT devices \revise{like GPUs} to accelerate reactive-flow and chemical kinetics simulations.
-Spafford et al.~\cite{Spafford:2010aa} coupled GPU-based chemical source-term evaluation with an explicit direct numerical simulation code, achieving an order of magnitude speedup \revisedelete{on a Tesla C1060} compared to a \revise{CPU-based} serial implementation\revisedelete{on a AMD-Opteron processor}.
-Shi et al.~\cite{Shi:2011aa} combined GPU-based chemical kinetic source-term evaluation and Jacobian factorization with two implicit CPU solvers, achieving an order-of-magnitude speedup for homogeneous reactor simulations of large chemical models \revisedelete{on a Tesla 2050 GPU} over a serial \revisedelete{Intel i7 930} CPU implementation.
-Niemeyer et al.~\cite{Niemeyer:2011aa} implemented an explicit solver for non-stiff chemistry on a Tesla C2075 GPU, achieving a speedup of nearly two orders of magnitude over a sequential \revise{CPU} code\revisedelete{on an Intel Xeon X5650 CPU}.
-Shi et al.~\cite{Shi:2012aa} proposed a strategy for chemical-kinetic integration in three-dimensional reactive-flow simulations, where a traditional implicit integrator handled the stiffest computational cells on a CPU and a stabilized-explicit solver \revisedelete{on a Tesla C2050 GPU} solved the less-stiff cells on a GPU; this hybrid solution technique \revise{performs} \SIrange{11}{46}{$\times$} faster than the implicit CPU solver alone for simulation of a premixed diesel engine.
-Le et al.~\cite{Le2013596} found a \SIrange{30}{50}{$\times$} speedup for a GPU-based shock-capturing reactive-flow code \revisedelete{on a Tesla C2070} as compared with a sequential \revise{CPU} version of the same\revisedelete{on an Intel Xeon X5650 CPU}.
+Spafford et al.~\cite{Spafford:2010aa} coupled GPU-based chemical source-term evaluation with an explicit direct numerical simulation code, achieving an order of magnitude speedup\revisedelete{ on a Tesla C1060} compared to a\revise{ CPU-based} serial implementation\revisedelete{on a AMD-Opteron processor}.
+Shi et al.~\cite{Shi:2011aa} combined GPU-based chemical kinetic source-term evaluation and Jacobian factorization with two implicit CPU solvers, achieving an order-of-magnitude speedup for homogeneous reactor simulations of large chemical models \revisedelete{on a Tesla 2050 GPU} over a serial\revisedelete{ Intel i7 930} CPU implementation.
+Niemeyer et al.~\cite{Niemeyer:2011aa} implemented an explicit solver for non-stiff chemistry on a\revisedelete{ Tesla C2075} GPU, achieving a speedup of nearly two orders of magnitude over a sequential \revise{CPU} code\revisedelete{on an Intel Xeon X5650 CPU}.
+Shi et al.~\cite{Shi:2012aa} proposed a strategy for chemical-kinetic integration in three-dimensional reactive-flow simulations, where a traditional implicit integrator handled the stiffest computational cells on a CPU and a stabilized-explicit solver\revisedelete{ on a Tesla C2050 GPU} solved the less-stiff cells on a GPU; this hybrid solution technique \revise{performs} \SIrange{11}{46}{$\times$} faster than the implicit CPU solver alone for simulation of a premixed diesel engine.
+Le et al.~\cite{Le2013596} found a \SIrange{30}{50}{$\times$} speedup for a GPU-based shock-capturing reactive-flow code\revisedelete{ on a Tesla C2070} as compared with a sequential\revise{ CPU} version of the same\revisedelete{on an Intel Xeon X5650 CPU}.
 Stone and Davis~\cite{Stone:2013aa} investigated a GPU-based version of a common implicit integrator (VODE~\cite{Brown:1989vl}), finding an order-of-magnitude speedup over a serial CPU implementation.
-Niemeyer and Sung~\cite{Niemeyer:2014aa} developed a GPU-based stabilized explicit integrator for use with moderately-stiff chemical kinetics, achieving an order of magnitude speedup \revisedelete{on a Tesla C2075 GPU} over a multithreaded VODE solver on a six-core \revisedelete{Intel X5650} CPU.
+Niemeyer and Sung~\cite{Niemeyer:2014aa} developed a GPU-based stabilized explicit integrator for use with moderately-stiff chemical kinetics, achieving an order of magnitude speedup\revisedelete{ on a Tesla C2075 GPU} over a multithreaded VODE solver on a six-core\revisedelete{ Intel X5650} CPU.
 Sewerin and Rigopoulos~\cite{Sewerin20151375} studied a fifth-order implicit Runge--Kutta solver on both consumer-grade and high-end GPUs\slash CPUs; the high-end GPU solver was at best \SI{1.8}{$\times$} slower than the high-end CPU version running on \num{16} cores.
-Yonkee and Sutherland~\cite{Yonkee2016} implemented \revisedelete{GPU-}accelerated evaluations of thermodynamic parameters, multicomponent transport properties, and species production rates \revisedelete{on an Intel Xeon E5-2680} \revise{on both the CPU} and \revisedelete{a Tesla K20} GPU, \revise{achieving speedups over serial evaluation between \SIrange{8}{13}{$\times$} on a 16-core CPU and \SIrange{20}{40}{$\times$} on the GPU}.
+Yonkee and Sutherland~\cite{Yonkee2016} implemented \revisedelete{GPU-}accelerated evaluations of thermodynamic parameters, multicomponent transport properties, and species production rates\revisedelete{ on an Intel Xeon E5-2680}\revise{ on both the CPU} and\revisedelete{ a Tesla K20} GPU, \revise{achieving speedups over serial evaluation between \SIrange{8}{13}{$\times$} on a 16-core CPU and \SIrange{20}{40}{$\times$} on the GPU}.
 \revise{In addition, \textasciitilde\SI{9}{$\times$} and \textasciitilde\SI{25}{$\times$} speedups} were achieved for the simulation of a partially premixed methanol flame for solving partial differential equations (PDE) on 16 CPU cores and the GPU, respectively.
-Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two fourth-order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa} \revisedelete{on a Tesla C2075} \revise{on the GPU and CPU}.
-The \revise{GPU-based} implicit Runge--Kutta method performed equivalently to a standard implicit integrator~\cite{Hindmarsh:2005} running on \numrange{12}{38} \revisedelete{Intel Xeon E5-4640 v2} CPU cores for two relatively small chemical models \revisedelete{with an integration time step of $10^{-6}$ s}.
+Curtis et al.~\cite{CurtisGPU:2017} implemented a fifth-order implicit Runge--Kutta method~\cite{wanner1991solving}, as well as two fourth-order exponential integration techniques~\cite{Hochbruck:1998,Hockbruck:2009} paired with an analytical Jacobian code~\cite{Niemeyer:2016aa}\revisedelete{ on a Tesla C2075}\revise{ on the GPU and CPU}.
+The \revise{GPU-based} implicit Runge--Kutta method performed equivalently to a standard implicit integrator~\cite{Hindmarsh:2005} running on \numrange{12}{38}\revisedelete{ Intel Xeon E5-4640 v2} CPU cores for two relatively small chemical models \revisedelete{with an integration time step of $10^{-6}$ s}.
 
 In contrast, SIMD-based chemical kinetics evaluation\slash integration have been studied far less.
 Linford et al.~\cite{Linford:2011} implemented a three-stage, second-order Rosenbrock integrator for atmospheric chemical kinetics on the CPU, GPU, and cell broadband engine (CBE)---a specially designed vector processor---and found speedups regularly exceeding~\SI{25}{$\times$} over a serial CPU implementation.
@@ -733,7 +750,7 @@ Additionally, the shallow-vectorized OpenCL code is \SIrange{2.53}{2.92}{$\times
 
 In contrast,~\cref{F:pocl_source} shows the mean run time per condition of deep, shallow, and unvectorized OpenCL codes using the POCL runtime, as compared with OpenMP parallelization.
 No speedup is achieved for either vectorization type on either CPU---indeed, the OpenMP case is faster on both CPUs\add{, though we stress that Intel OpenCL runtime achieves vectorization using the same code and hardware}.
-The reasons for this lack of vectorization with POCL are quite technical~\delete{ and somewhat outside the scope of this work}; however, \add{personal communication with the developers of POCL revealed that to achieve vectorization, changes are required to both the way POCL prepares LLVM intermediate representation code, as well as improvements to LLVM's loop-vectorizer itself~\cite{pocl_communication}.\footnote{Specifically, improvements such as ensuring LLVM recognizes uniform vectorization loop bounds (even if said bounds \textit{are} uniform in practice), proving vector instructions' ability to handle all edge cases identically to the corresponding scalar instruction, handing of branches and conditionals (potentially within POCL instructions themselves), and handling of memory access\slash vector-element extraction patterns.}}
+The reasons for this lack of vectorization with POCL are quite technical\delete{ and somewhat outside the scope of this work}; however, \add{personal communication with the developers of POCL revealed that to achieve vectorization, changes are required to both the way POCL prepares LLVM intermediate representation code, as well as improvements to LLVM's loop-vectorizer itself~\cite{pocl_communication}.\footnote{Specifically, improvements such as ensuring LLVM recognizes uniform vectorization loop bounds (even if said bounds \textit{are} uniform in practice), proving vector instructions' ability to handle all edge cases identically to the corresponding scalar instruction, handing of branches and conditionals (potentially within POCL instructions themselves), and handling of memory access\slash vector-element extraction patterns.}}
 As will be discussed in~\cref{S:opencl}, \add{we hope that using explicit vector types (to lessen demands on the LLVM-vectorization module) in combination with some of these changes might solve this issue}, but for the moment POCL is still quite useful as a verification tool.
 
 \Cref{F:gpu_source} shows the performance of evaluating source terms on the GPUs listed in~\cref{t:gpus}.
@@ -1221,7 +1238,7 @@ As in~\cref{S:results} all reported results are based on \num{10} individual run
   \Procedure{Model Generation}{$M$}
   \State $\text{active}[j] \gets \text{True}$ for all reactions $R_j$ in $M$
   \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{\text{active}}$
-  \While {$\operatorname{min}\left(\text{species\smallunderscore rxn\smallunderscore count}\right) \ge 1$}
+  \While {$\operatorname{min}\left(\text{species\smallunderscore{}rxn\smallunderscore{}count}\right) \ge 1$}
      \State $\text{species\smallunderscore{}rxn\smallunderscore{}count}\gets \Call{Determine Species Count}{\text{active}}$
      \For {Reaction $R_j$ in model $M$}
 	\State $\text{rxn\smallunderscore{}count}[j] \gets \min_{\forall S_k \in R_j}{\left(\text{species\smallunderscore{}rxn\smallunderscore{}count}\left[k\right]\right)}$
