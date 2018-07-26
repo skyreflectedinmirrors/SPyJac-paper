@@ -250,11 +250,12 @@ This work builds upon our previous analytical chemical kinetic Jacobian code, \t
 In this article we
 \begin{itemize}
  \item Derive and verify a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity: \texttt{pyJac v2};
- \item Enable cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
+ \item \revisedelete{Enable}\add{Detail the implementation of} cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}; and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
 \end{itemize}
 To our knowledge, this is the first open-source, verified effort that vectorizes the evaluation of chemical-kinetic source terms and Jacobian matrices for any chemical model on a wide selection of platforms.
+
 
 \section{Methodology}
 \subsection{Data ordering and vectorization patterns}
@@ -393,7 +394,7 @@ In our previous work~\cite{Niemeyer:2016aa}, this static code generation caused 
 We will discuss the implications of this change in~\cref{S:jacobian_results}, where the performance of the new version of~\texttt{pyJac} will be compared with the previous version.
 
 In addition, \texttt{loo.py} allows the user to more easily make changes to the structure of the generated program, e.g., the data ordering, vectorization, and threading patterns, as well as switch the target language for code generation (and more simply extend to additional languages, e.g., CUDA).
-Further, \texttt{loo.py} can execute developed subroutines from Python (natively for C code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL), enabling unit testing\slash verification for each component of the Jacobian or source terms.
+Further, \texttt{loo.py} can execute developed subroutines from Python (natively for C code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL), enabling unit testing\slash verification for each component of the Jacobian or source terms; \add{the unit testing suite also helps ensure that bugs are not present in less commonly used code-paths}.
 The source terms and sub-components thereof (e.g., rates of progress, pressure-modification terms) are directly compared with Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{hogan2014fast,adept-v11} provides reference values for Jacobian sub-components.
 We use the Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} to perform OpenCL and C unit testing, respectively, on the continuous-integration framework Travis CI~\cite{travis:2018}.
 We will discuss verification of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes in detail in~\cref{s:verification}.
@@ -1053,6 +1054,7 @@ Further, as noted throughout this work, certain code-generation patterns can bre
 Indeed the vectorization process attempted by most OpenCL runtimes (and thus, reasons for incorrect\slash unvectorized code output) is obscured from the user, making reasoning about errors or performance trends quite difficult.
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change requires building of the wrapper that initializes\slash transfers memory and calls the source-rate\slash Jacobian kernel.
 
+\add{These issues make it critical to provide adequate implementation details (e.g., runtime version, platform, etc., as given in~\cref{s:test_platforms}) for codes utilizing OpenCL in order to enable reproducible results.}
 
 \section{Conclusions}
 \label{S:future}
