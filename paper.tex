@@ -249,7 +249,7 @@ They found that SIMD vectorization improves integrator performance over an OpenM
 This work builds upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}.
 In this article we
 \begin{itemize}
- \item Derive and verify a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity: \texttt{pyJac v2};
+ \item Derive and \add{reproducibly} verify a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity: \texttt{pyJac v2};
  \item \revisedelete{Enable}\add{Detail the implementation of} cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
  \item Investigate the performance for a wide range chemical kinetic models, specifically looking at speedups due to SIMD\slash SIMT-vectorization as well as relative to the previous version of \texttt{pyJac}; and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
