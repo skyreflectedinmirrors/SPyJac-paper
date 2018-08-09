@@ -1068,7 +1068,7 @@ The main contributions of this work are:
  \item Achieving significant speedups over a strictly parallel Jacobian and source-term evaluation on SIMD-enabled processors (e.g., CPUs).
 \end{itemize}
 
-\add{These achievements are made publicly available (see~\cref{A:availability}) via the open-source, high-performance, chemical kinetics code \texttt{pyJac}}.
+\add{These efforts are made publicly available (see~\cref{A:availability}) via the open-source, high-performance, chemical kinetics code \texttt{pyJac}}.
 The new molar-based formulation \delete{for \texttt{pyJac}} resulted in highly sparse chemical kinetic Jacobians, and allows selection of either the constant-volume or constant-pressure approximation.
 In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity}; this approximation is not a key feature of this work, and future efforts to \revisedelete{develop}\revise{incorporate} more sophisticated Jacobian approximations\delete{ based on the \texttt{pyJac} software} would be a worthwhile endeavor.
 
