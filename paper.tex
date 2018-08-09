@@ -1063,15 +1063,14 @@ Thankfully, \texttt{loo.py} allows relatively easy switching between output lang
 In this work, we developed automatically generated OpenCL codes for SIMD and SIMT-vectorized evaluations of thermochemical source-term and sparse\slash dense chemical kinetic Jacobian matrices.
 The main contributions of this work are:
 \begin{itemize}
- \item Deriving and verifying a new Jacobian formulation for \texttt{pyJac} that greatly increases sparsity;
- \item Extending \texttt{pyJac} to enable vectorized execution on the CPU, GPU, and other accelerators; and
+ \item Deriving and \add{reproducibly} verifying a new Jacobian formulation \revisedelete{for \texttt{pyJac}} that greatly increases sparsity;
+ \item \revisedelete{Extending \texttt{pyJac} to enable}\add{Enabling} vectorized execution on the CPU, GPU, and other accelerators; and
  \item Achieving significant speedups over a strictly parallel Jacobian and source-term evaluation on SIMD-enabled processors (e.g., CPUs).
 \end{itemize}
 
-The new molar-based formulation for \texttt{pyJac} resulted in highly sparse chemical kinetic Jacobians,
-and allows selection of either the constant-volume or constant-pressure approximation.
-In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity};
-this approximation is not a key feature of this work, and future efforts to develop more sophisticated Jacobian approximations based on the \texttt{pyJac} software would be a worthwhile endeavor.
+\add{These achievements are made publicly available (see~\cref{A:availability}) via the open-source, high-performance, chemical kinetics code \texttt{pyJac}}.
+The new molar-based formulation \revisedelete{for \texttt{pyJac}} resulted in highly sparse chemical kinetic Jacobians, and allows selection of either the constant-volume or constant-pressure approximation.
+In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity}; this approximation is not a key feature of this work, and future efforts to develop more sophisticated Jacobian approximations based on the \texttt{pyJac} software would be a worthwhile endeavor.
 
 We also demonstrated source-term and Jacobian evaluation for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
 In addition to parallel OpenMP evaluation on the CPU, the new version of \texttt{pyJac} enables the shallow-vectorized evaluation of the chemical-kinetic source terms and analytical Jacobian on both the CPU and GPU via OpenCL.
