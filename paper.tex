@@ -341,7 +341,7 @@ it is also similar to OpenCL's native vector data-types, e.g., \texttt{double\nu
 Conversely, the data-ordering in~\cref{F:column_major_split} enables coalesced memory accesses for ``F''-ordered, deep SIMT vectorization on the GPU.
 We will discuss the effects of these various data-ordering and vectorization patterns on performance in~\cref{S:results}.
 
-\subsection{Thermochemical Source Terms and Jacobian}
+\subsection{Thermochemical source terms and Jacobian}
 This new version of \texttt{pyJac} is capable of evaluating the thermochemical source-terms for using the constant-pressure (\conp/) or constant-volume (\conv/) assumption\footnote{Note: in this context, the ``constant-pressure'' and ``constant-volume'' assumptions refer to evaluation within a reaction sub-step in the operator splitting scheme, rather than a general constant-pressure or constant-volume reactive-flow simulation.}
 In this section, we will outline a brief summary of the system evaluated by \texttt{pyJac}; the supplemental material contains the complete---and lengthy---derivations.
 
@@ -386,7 +386,7 @@ where $\mathcal{R}$ is the ideal-gas constant in molar units, we find the volume
 
 The supplemental material for this article contains the complete derivation of the Jacobian used by \texttt{pyJac}, for interested readers.
 
-\subsection{Code Generation and Testing Infrastructure}
+\subsection{Code generation and testing infrastructure}
 \label{s:unittest}
 
 The new version of \texttt{pyJac} uses the Python package \texttt{loo.py}~\cite{kloeckner_loopy_2014} for code generation, which translates pseudo-code and data to OpenCL\slash C code.
@@ -401,7 +401,7 @@ We use the Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cit
 We will discuss verification of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes in detail in~\cref{s:verification}.
 
 
-\section{Results and Discussion}
+\section{Results and discussion}
 \subsection{Testing platforms}
 \label{s:test_platforms}
 
@@ -1041,7 +1041,7 @@ Performance likely drops for the isopentanol model due to the limited number of 
   \label{F:v1_vs_v2}
 \end{figure}
 
-\section{Practical notes on OpenCL Usage}
+\section{Practical notes on OpenCL use}
 \label{S:opencl}
 
 While OpenCL provides a simple interface to enable cross-platform execution, and significant speedups were achieved via shallow-vectorized OpenCL code in this work, there are some serious potential pitfalls in its use.
