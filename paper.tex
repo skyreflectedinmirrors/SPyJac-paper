@@ -19,8 +19,8 @@
 % https://tex.stackexchange.com/a/5896/56227
 \usepackage{etoolbox}
 \newtoggle{markup}
-%\togglefalse{markup}
-\toggletrue{markup}
+\togglefalse{markup}
+%\toggletrue{markup}
 
 \usepackage[xcolor]{changebar}
 
@@ -123,8 +123,7 @@
 \begin{abstract}
 Accurately predicting key combustion phenomena in reactive-flow simulations, e.g., lean blow-out, extinction\slash ignition limits and pollutant formation, necessitates the use of detailed chemical kinetics.
 The large size and high levels of numerical stiffness typically present in chemical kinetic models relevant to transportation\slash power-generation applications make the efficient evaluation\slash factorization of the chemical kinetic Jacobian and thermochemical source-terms critical to the performance of reactive-flow codes.
-\add{Here we investigate the performance of vectorized evaluation of constant-pressure/volume thermochemical source-term and sparse/dense chemical kinetic Jacobians using single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) paradigms. These are implemented in pyJac, an open-source, reproducible code generation platform.}
-\delete{Here we present \texttt{pyJac}, an open-source, a code generation platform for single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) vectorized constant-pressure\slash volume thermochemical source-term and sparse\slash dense chemical kinetic Jacobian evaluation.}
+Here we investigate the performance of vectorized evaluation of constant-pressure/volume thermochemical source-term and sparse/dense chemical kinetic Jacobians using single-instruction, multiple-data (SIMD) and single-instruction, multiple thread (SIMT) paradigms. These are implemented in pyJac, an open-source, reproducible code generation platform.
 Selected chemical kinetic models covering the range of sizes typically used in reactive-flow simulations were used for demonstration.
 A new formulation of the chemical kinetic governing equations was derived and verified, resulting in Jacobian sparsities of \SIrange{28.6}{92.0}{$\percent$} for the tested models.
 Speedups of \SIrange{3.40}{4.08}{$\times$} were found for shallow-vectorized OpenCL source-rate evaluation compared with a parallel OpenMP code on an \avx/ central processing unit (CPU), increasing to \SIrange{6.63}{9.44}{$\times$} and \SIrange{3.03}{4.23}{$\times$} for sparse and dense chemical kinetic Jacobian evaluation, respectively.
@@ -250,11 +249,11 @@ They found that SIMD vectorization improves integrator performance over an OpenM
 In this article we
 \begin{itemize}
  \item Derive and verify a new Jacobian formulation that greatly increases sparsity\delete{: \texttt{pyJac v2}};
- \item \delete{Enable}\add{Detail the implementation of} cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
- \item \add{Investigate the performance of SIMD\slash SIMT-vectorization for a wide range of chemical kinetic models, and compare with the previous version of our analytical chemical kinetic Jacobian code~\cite{Niemeyer:2016aa}; and finally}
+ \item Detail the implementation of cross-platform SIMD\slash SIMT vectorization for CPUs, GPUs, and other accelerators;
+ \item Investigate the performance of SIMD\slash SIMT-vectorization for a wide range of chemical kinetic models, and compare with the previous version of our analytical chemical kinetic Jacobian code~\cite{Niemeyer:2016aa}; and finally
  \item Discuss future extensions to this work as well as several promising directions for SIMD\slash SIMT vectorization in reactive-flow simulations.
 \end{itemize}
-This work builds upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}\add{, using the new formulation, \texttt{pyJac v2}, to achieve these goals}.
+This work builds upon our previous analytical chemical kinetic Jacobian code, \texttt{pyJac}~\cite{Niemeyer:2016aa}, using the new formulation, \texttt{pyJac v2}, to achieve these goals.
 To our knowledge is the first open-source, verified effort that vectorizes the evaluation of chemical-kinetic source terms and Jacobian matrices for any chemical model on a wide selection of platforms.
 
 
@@ -395,7 +394,7 @@ In our previous work~\cite{Niemeyer:2016aa}, this static code generation caused 
 We will discuss the implications of this change in~\cref{S:jacobian_results}, where the performance of the new version of~\texttt{pyJac} will be compared with the previous version.
 
 In addition, \texttt{loo.py} allows the user to more easily make changes to the structure of the generated program, e.g., the data ordering, vectorization, and threading patterns, as well as switch the target language for code generation (and more simply extend to additional languages, e.g., CUDA).
-Further, \texttt{loo.py} can execute developed subroutines from Python (natively for C code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL), enabling unit testing\slash verification for each component of the Jacobian or source terms; \add{the unit testing suite also helps ensure that bugs are not present in less commonly used code-paths, or are introduced by future code changes}.
+Further, \texttt{loo.py} can execute developed subroutines from Python (natively for C code, or via \texttt{PyOpenCL}~\cite{kloeckner_pycuda_2012} for OpenCL), enabling unit testing\slash verification for each component of the Jacobian or source terms; the unit testing suite also helps ensure that bugs are not present in less commonly used code-paths, or are introduced by future code changes.
 The source terms and sub-components thereof (e.g., rates of progress, pressure-modification terms) are directly compared with Cantera~\cite{Cantera}, while the automatic differentiation code Adept~\cite{hogan2014fast,adept-v11} provides reference values for Jacobian sub-components.
 We use the Portable OpenCL (POCL) implementation~\cite{poclIJPP} and OpenMP~\cite{dagum1998openmp} to perform OpenCL and C unit testing, respectively, on the continuous-integration framework Travis CI~\cite{travis:2018}.
 We will discuss verification of the complete (as opposed to the sub-component testing discussed here) generated source-terms and Jacobian codes in detail in~\cref{s:verification}.
@@ -1054,7 +1053,7 @@ This provides a particularly vexing problem for the programmer, since little can
 Further, as noted throughout this work, certain code-generation patterns can break OpenCL execution\slash vectorization, e.g., the failure of POCL to achieve vectorization or Intel OpenCL's failure to vectorize the finite-difference Jacobian.
 Indeed the vectorization process attempted by most OpenCL runtimes (and thus, reasons for incorrect\slash unvectorized code output) is obscured from the user, making reasoning about errors or performance trends quite difficult.
 Thankfully, \texttt{loo.py} allows relatively easy switching between output languages; the most significant code change requires building of the wrapper that initializes\slash transfers memory and calls the source-rate\slash Jacobian kernel.
-\add{These issues make it critical to provide adequate implementation details (e.g., runtime version, platform, etc., as given in~\cref{s:test_platforms}) for codes utilizing OpenCL in order to enable reproducible results.}
+These issues make it critical to provide adequate implementation details (e.g., runtime version, platform, etc., as given in~\cref{s:test_platforms}) for codes utilizing OpenCL in order to enable reproducible results.
 
 \section{Conclusions}
 \label{S:future}
@@ -1062,17 +1061,17 @@ Thankfully, \texttt{loo.py} allows relatively easy switching between output lang
 In this work, we developed automatically generated OpenCL codes for SIMD and SIMT-vectorized evaluations of thermochemical source-term and sparse\slash dense chemical kinetic Jacobian matrices.
 The main contributions of this work are:
 \begin{itemize}
- \item Deriving and verifying a new Jacobian formulation \delete{for \texttt{pyJac}} that greatly increases sparsity;
- \item \delete{Extending \texttt{pyJac} to enable}\add{Enabling} vectorized execution on the CPU, GPU, and other accelerators; and
+ \item Deriving and verifying a new Jacobian formulation that greatly increases sparsity;
+ \item Enabling vectorized execution on the CPU, GPU, and other accelerators; and
  \item Achieving significant speedups over a strictly parallel Jacobian and source-term evaluation on SIMD-enabled processors (e.g., CPUs).
 \end{itemize}
 
-\add{These efforts are made publicly available (see~\cref{A:availability}) via the open-source, high-performance, chemical kinetics code \texttt{pyJac}}.
-The new molar-based formulation \delete{for \texttt{pyJac}} resulted in highly sparse chemical kinetic Jacobians, and allows selection of either the constant-volume or constant-pressure approximation.
-In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity}; this approximation is not a key feature of this work, and future efforts to \delete{develop}\add{incorporate} more sophisticated Jacobian approximations\delete{ based on the \texttt{pyJac} software} would be a worthwhile endeavor.
+These efforts are made publicly available (see~\cref{A:availability}) via the open-source, high-performance, chemical kinetics code \texttt{pyJac}.
+The new molar-based formulation resulted in highly sparse chemical kinetic Jacobians, and allows selection of either the constant-volume or constant-pressure approximation.
+In addition, sparsity can be increased further by eliminating components associated with the bath gas, as discussed in \cref{S:sparsity}; this approximation is not a key feature of this work, and future efforts to incorporate more sophisticated Jacobian approximations would be a worthwhile endeavor.
 
 We also demonstrated source-term and Jacobian evaluation for a range of chemical kinetic models~\cite{Burke:2011fh,smith_gri-mech_30,Wang:2007,Sarathy:2013jr} and multiple CPUs\slash GPUs (\cref{t:cpus,t:gpus}).
-In addition to parallel OpenMP evaluation on the CPU, \add{this work}\delete{the new version of \texttt{pyJac}} enabled the shallow-vectorized evaluation of the chemical-kinetic source terms and analytical Jacobian on both the CPU and GPU via OpenCL.
+In addition to parallel OpenMP evaluation on the CPU, this work enabled the shallow-vectorized evaluation of the chemical-kinetic source terms and analytical Jacobian on both the CPU and GPU via OpenCL.
 Deep vectorization is possible on the Portable OpenCL (POCL) platform~\cite{poclIJPP}, but it yields no performance benefit as POCL did not achieve vectorizations for any execution pattern studied.
 Deep vectorization deserves further study with other platforms (e.g., CUDA).
 
@@ -1083,7 +1082,7 @@ Finally, we compared the performance of evaluating dense, analytical Jacobians i
 The OpenMP version evaluates moderately slower on the CPU for the smallest chemical model (e.g., \SI{1.79}{$\times$} on the \avx/ CPU), but significantly faster for the larger models---up to \SI{10.19}{$\times$}.
 The shallow-vectorized OpenCL code runs faster than the previous version over all chemical models, reaching speedups of \SI{19.56}{$\times$}.
 
-The OpenMP code-generation \delete{built into \texttt{pyJac}} is currently only capable of parallel execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards since OpenMP is a standard library on most machines.
+The OpenMP code-generation is currently only capable of parallel execution, but extending this platform to shallow\slash deep-vectorizations (via \texttt{loo.py} and compiler \texttt{\#pragma}s) is a key priority going forwards since OpenMP is a standard library on most machines.
 In addition, CUDA~\cite{Nvidia:2018} has been significantly more reliable in previous works~\cite{Niemeyer:2016aa,CurtisGPU:2017}, while Intel's open-source OpenCL alternative, ISPC~\cite{pharr2012ispc}, has been relatively stable and easy to work with during preliminary efforts with the unit-testing discussed in~\cref{s:unittest}.
 The current deep-vectorization formulation would be executable for both CUDA and ISPC targets, as these languages implement double-precision atomic operations, further recommending their use.
 It is also possible, particularly for the Intel OpenCL\slash POCL runtimes, that better performance\slash stability might be achieved using so-called ``explicit'' vectorization, i.e., through use of built-in vector types such as the \texttt{double8}.
@@ -1091,7 +1090,7 @@ Specifically, this change could enable vectorization on the POCL runtime and mig
 Using OpenCL Image\slash CUDA Texture memory to accelerate the indirect lookup for sparse matrix evaluation should be investigated as well.
 Finally, future extensions of this work will include extending to additional target languages (e.g., vectorized OpenMP, CUDA, ISPC) to improve ease of use and reliability, improving the existing OpenCL targets (e.g., to enable meaningful deep-vectorized evaluation), and implementing reaction sorting~\cite{Sewerin20151375} to improve SIMD efficiency (\cref{S:SIMD_scaling}).
 
-One key component missing in \add{this work}\delete{ the current version of \texttt{pyJac}} is vectorized sparse\slash dense linear-algebra subroutines to maximize the performance of LU-factorization and matrix-vector multiplication (commonly used in implicit-integration techniques).
+One key component missing in this work is vectorized sparse\slash dense linear-algebra subroutines to maximize the performance of LU-factorization and matrix-vector multiplication (commonly used in implicit-integration techniques).
 Third-party\slash open-source options exist for some target languages, e.g., cuBLAS~\cite{cublas}, clBLAS\slash clSPARSE~\cite{clmath} or SuperLU~\cite{superlu99}, but these do not necessarily cover all targets\slash required linear-algebra operations and, in the case of the CUDA\slash OpenCL libraries, are often optimized operation on one large matrix instead of many (relatively) smaller matrices.
 The extent to which these existing programs may be used needs to be assessed and missing operations should be implemented in \texttt{loo.py} to ensure easy switching between target languages and vectorization types.
 
