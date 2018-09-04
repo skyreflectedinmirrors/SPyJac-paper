@@ -29,24 +29,6 @@
 \usepackage{relsize}
 \newcommand{\smallunderscore}{\textscale{.5}{\textunderscore}\xspace}
 
-\iftoggle{markup}{
-\newcommand{\add}[1]{{\sloppy\cbcolor{OliveGreen}\textcolor{OliveGreen}{\cbstart {#1}\cbend}}\xspace}  % add
-\newcommand{\delete}[1]{\sloppy\cbcolor{RedOrange}\textcolor{RedOrange}{\cbdelete\sout{#1}}\xspace}
-\newcommand{\revise}[1]{{\sloppy\textcolor{RoyalPurple}{#1}}\xspace}  % add
-\newcommand{\revisedelete}[1]{\sloppy\textcolor{RoyalPurple}{\sout{#1}}\xspace} %delete
-
-\newcommand{\addnl}[1]{{\sloppy\textcolor{OliveGreen}{#1}}\xspace}  % add
-\newcommand{\deletenl}[1]{\sloppy\textcolor{RedOrange}{\sout{#1}}\xspace} %delete with no strikeout
-}{
-\newcommand{\add}[1]{#1\xspace}  % dummy add
-\newcommand{\delete}[1]{\xspace} % dummy delete
-\newcommand{\revise}[1]{#1\xspace}  % dummy add
-\newcommand{\revisedelete}[1]{\xspace} %dummy delete
-
-\newcommand{\addnl}[1]{#1\xspace}  % dummy add
-\newcommand{\deletenl}[1]{\xspace} % dummy delete
-}
-
 % shared equations in separate file
 % https://yatb.giacomodrago.com/en/post/3/latex-loading-equations-from-an-external-file.html
 \usepackage{catchfilebetweentags}
