@@ -71,6 +71,10 @@
 % https://tex.stackexchange.com/a/146707/56227
 \crefname{appendix}{}{}
 
+% use endfloat to move all figures to end
+% https://tex.stackexchange.com/a/164141/56227
+\usepackage[nomarkers,figuresonly,nofiglist]{endfloat}
+
 \usepackage{placeins}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1100,11 +1104,18 @@ under grants ACI-1534688 (Curtis and Sung) and ACI-1535065 (Niemeyer).
 
 \pagebreak
 
+% process floats before going into appendix as they've moved to the bottom
+\processdelayedfloats
+\listoffigures
+
 %% The Appendices part starts with the command \appendix;
 %% appendix sections are then done as normal sections
 \appendix
 \setcounter{figure}{0}
 \setcounter{table}{0}
+% https://tex.stackexchange.com/a/218994/56227
+\renewcommand{\thepostfigure}{S\arabic{postfigure}}
+\setcounter{postfigure}{0}
 
 % Fix for missing space between "Appendix" and letter
 \renewcommand*{\thesection}{\appendixname~\Alph{section}}
