@@ -703,7 +703,7 @@ The performance studies in this work were run on the platforms listed in~\cref{t
 Run times in each case were averaged over ten runs, each using the same set of PaSR conditions used in verification.
 The OpenMP Jacobian\slash source-term kernels, as well as the OpenMP\slash OpenCL wrapping code (responsible for initializing\slash transferring memory, reading input, etc.) was compiled with \texttt{gcc v5.4.0} on the \avx/\slash\gpunew/ platforms and \texttt{gcc v4.8.5} on the \sse/\slash\gpuold/ machines.
 The optimization level ``\texttt{-O3 -mtune=native}'' was used and no ``fast math'' OpenCL optimizations were enabled.
-Additionally, the exact form of the Jacobian (as opposed the the ``approximate'' form discussed in~\cref{S:sparsity}) was used in all cases.
+Additionally, the exact form of the Jacobian (as opposed the ``approximate'' form discussed in~\cref{S:sparsity}) was used in all cases.
 Finally, unless stated otherwise: the performance results used a single CPU core, the \conp/ assumption, a vector width of \num{8}\slash\num{128}, and ``C''\slash ``F''-ordered data for the CPU\slash GPU cases, respectively; the run times reported are for the number of conditions specified in~\cref{T:error} and include data-transfer overhead to\slash from internal buffers used in \texttt{pyJac}.
 The effects of choice of vector width, data ordering, and differences between \conp/ and \conv/ evaluations on the CPU\slash GPU will be explored in~\cref{S:source_results}, while parallel scaling for multiple CPU cores will be examined in~\cref{S:source_results,S:jacobian_results}.
 
